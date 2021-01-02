@@ -56,3 +56,7 @@ chunks distributed across multiple nodes in the network. It's similar to the dis
 
 Your device is both a client and server in that network - you'll store your own data, posts from your friends and 
 some random unreadable chunks from other participants in the network, just as they will do the same for you!
+
+
+### So how do I use it?
+You can't. It's not done yet. Sorry. :(
