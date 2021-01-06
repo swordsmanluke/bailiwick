@@ -2,5 +2,7 @@ package com.perfectlunacy.bailiwick
 
 interface DistHashStore {
     fun store(data: String): String
-    fun retrieve(uri: String): String
+    fun publish_posts(data: String): String
+    fun retrieve(key: String): String
+    fun retrieve_posts(key: String): String
 }

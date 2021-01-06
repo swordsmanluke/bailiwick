@@ -31,12 +31,18 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
 
-    // IPFS API
-    implementation "com.github.ligi:ipfs-api-kotlin:0.15"
+    // IPFS
+    implementation 'lite.ipfs:lite:1.0.0' // IPFS Lite Node
 
     // Coros
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.0.0"
+
+    // JSON Parsing
+    implementation 'com.google.code.gson:gson:2.8.6'
+
+    // DNS
+    implementation 'org.minidns:minidns-client:1.0.0'
 
     // TESTS
     testImplementation 'junit:junit:4.12'
