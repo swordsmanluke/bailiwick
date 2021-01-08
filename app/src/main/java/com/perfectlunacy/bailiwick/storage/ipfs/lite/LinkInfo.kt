@@ -1,4 +1,4 @@
-package com.perfectlunacy.bailiwick.ipfs.lite
+package com.perfectlunacy.bailiwick.storage.ipfs.lite
 
 import java.util.*
 

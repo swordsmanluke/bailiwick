@@ -2,14 +2,11 @@ package com.perfectlunacy.bailiwick
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.perfectlunacy.bailiwick.ipfs.IpfsLiteStore
-import com.perfectlunacy.bailiwick.ipfs.lite.IPFS
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import java.lang.RuntimeException
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsLiteStore
+import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,16 +20,8 @@ class MainActivity : AppCompatActivity() {
 
         // TODO: Extract this to a Service
         val ipfs = IPFS.getInstance(context)
-        val dht = IpfsLiteStore(ipfs)
         ipfs.startDaemon(false)
 
-        GlobalScope.launch {
-            val data = "test data"
-            val key = dht.store(data)
-            val ret_data = dht.retrieve(key)
-            if (ret_data != data) {
-                throw RuntimeException("Well, hell. '$ret_data' != '$data'")
-            }
-        }
+        val dht = IpfsLiteStore(ipfs, IPFS.getPeerID(context)!!)
     }
 }
