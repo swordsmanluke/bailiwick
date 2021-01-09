@@ -1,13 +1,13 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
 import android.util.Log
-import com.perfectlunacy.bailiwick.storage.DistHashStore
+import com.perfectlunacy.bailiwick.storage.DistHashTable
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.Closeable
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 
 
-class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashStore, Closeable {
+class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable, Closeable {
     companion object {
         val TAG = "IpfsLiteStore"
     }
