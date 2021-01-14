@@ -1,6 +1,6 @@
-package com.perfectlunacy.bailiwick
+package com.perfectlunacy.bailiwick.controllers
 
-import com.perfectlunacy.bailiwick.controllers.PostPublisher
+import com.perfectlunacy.bailiwick.InMemoryStore
 import com.perfectlunacy.bailiwick.models.Post
 import com.perfectlunacy.bailiwick.models.PostFile
 import org.junit.Assert

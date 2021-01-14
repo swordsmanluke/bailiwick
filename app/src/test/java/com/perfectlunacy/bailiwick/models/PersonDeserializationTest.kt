@@ -1,13 +1,9 @@
-package com.perfectlunacy.bailiwick
+package com.perfectlunacy.bailiwick.models
 
-import com.perfectlunacy.bailiwick.models.Person
 import org.junit.Assert
 import org.junit.Test
-import org.mockito.AdditionalMatchers.eq
 import org.semanticweb.yars.rdfxml.RdfXmlParser
-import org.semanticweb.yars.turtle.TurtleParser
 import java.nio.charset.StandardCharsets
-
 
 class PersonDeserializationTest {
     val xml_person_def = """
