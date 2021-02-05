@@ -14,6 +14,10 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable,
 
     private var sequence = 0L
 
+    override fun myId(): String {
+        return peer_id
+    }
+
     override fun store(data: String): String {
         return ipfs.storeData(data.toByteArray())!!.cid
     }

@@ -38,7 +38,7 @@ interface PostDao {
     fun all(): List<Post>
 
     @Query("SELECT * FROM post WHERE user_id=:user_id")
-    fun postsForUser(user_id: Int)
+    fun postsForUser(user_id: Int): List<Post>
 }
 
 @Dao

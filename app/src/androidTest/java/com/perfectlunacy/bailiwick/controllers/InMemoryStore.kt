@@ -1,4 +1,4 @@
-package com.perfectlunacy.bailiwick
+package com.perfectlunacy.bailiwick.controllers
 
 import com.perfectlunacy.bailiwick.storage.DistHashTable
 

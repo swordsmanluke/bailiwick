@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.models.db
 
+import android.database.Cursor
 import androidx.room.*
 
 @Entity
