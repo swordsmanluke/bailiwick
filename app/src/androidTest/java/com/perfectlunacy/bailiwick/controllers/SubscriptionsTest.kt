@@ -67,8 +67,8 @@ class SubscriptionsTest {
         val bob = User(2, "cid2", "bob")
         val (aliceIntro, bobIntro) = subject().generateIntroductions(alice, bob)
 
-        assertEquals("Alice's intro has wrong cid", "cid2", aliceIntro)
-        assertEquals("Bob's intro has wrong cid", "cid1", bobIntro)
+        assertEquals("Alice's intro has wrong cid", "cid2", aliceIntro.introTo)
+        assertEquals("Bob's intro has wrong cid", "cid1", bobIntro.introTo)
     }
 
     fun subject(): Subscriptions {

@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Bailiwick</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="first_run_sign_up">Sign Up</string>
+    <string name="first_run_use_my_key">Use My Key</string>
+    <string name="new_user_name_hint">Your Name (Public)</string>
+    <string name="new_user_name">Name: </string>
+    <string name="new_user_btn_go">Go!</string>
 </resources>

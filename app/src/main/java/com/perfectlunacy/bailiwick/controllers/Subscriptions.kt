@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.controllers
 
+import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.models.SubscriptionRequest
 import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.db.UserDao
@@ -16,8 +17,9 @@ class Subscriptions(private val users: UserDao, private val dht: DistHashTable) 
         return SubscriptionRequest(myName, cid)
     }
 
-    // TODO: Create an Introduction class
-    fun generateIntroductions(user1: User, user2: User) : List<String> {
-        TODO("Generate 'intro' messages for each User")
+    fun generateIntroductions(user1: User, user2: User) : List<Introduction> {
+        return listOf(
+            Introduction.introduce(user1, user2),
+            Introduction.introduce(user2, user1))
     }
 }
