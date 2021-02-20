@@ -7,4 +7,5 @@
     <string name="new_user_name_hint">Your Name (Public)</string>
     <string name="new_user_name">Name: </string>
     <string name="new_user_btn_go">Go!</string>
+    <string name="logo">bailiwick logo</string>
 </resources>

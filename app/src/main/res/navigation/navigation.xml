@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/navigation"
-    app:startDestination="@id/firstRunFragment">
+    app:startDestination="@id/splashFragment">
 
     <fragment
         android:id="@+id/firstRunFragment"
@@ -17,5 +17,27 @@
         android:id="@+id/newUserFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.NewUserFragment"
         android:label="fragment_new_user"
-        tools:layout="@layout/fragment_new_user" />
+        tools:layout="@layout/fragment_new_user" >
+        <action
+            android:id="@+id/action_newUserFragment_to_contentFragment"
+            app:destination="@id/contentFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.SplashFragment"
+        android:label="fragment_splash"
+        tools:layout="@layout/fragment_splash" >
+        <action
+            android:id="@+id/action_splashFragment_to_firstRunFragment"
+            app:destination="@id/firstRunFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_splashFragment_to_contentFragment"
+            app:destination="@id/contentFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/contentFragment"
+        android:name="com.perfectlunacy.bailiwick.ContentFragment"
+        android:label="fragment_content"
+        tools:layout="@layout/fragment_content" />
 </navigation>

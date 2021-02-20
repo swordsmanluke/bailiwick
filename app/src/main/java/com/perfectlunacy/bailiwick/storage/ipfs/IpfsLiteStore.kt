@@ -1,6 +1,8 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
 import android.util.Log
+import com.google.gson.Gson
+import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.DistHashTable
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.Closeable
@@ -20,6 +22,17 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable,
 
     override fun store(data: String): String {
         return ipfs.storeData(data.toByteArray())!!.cid
+    }
+
+    override fun updateIdentity(name: String) {
+        val idMap = HashMap<String, String>()
+        idMap.put("name", name)
+        val data = Gson().toJson(idMap)
+
+        // TODO: This is wrong.
+
+        val cid = ipfs.storeData(data.toByteArray())
+        ipfs.publishName(CID("${myId()}/identity"), this, { 1 })
     }
 
     override fun publish_posts(data: String): String {
@@ -49,6 +62,16 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable,
 
         return retrieve(cid)
     }
+
+    override val identity: Identity
+        get(){
+            val identityJson = retrieve("${myId()}/identity")
+            return if (identityJson.isBlank()) {
+                Identity("")
+            } else {
+                Gson().fromJson(identityJson, Identity::class.java)
+            }
+        }
 
     private fun ipnsRecord(
         cid: String,

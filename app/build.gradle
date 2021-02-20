@@ -5,6 +5,15 @@ apply plugin: 'kotlin-kapt'
 android {
     compileSdkVersion 28
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
+
     defaultConfig {
         applicationId "com.perfectlunacy.bailiwick"
         minSdkVersion 26

@@ -5,9 +5,14 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.viewModels
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.activityViewModels
+import com.perfectlunacy.bailiwick.MainActivity
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
+import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
+import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 
 /**
  * A simple [Fragment] subclass.
@@ -15,12 +20,22 @@ import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
  * create an instance of this fragment.
  */
 class NewUserFragment : Fragment() {
+    private val bailiwick: BailiwickViewModel by activityViewModels { BailwickViewModelFactory((activity as MainActivity).dht) }
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         // Inflate the layout for this fragment
         val binding = DataBindingUtil.inflate<FragmentNewUserBinding>(inflater, R.layout.fragment_new_user, container, false)
+
+        // Display the user's saved name (probably nothing)
+        binding.name = bailiwick.name
+
+        binding.newUserBtnGo.setOnClickListener { view ->
+            bailiwick.name = binding.newUserName.text.toString()
+        }
 
         return binding.root
     }
