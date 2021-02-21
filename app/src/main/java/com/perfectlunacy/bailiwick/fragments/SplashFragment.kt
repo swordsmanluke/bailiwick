@@ -7,10 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.navigation.findNavController
+import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
+import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import java.util.*
 
 // TODO: Rename parameter arguments, choose names that match
@@ -19,20 +19,9 @@ private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
 
 /**
- * A simple [Fragment] subclass.
- * Use the [SplashFragment.newInstance] factory method to
- * create an instance of this fragment.
+ * Shows the branded splash screen and determines if we already have an account loaded or not.
  */
-class SplashFragment : Fragment() {
-    private var myIdentity: String = ""
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // TODO: Move this behind a "Bailiwick data store"
-        val peerId = IPFS.getPeerID(requireContext()) ?: ""
-        myIdentity = IPFS.getInstance(requireContext()).getText(CID("$peerId/identity")) ?: ""
-    }
-
+class SplashFragment : BailiwickFragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -48,7 +37,7 @@ class SplashFragment : Fragment() {
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 val nav = requireView().findNavController()
-                if (myIdentity.isBlank()) {
+                if (bwModel.name.isBlank()) {
                     nav.navigate(R.id.action_splashFragment_to_firstRunFragment)
                 } else {
                     nav.navigate(R.id.action_splashFragment_to_contentFragment)

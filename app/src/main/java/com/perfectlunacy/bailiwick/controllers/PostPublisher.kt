@@ -1,9 +1,9 @@
 package com.perfectlunacy.bailiwick.controllers
 
 import com.perfectlunacy.bailiwick.models.Post
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 
-class PostPublisher(private val dht: DistHashTable, private val peerId: String) {
+class PostPublisher(private val dht: BailiwickNetwork, private val peerId: String) {
 
     fun publish(post: Post) {
         // Store new Post

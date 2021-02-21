@@ -37,7 +37,7 @@
     </fragment>
     <fragment
         android:id="@+id/contentFragment"
-        android:name="com.perfectlunacy.bailiwick.ContentFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.ContentFragment"
         android:label="fragment_content"
         tools:layout="@layout/fragment_content" />
 </navigation>

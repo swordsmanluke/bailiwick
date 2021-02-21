@@ -4,9 +4,9 @@ import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.models.SubscriptionRequest
 import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.db.UserDao
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 
-class Subscriptions(private val users: UserDao, private val dht: DistHashTable) {
+class Subscriptions(private val users: UserDao, private val dht: BailiwickNetwork) {
 
     fun add(cid: String, name: String) {
         users.insert(User(0, cid, name))

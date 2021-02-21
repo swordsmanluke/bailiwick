@@ -2,10 +2,10 @@ package com.perfectlunacy.bailiwick.controllers
 
 import com.perfectlunacy.bailiwick.models.Interaction
 import com.perfectlunacy.bailiwick.models.PostFile
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import java.util.*
 
-class CommentPoster(private val dht: DistHashTable) {
+class CommentPoster(private val dht: BailiwickNetwork) {
     fun postComment(postId: String, parentId: String?, comment: String): String {
         val file = publishContents(comment)
         val interaction = Interaction("comment", "0.1", UUID.randomUUID().toString(), System.currentTimeMillis(), postId, parentId, listOf(file))

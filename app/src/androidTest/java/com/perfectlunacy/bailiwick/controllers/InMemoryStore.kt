@@ -1,8 +1,8 @@
 package com.perfectlunacy.bailiwick.controllers
 
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 
-class InMemoryStore(private val myPeerId: String): DistHashTable {
+class InMemoryStore(private val myPeerId: String): BailiwickNetwork {
 
     private val store = HashMap<String, String>()
     override fun myId(): String {

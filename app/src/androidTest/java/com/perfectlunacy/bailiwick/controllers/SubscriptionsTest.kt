@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.perfectlunacy.bailiwick.models.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.models.db.User
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -13,7 +13,7 @@ import org.junit.Assert.*
 class SubscriptionsTest {
 
     val db = buildMemDb()
-    val dht: DistHashTable = InMemoryStore("mycid")
+    val dht: BailiwickNetwork = InMemoryStore("mycid")
 
     /***
      * Adding New Subscription

@@ -3,18 +3,21 @@ package com.perfectlunacy.bailiwick.storage.ipfs
 import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.models.Identity
-import com.perfectlunacy.bailiwick.storage.DistHashTable
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.Closeable
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 
 
-class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable, Closeable {
+class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
     companion object {
         val TAG = "IpfsLiteStore"
     }
 
     private var sequence = 0L
+
+    private val version = "0.1"
+    private val baseIPNS = "$peer_id/bw/$version/"
 
     override fun myId(): String {
         return peer_id
@@ -22,17 +25,6 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable,
 
     override fun store(data: String): String {
         return ipfs.storeData(data.toByteArray())!!.cid
-    }
-
-    override fun updateIdentity(name: String) {
-        val idMap = HashMap<String, String>()
-        idMap.put("name", name)
-        val data = Gson().toJson(idMap)
-
-        // TODO: This is wrong.
-
-        val cid = ipfs.storeData(data.toByteArray())
-        ipfs.publishName(CID("${myId()}/identity"), this, { 1 })
     }
 
     override fun publish_posts(data: String): String {
@@ -63,14 +55,18 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): DistHashTable,
         return retrieve(cid)
     }
 
-    override val identity: Identity
+    // TODO: This should be managed externally.
+    override var identity: Identity
         get(){
-            val identityJson = retrieve("${myId()}/identity")
+            val identityJson = retrieve("$baseIPNS/identity")
             return if (identityJson.isBlank()) {
                 Identity("")
             } else {
                 Gson().fromJson(identityJson, Identity::class.java)
             }
+        }
+        set(value) {
+            //TODO: Write Identity to a file <PEERID>/bw/v0.1/identity <-- IPLD?
         }
 
     private fun ipnsRecord(

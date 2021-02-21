@@ -23,6 +23,8 @@ class FirstRunFragment : Fragment() {
     ): View {
         // Inflate the layout for this fragment
         val binding = DataBindingUtil.inflate<FragmentFirstRunBinding>(inflater, R.layout.fragment_first_run, container, false)
+
+        // Bind button handlers
         binding.btnSignUp.setOnClickListener { view ->
             view.findNavController().navigate(R.id.action_firstRunFragment_to_newUserFragment)
         }
@@ -39,8 +41,6 @@ class FirstRunFragment : Fragment() {
          * Use this factory method to create a new instance of
          * this fragment using the provided parameters.
          *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
          * @return A new instance of fragment FirstRunFragment.
          */
         @JvmStatic

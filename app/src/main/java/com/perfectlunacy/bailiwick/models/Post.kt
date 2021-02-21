@@ -9,6 +9,12 @@ data class PostFile(
     val signature: String
 ) {
     fun toJson() = "[$mimeType, $cid, $signature]"
+
+    companion object {
+        fun fromDbPostFile(f: com.perfectlunacy.bailiwick.models.db.PostFile): PostFile {
+            return PostFile(f.mimeType, f.cid, f.signature)
+        }
+    }
 }
 
 data class Post(
@@ -24,6 +30,10 @@ data class Post(
             val post = parser.fromJson(json, Post::class.java)
             post.validateSignature()
             return post
+        }
+
+        fun fromDbPost(dbPost: com.perfectlunacy.bailiwick.models.db.Post, files: List<PostFile>): Post {
+            return Post("0.1", dbPost.timestamp, dbPost.text, files, dbPost.signature)
         }
     }
 

@@ -56,5 +56,5 @@ interface PostFileDao {
     fun all(): List<PostFile>
 
     @Query("SELECT * FROM postfile WHERE post_id=:post_id")
-    fun filesForPost(post_id: Int)
+    fun filesForPost(post_id: Int): List<PostFile>
 }
