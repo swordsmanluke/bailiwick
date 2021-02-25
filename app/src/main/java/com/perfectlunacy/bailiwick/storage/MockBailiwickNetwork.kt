@@ -8,7 +8,12 @@ import java.io.FileOutputStream
 
 class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
     override fun myId() = "<peerid>"
-    private val basePath = context.filesDir.toString() + "/bw/0.1/"
+    val basePath: String
+        get() {
+            val path = context.filesDir.toString() + "/bw/0.1/"
+            File(path).also { if (!it.exists()) { it.mkdirs() } }
+            return path
+        }
 
     override fun store(data: String): String {
         val name = data.hashCode().toString() + ".hash"

@@ -8,8 +8,8 @@ import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 
 class Subscriptions(private val users: UserDao, private val dht: BailiwickNetwork) {
 
-    fun add(cid: String, name: String) {
-        users.insert(User(0, cid, name))
+    fun add(cid: String, name: String, profilePicCid: String) {
+        users.insert(User(cid, name, profilePicCid))
     }
 
     fun request(myName: String) : SubscriptionRequest {

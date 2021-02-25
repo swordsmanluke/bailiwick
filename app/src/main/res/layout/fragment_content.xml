@@ -7,6 +7,33 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_mock_data"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="Generate a Post"
+                />
+            <Button
+                android:id="@+id/btn_prev_user"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="Prev User"
+                />
+            <Button
+                android:id="@+id/btn_next_user"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="Next User"
+                />
+        </LinearLayout>
 
         <com.stfalcon.chatkit.messages.MessagesList
             android:id="@+id/messagesList"

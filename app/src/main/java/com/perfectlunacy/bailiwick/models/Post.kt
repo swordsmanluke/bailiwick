@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.models
 
 import com.google.gson.Gson
+import com.perfectlunacy.bailiwick.models.db.User
 import java.lang.RuntimeException
 
 data class PostFile(
@@ -20,11 +21,14 @@ data class PostFile(
 data class Post(
     val version: String,
     val timestamp: Long,
+    val author: User,
     val text: String,
     val files: List<PostFile>,
     var signature: String?=null
 ) {
     companion object {
+        val VERSION = "0.1"
+
         fun fromJson(json: String): Post {
             val parser = Gson()
             val post = parser.fromJson(json, Post::class.java)
@@ -32,8 +36,10 @@ data class Post(
             return post
         }
 
-        fun fromDbPost(dbPost: com.perfectlunacy.bailiwick.models.db.Post, files: List<PostFile>): Post {
-            return Post("0.1", dbPost.timestamp, dbPost.text, files, dbPost.signature)
+        fun create(author: User, text: String, files: List<PostFile>):Post {
+            return Post(VERSION, System.currentTimeMillis(), author, text, files).also { p ->
+                p.calcSignature()
+            }
         }
     }
 
@@ -46,7 +52,7 @@ data class Post(
         if(expectedSig != signature) { throw RuntimeException("Signature Violation") }
     }
 
-    private fun calcSignature(): String {
+    protected fun calcSignature(): String {
         // TODO: Use our PublicKey to calculate the signature
         return sigStr().hashCode().toString()
     }
