@@ -8,9 +8,11 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import com.perfectlunacy.bailiwick.MockDataWriter
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.fragments.views.PostMessage
+import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
 import com.squareup.picasso.Picasso
 import com.stfalcon.chatkit.commons.ImageLoader
 import com.stfalcon.chatkit.messages.MessagesList
@@ -25,6 +27,10 @@ import java.util.*
  */
 class ContentFragment : BailiwickFragment() {
 
+    val mocker:MockDataWriter
+        get() {
+            return MockDataWriter(bwModel.db, bwModel.bwNetwork as MockBailiwickNetwork)
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,8 +44,8 @@ class ContentFragment : BailiwickFragment() {
         )
 
         binding.btnMockData.setOnClickListener {
-            bwModel.generateFakePost(requireContext())
-            buildAdapter(binding.messagesList)
+            mocker.generateFakePost(requireContext())
+            updateAdapter(adapter.get())
         }
 
         binding.btnNextUser.setOnClickListener{

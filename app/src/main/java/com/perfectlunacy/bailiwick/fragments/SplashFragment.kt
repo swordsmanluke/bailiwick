@@ -13,11 +13,6 @@ import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import java.util.*
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
 /**
  * Shows the branded splash screen and determines if we already have an account loaded or not.
  */
