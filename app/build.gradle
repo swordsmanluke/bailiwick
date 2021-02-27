@@ -36,6 +36,7 @@ android {
     }
 }
 
+def arrow_version = "0.11.0"
 dependencies {
     // DEFAULT AUTOGEN
     implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -79,6 +80,11 @@ dependencies {
     def room_version = "2.3.0-beta02"
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
+
+    // Arrow - FP in Kotlin
+    implementation "io.arrow-kt:arrow-core:$arrow_version"
+    implementation "io.arrow-kt:arrow-syntax:$arrow_version"
+    kapt    "io.arrow-kt:arrow-meta:$arrow_version"
 
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation "androidx.room:room-ktx:$room_version"

@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -45,20 +46,26 @@ class ContentFragment : BailiwickFragment() {
 
         binding.btnMockData.setOnClickListener {
             mocker.generateFakePost(requireContext())
-            updateAdapter(adapter.get())
+            refreshContent(adapter.get())
         }
 
         binding.btnNextUser.setOnClickListener{
             bwModel.selectNextUser()
-            if(adapter.isPresent) { updateAdapter(adapter.get()) }
+            binding.user = bwModel.selectedUser
+            if(adapter.isPresent) { refreshContent(adapter.get()) }
         }
 
         binding.btnPrevUser.setOnClickListener{
             bwModel.selectPrevUser()
-            if(adapter.isPresent) { updateAdapter(adapter.get()) }
+            binding.user = bwModel.selectedUser
+            if(adapter.isPresent) { refreshContent(adapter.get()) }
         }
 
+        if (bwModel.selectedUser != null) {
+            binding.user = bwModel.selectedUser
+        }
         buildAdapter(binding.messagesList)
+        if(adapter.isPresent) { refreshContent(adapter.get()) }
 
         return binding.root
     }
@@ -69,16 +76,16 @@ class ContentFragment : BailiwickFragment() {
         messagesList.setAdapter(adapter.get())
     }
 
-    private fun updateAdapter(adapter: MessagesListAdapter<PostMessage>) {
+    private fun refreshContent(adapter: MessagesListAdapter<PostMessage>) {
         GlobalScope.launch {
             bwModel.refreshContent()
         }
 
         adapter.clear()
-        val posts = bwModel.content[bwModel.selectedUser.get()]?.map { PostMessage(it) } // Wrap in the style the adapter expects
+        val posts = bwModel.content[bwModel.selectedUser]?.map { PostMessage(it) } ?: emptyList() // Wrap in the style the adapter expects
         adapter.addToEnd(posts, false)
 
-        Log.i(TAG, "Found ${posts?.count() ?: 0} posts! ${posts?.filter { !it.imageUrl.isNullOrBlank() }?.count() ?: 0} with attachments!")
+        Log.i(TAG, "Found ${posts.count() ?: 0} posts! ${posts.filter { !it.imageUrl.isNullOrBlank() }.count() ?: 0} with attachments!")
     }
 
     private fun buildListAdapter(): MessagesListAdapter<PostMessage> {
@@ -95,7 +102,8 @@ class ContentFragment : BailiwickFragment() {
             override fun loadImage(imageView: ImageView?, url: String?, payload: Any?) {
                 File(url).also { file ->
                     if (file.exists()) {
-                        Picasso.get().load(file).into(imageView)
+                        imageView?.setImageDrawable(Drawable.createFromPath(file.path))
+//                        Picasso.get().load(file).into(imageView)
                     }
                 }
             }

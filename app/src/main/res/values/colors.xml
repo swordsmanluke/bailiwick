@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#6200EE</color>
-    <color name="colorPrimaryDark">#3700B3</color>
-    <color name="colorAccent">#03DAC5</color>
+    <color name="colorPrimary">#ffc04a</color>
+    <color name="colorPrimaryDark">#ff9040</color>
+    <color name="colorAccent">#3a3a3a</color>
+
+    <!--    Logo colors  -->
+    <color name="logoLight">#ffc04a</color>
+    <color name="logoDark">#ff6347</color>
+    <color name="logoAccent">#3a3a3a</color>
 </resources>

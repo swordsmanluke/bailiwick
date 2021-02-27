@@ -7,6 +7,7 @@ import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.Closeable
 import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
+import java.io.File
 
 
 class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
@@ -55,12 +56,17 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
         return retrieve(cid)
     }
 
+    override fun retrieve_file(key: String): File? {
+        TODO("Not yet implemented")
+    }
+
     // TODO: This should be managed externally.
     override var identity: Identity
         get(){
             val identityJson = retrieve("$baseIPNS/identity")
             return if (identityJson.isBlank()) {
-                Identity("")
+                // FIXME: if we have no identity, we should return something else
+                Identity("", "", null)
             } else {
                 Gson().fromJson(identityJson, Identity::class.java)
             }

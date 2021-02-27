@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.models.Identity
+import java.io.File
 
 interface BailiwickNetwork {
     fun myId(): String
@@ -8,6 +9,7 @@ interface BailiwickNetwork {
     fun publish_posts(data: String): String
     fun retrieve(key: String): String
     fun retrieve_posts(key: String): String
+    fun retrieve_file(key: String): File?
 
     var identity: Identity
 }

@@ -45,7 +45,15 @@ class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
         TODO("Not yet implemented")
     }
 
-    private var _identity = Identity("swordsmanluke")
+    override fun retrieve_file(key: String): File? {
+        val f = File(key)
+        return when {
+            f.exists() -> f
+            else -> null
+        }
+    }
+
+    private var _identity = Identity("swordsmanluke", myId(), null)
     override var identity: Identity
         get() = _identity
         set(value) {
