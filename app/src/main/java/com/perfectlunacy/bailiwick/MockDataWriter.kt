@@ -15,6 +15,12 @@ import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.slmyldz.random.BitmapListener
 import com.slmyldz.random.GifListener
 import com.slmyldz.random.Randoms
+import com.stedi.randomimagegenerator.ImageParams
+import com.stedi.randomimagegenerator.Rig
+import com.stedi.randomimagegenerator.callbacks.GenerateCallback
+import com.stedi.randomimagegenerator.generators.ColoredCirclesGenerator
+import com.stedi.randomimagegenerator.generators.ColoredLinesGenerator
+import com.stedi.randomimagegenerator.generators.ColoredNoiseGenerator
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -72,17 +78,47 @@ class MockDataWriter(val db: BailiwickDatabase, val bwNetwork: MockBailiwickNetw
                 true -> "image/gif"; false -> "image/bmp"
             }
             val cid = bwNetwork.basePath + "/$filename"
-
-            if (useGif) {
-                Randoms.imageGif(FileSaver(bwNetwork, filename))
-            } else {
-                Randoms.image(FileSaver(bwNetwork, filename), 300, 400)
-            }
+            generateImage(filename)
 
             Log.i(FileSaver.TAG, "Creating new attachment and waiting for D/L")
             attachments.add(PostFile(mimeType, cid, cid.hashCode().toString()))
         }
         return attachments
+    }
+
+    private fun generateImage(filename: String) {
+        val generators = listOf(
+            ColoredNoiseGenerator(
+                ColoredNoiseGenerator.Orientation.HORIZONTAL,
+                ColoredNoiseGenerator.Type.RANDOM,
+                2
+            ),
+            ColoredCirclesGenerator(Randoms.Integer(3, 17)),
+            ColoredLinesGenerator(Randoms.Integer(10, 1000))
+        )
+
+        Rig.
+        Builder().
+        setGenerator(generators.shuffled().first()).
+        setFixedSize(300, 400).setCount(1).setCallback(object : GenerateCallback {
+            override fun onGenerated(imageParams: ImageParams, bitmap: Bitmap) {
+                val f = File(bwNetwork.basePath + filename)
+                Log.i(FileSaver.TAG, "BMP download succeeded. Storing at ${f.path}")
+
+                val fs = FileOutputStream(f, false)
+                try {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fs)
+                } finally {
+                    fs.close()
+                }
+                Log.i(FileSaver.TAG, "File at ${f.path} is ${f.length()} Bytes")
+            }
+
+            override fun onFailedToGenerate(imageParams: ImageParams, e: java.lang.Exception) {
+                Log.e(FileSaver.TAG, "Failed to generate image", e)
+            }
+
+        }).build().generate()
     }
 
     private fun createFakeUser(

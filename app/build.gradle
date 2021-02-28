@@ -72,6 +72,8 @@ dependencies {
 
     // Fake Data generator (Like Lorem Ipsum)
     implementation 'com.github.slmyldz:AndroidRandom:1.0'
+    // Fake Image generator
+    implementation 'com.stedi.randomimagegenerator:rig:1.1.0'
 
     // Easy Image handling
     implementation 'com.squareup.picasso:picasso:2.8'
