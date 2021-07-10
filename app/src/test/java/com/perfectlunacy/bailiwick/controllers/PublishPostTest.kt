@@ -3,6 +3,7 @@ package com.perfectlunacy.bailiwick.controllers
 import com.perfectlunacy.bailiwick.InMemoryStore
 import com.perfectlunacy.bailiwick.models.Post
 import com.perfectlunacy.bailiwick.models.PostFile
+import com.perfectlunacy.bailiwick.models.db.User
 import org.junit.Assert
 import org.junit.Test
 
@@ -13,7 +14,8 @@ class PublishPostTest {
         val myPeerId = "peerId"
         val dht = InMemoryStore(myPeerId)
         val publisher = PostPublisher(dht, myPeerId)
-        val post = Post("0.1", System.currentTimeMillis(), "This is a post!", emptyList())
+        val author = User("1234", "author", "nopic")
+        val post = Post("0.1", System.currentTimeMillis(), author,"This is a post!", emptyList())
 
         publisher.publish(post)
 
@@ -26,7 +28,8 @@ class PublishPostTest {
         val dht = InMemoryStore(myPeerId)
         val publisher = PostPublisher(dht, myPeerId)
         val file = PostFile("application/text", "fakeCid", "fakeSig")
-        val post = Post("0.1", System.currentTimeMillis(), "This is a post!", listOf(file))
+        val author = User("1234", "author", "nopic")
+        val post = Post("0.1", System.currentTimeMillis(), author, "This is a post!", listOf(file))
 
         publisher.publish(post)
 
@@ -38,7 +41,8 @@ class PublishPostTest {
         val myPeerId = "peerId"
         val dht = InMemoryStore(myPeerId)
         val publisher = PostPublisher(dht, myPeerId)
-        val post = Post("0.1", System.currentTimeMillis(), "This is a post!", emptyList())
+        val author = User("1234", "author", "nopic")
+        val post = Post("0.1", System.currentTimeMillis(), author,"This is a post!", emptyList())
         publisher.publish(post)
 
         val posts = dht.retrieve_posts(myPeerId).

@@ -23,7 +23,7 @@ class SubscriptionsTest {
     fun addingNewSubCreatesUser() {
         val users = db.getUserDao()
         val beforeCnt = users.all().count()
-        subject().add("cid", "new cid")
+        subject().add("cid", "name", "new cid")
         val afterCnt = users.all().count()
 
         assertEquals("Failed to add new User!",beforeCnt + 1, afterCnt)
@@ -36,8 +36,8 @@ class SubscriptionsTest {
         var caughtExpectedException = false
 
         try {
-            subject().add("cid", "new cid")
-            subject().add("cid", "same cid")
+            subject().add("cid", "name", "new cid")
+            subject().add("cid", "name", "same cid")
         } catch(ex: SQLiteConstraintException) {
             caughtExpectedException = true
         }
@@ -63,8 +63,8 @@ class SubscriptionsTest {
      */
     @Test
     fun introduce() {
-        val alice = User(1, "cid1", "alice")
-        val bob = User(2, "cid2", "bob")
+        val alice = User(1,  "cid1", "name","alice")
+        val bob = User(2, "cid2", "name","bob")
         val (aliceIntro, bobIntro) = subject().generateIntroductions(alice, bob)
 
         assertEquals("Alice's intro has wrong cid", "cid2", aliceIntro.introTo)

@@ -1,6 +1,8 @@
 package com.perfectlunacy.bailiwick.controllers
 
+import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
+import java.io.File
 
 class InMemoryStore(private val myPeerId: String): BailiwickNetwork {
 
@@ -29,5 +31,16 @@ class InMemoryStore(private val myPeerId: String): BailiwickNetwork {
         // since I'm ignoring the IPNS stuff for now.
         return retrieve(key)
     }
+
+    override fun retrieve_file(key: String): File? {
+        return when(store[key]) {
+            is String -> { File(store[key]) }
+            else -> { null }
+        }
+    }
+
+    override var identity: Identity
+        get() = TODO("Not yet implemented")
+        set(value) {}
 
 }

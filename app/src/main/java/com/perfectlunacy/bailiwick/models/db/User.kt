@@ -3,7 +3,7 @@ package com.perfectlunacy.bailiwick.models.db
 import android.database.Cursor
 import androidx.room.*
 
-@Entity
+@Entity(indices = [Index(value = ["uid"], unique = true)])
 data class User (
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo val uid: String,

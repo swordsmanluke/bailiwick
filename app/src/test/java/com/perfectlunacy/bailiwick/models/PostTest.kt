@@ -1,18 +1,20 @@
 package com.perfectlunacy.bailiwick.models
 
+import com.perfectlunacy.bailiwick.models.db.User
 import org.junit.Assert
 import org.junit.Test
 import java.lang.Exception
 import java.lang.RuntimeException
 
 class PostTest {
-    val textPost = Post("0.1", 1610156501960, "a post", emptyList())
+    val author = User("1234", "author", "nopic")
+    val textPost = Post("0.1", 1610156501960, author, "a post", emptyList())
 
     val file = PostFile("plain/text", "fake_cid", "fake_sig")
-    val filePost = Post("0.1", 1610156501960, "a post", listOf(file))
+    val filePost = Post("0.1", 1610156501960, author,"a post", listOf(file))
 
-    val postJson = "{\"version\":\"0.1\",\"timestamp\":1610156501960,\"text\":\"a post\",\"files\":[],\"signature\":\"1819436663\"}"
-    val filePostJson = "{\"version\":\"0.1\",\"timestamp\":1610156501960,\"text\":\"a post\",\"files\":[{\"mimeType\":\"plain/text\",\"cid\":\"fake_cid\",\"signature\":\"fake_sig\"}],\"signature\":\"1598744516\"}"
+    val postJson = "{\"version\":\"0.1\",\"timestamp\":1610156501960,\"author\":{\"id\":0,\"uid\":\"1234\",\"name\":\"author\",\"profilePicCid\":\"nopic\"},\"text\":\"a post\",\"files\":[],\"signature\":\"1819436663\"}"
+    val filePostJson = "{\"version\":\"0.1\",\"timestamp\":1610156501960,\"author\":{\"id\":0,\"uid\":\"1234\",\"name\":\"author\",\"profilePicCid\":\"nopic\"},\"text\":\"a post\",\"files\":[{\"mimeType\":\"plain/text\",\"cid\":\"fake_cid\",\"signature\":\"fake_sig\"}],\"signature\":\"1598744516\"}"
 
     @Test
     fun postSerializesToJson() {
