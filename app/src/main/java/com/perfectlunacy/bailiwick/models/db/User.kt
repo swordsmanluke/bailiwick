@@ -1,6 +1,5 @@
 package com.perfectlunacy.bailiwick.models.db
 
-import android.database.Cursor
 import androidx.room.*
 
 @Entity(indices = [Index(value = ["uid"], unique = true)])

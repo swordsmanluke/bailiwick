@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.perfectlunacy.bailiwick.models.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsLiteStore
+import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 
@@ -22,8 +24,7 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private fun initBailiwick() {
-        // TODO: Replace MockBailiwickNetwork w/IPFS! :D
-        val bwNetwork = MockBailiwickNetwork(applicationContext)
+        val bwNetwork = IpfsLiteStore(IPFS.getInstance(applicationContext), IPFS.getPeerID(applicationContext)!!)
         val db = BailiwickDatabase.getInstance(applicationContext)
         bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork, db) }).value
     }

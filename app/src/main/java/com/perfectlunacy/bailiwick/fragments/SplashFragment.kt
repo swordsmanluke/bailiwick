@@ -1,16 +1,14 @@
 package com.perfectlunacy.bailiwick.fragments
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.navigation.findNavController
-import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
-import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import java.util.*
 
 /**
@@ -33,9 +31,9 @@ class SplashFragment : BailiwickFragment() {
             override fun run() {
                 val nav = requireView().findNavController()
                 if (bwModel.name.isBlank()) {
-                    nav.navigate(R.id.action_splashFragment_to_firstRunFragment)
+                    Handler(context!!.mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }
                 } else {
-                    nav.navigate(R.id.action_splashFragment_to_contentFragment)
+                    Handler(context!!.mainLooper).post { nav.navigate(R.id.action_splashFragment_to_contentFragment) }
                 }
             }
         }, SPLASH_DURATION_MS)
