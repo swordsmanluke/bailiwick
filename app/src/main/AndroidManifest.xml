@@ -17,7 +17,8 @@
         android:icon="@drawable/img_bailiwick_icon"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".BailiwickActivity">
+        <activity android:name=".BailiwickActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

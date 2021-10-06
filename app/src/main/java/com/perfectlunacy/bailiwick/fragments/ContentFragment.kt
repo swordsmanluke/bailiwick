@@ -14,10 +14,6 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.fragments.views.PostMessage
 import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
-import com.squareup.picasso.Picasso
-import com.stfalcon.chatkit.commons.ImageLoader
-import com.stfalcon.chatkit.messages.MessagesList
-import com.stfalcon.chatkit.messages.MessagesListAdapter
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File

@@ -11,16 +11,6 @@ import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.db.UserDao
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
-import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
-import com.slmyldz.random.BitmapListener
-import com.slmyldz.random.GifListener
-import com.slmyldz.random.Randoms
-import com.stedi.randomimagegenerator.ImageParams
-import com.stedi.randomimagegenerator.Rig
-import com.stedi.randomimagegenerator.callbacks.GenerateCallback
-import com.stedi.randomimagegenerator.generators.ColoredCirclesGenerator
-import com.stedi.randomimagegenerator.generators.ColoredLinesGenerator
-import com.stedi.randomimagegenerator.generators.ColoredNoiseGenerator
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -43,7 +33,6 @@ class MockDataWriter(val db: BailiwickDatabase, val bwNetwork: MockBailiwickNetw
         } else {
             users.all().shuffled().first()
         }
-        Log.i(FileSaver.TAG, "Random User for new post is: ${user.name}:${user.id}")
         return user
     }
 
@@ -56,14 +45,11 @@ class MockDataWriter(val db: BailiwickDatabase, val bwNetwork: MockBailiwickNetw
         val attachments = generateAttachments()
 
         // TODO: This is an ugly way to create these objects.
-        val text = Randoms.sentence(context)
-        Log.i(FileSaver.TAG, "Generating Post for user ${user.id}. '$text' / ${attachments.count()} attached")
+        val text = "Lorem Ipsum"
 
         val post = convert.toDbPost(Post.create(user, text, attachments))
-        Log.i(FileSaver.TAG, "after conversion: $post")
         posts.insert(post)
         val post_id = posts.postsForUser(user.id).last().id
-        Log.i(FileSaver.TAG,"New post id: $post_id")
         attachments.forEach { files.insert(convert.toDbFile(it, post_id)) }
     }
 
@@ -73,103 +59,26 @@ class MockDataWriter(val db: BailiwickDatabase, val bwNetwork: MockBailiwickNetw
 
         if (Random().nextInt(3) == 1) {
             val filename = UUID.randomUUID().toString()
-            val useGif = Randoms.Boolean()
+            val useGif = Random().nextBoolean()
             val mimeType = when (useGif) {
                 true -> "image/gif"; false -> "image/bmp"
             }
             val cid = bwNetwork.basePath + "/$filename"
-            generateImage(filename)
 
-            Log.i(FileSaver.TAG, "Creating new attachment and waiting for D/L")
             attachments.add(PostFile(mimeType, cid, cid.hashCode().toString()))
         }
         return attachments
     }
 
-    private fun generateImage(filename: String) {
-        val generators = listOf(
-            ColoredNoiseGenerator(
-                ColoredNoiseGenerator.Orientation.HORIZONTAL,
-                ColoredNoiseGenerator.Type.RANDOM,
-                2
-            ),
-            ColoredCirclesGenerator(Randoms.Integer(3, 17)),
-            ColoredLinesGenerator(Randoms.Integer(10, 1000))
-        )
-
-        Rig.
-        Builder().
-        setGenerator(generators.shuffled().first()).
-        setFixedSize(300, 400).setCount(1).setCallback(object : GenerateCallback {
-            override fun onGenerated(imageParams: ImageParams, bitmap: Bitmap) {
-                val f = File(bwNetwork.basePath + filename)
-                Log.i(FileSaver.TAG, "BMP download succeeded. Storing at ${f.path}")
-
-                val fs = FileOutputStream(f, false)
-                try {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fs)
-                } finally {
-                    fs.close()
-                }
-                Log.i(FileSaver.TAG, "File at ${f.path} is ${f.length()} Bytes")
-            }
-
-            override fun onFailedToGenerate(imageParams: ImageParams, e: java.lang.Exception) {
-                Log.e(FileSaver.TAG, "Failed to generate image", e)
-            }
-
-        }).build().generate()
-    }
 
     private fun createFakeUser(
         context: Context,
         users: UserDao
     ): User {
         val filename = UUID.randomUUID().toString()
-        val fileSaver = FileSaver(bwNetwork, filename)
-        Randoms.imageAvatar(fileSaver, 200) // download a profile pic
-        return User(UUID.randomUUID().toString(), Randoms.name(context), bwNetwork.basePath + "/$filename").also { u ->
+
+        return User(UUID.randomUUID().toString(), "Some user", bwNetwork.basePath + "/$filename").also { u ->
             users.insert(u)
-        }
-    }
-
-    class FileSaver(bwNetwork: BailiwickNetwork, val filename: String): GifListener,
-        BitmapListener {
-
-        private val mockBailiwickNetwork: MockBailiwickNetwork = bwNetwork as MockBailiwickNetwork
-
-        override fun onSuccess(bitmap: ByteArray?) {
-            val f = File(mockBailiwickNetwork.basePath + filename)
-            Log.i(TAG, "Gif download succeeded. Storing at ${f.path}. bytes: ${bitmap?.size ?: 0}")
-
-            val fs = FileOutputStream(f, false)
-            try {
-                bitmap ?: fs.write(bitmap)
-            } finally {
-                fs.close()
-            }
-            Log.i(TAG, "File at ${f.path} is ${f.length()} Bytes")
-        }
-
-        override fun onSuccess(bitmap: Bitmap?) {
-            val f = File(mockBailiwickNetwork.basePath + filename)
-            Log.i(TAG, "BMP download succeeded. Storing at ${f.path}")
-
-            val fs = FileOutputStream(f, false)
-            try {
-                bitmap?.compress(Bitmap.CompressFormat.PNG,100, fs)
-            } finally {
-                fs.close()
-            }
-            Log.i(TAG, "File at ${f.path} is ${f.length()} Bytes")
-        }
-
-        override fun onFailure(e: Exception?) {
-            Log.e(TAG, "Image download failed with", e)
-        }
-
-        companion object {
-            const val TAG = "MockDataWriter"
         }
     }
 

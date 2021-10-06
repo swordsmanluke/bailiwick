@@ -7,11 +7,10 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.perfectlunacy.bailiwick.models.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsLiteStore
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
+import threads.lite.IPFS
 
 class BailiwickActivity : AppCompatActivity() {
     lateinit var bwModel: BailiwickViewModel
@@ -24,7 +23,7 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private fun initBailiwick() {
-        val bwNetwork = IpfsLiteStore(IPFS.getInstance(applicationContext), IPFS.getPeerID(applicationContext)!!)
+        val bwNetwork = IpfsLiteStore(IPFS.getInstance(applicationContext), IPFS.getInstance(applicationContext).getPeerId("me").toString())
         val db = BailiwickDatabase.getInstance(applicationContext)
         bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork, db) }).value
     }

@@ -4,10 +4,10 @@ import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.CID
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.Closeable
-import com.perfectlunacy.bailiwick.storage.ipfs.lite.IPFS
 import java.io.File
+import threads.lite.IPFS
+import threads.lite.cid.Cid
+import threads.lite.core.Closeable
 
 
 class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
@@ -18,35 +18,24 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
     private var sequence = 0L
 
     private val version = "0.1"
-    private val baseIPNS = "$peer_id/bw/$version/"
+    private val baseIPNS = "/ipfs/$peer_id/bw/$version"
 
     override fun myId(): String {
         return peer_id
     }
 
     override fun store(data: String): String {
-        return ipfs.storeData(data.toByteArray())!!.cid
+        return ipfs.storeData(data.toByteArray()).toString()
     }
 
     override fun publish_posts(data: String): String {
-        val cid = ipfs.storeData(data.toByteArray())!!
-        ipfs.publishName(cid, this, { 1 })
-
-        val ipnsRec = ipnsRecord(cid.cid, peer_id)
-
-        // TODO: store and use this
-        val usersIKnow: List<User> = emptyList()
-
-        for(user in usersIKnow) {
-            val success = ipfs.push(user.pid, ipnsRec)
-            if (!success) { Log.e(TAG, "Failed to push IPNS record to ${user.pid}") }
-        }
-
-        return ipfs.id()?.id!!
+        val cid = ipfs.storeData(data.toByteArray())
+        ipfs.publishName(cid, 1, this)
+        return ""
     }
 
     override fun retrieve(key: String): String {
-        return ipfs.getText(CID(key)) ?: ""
+        return ipfs.getText(Cid(key.toByteArray()), this) ?: ""
     }
 
     override fun retrieve_posts(key: String): String {
@@ -86,8 +75,9 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
         return hashMap
     }
 
-    override val isClosed: Boolean
-        get() = false // Let's see what this does
+    override fun isClosed(): Boolean {
+        return false
+    }
 
     private data class User(val pid: String)
 }

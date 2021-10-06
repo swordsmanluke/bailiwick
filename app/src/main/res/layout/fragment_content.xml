@@ -28,8 +28,6 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:icon="@drawable/ic_add_attachment"
-            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
             />
     </LinearLayout>
         <LinearLayout
@@ -42,7 +40,6 @@
             <ImageView
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:src="@{user.drawablePic}"
                 android:contentDescription="@string/profile_picture" />
             <TextView
                 android:id="@+id/lblSelectedUser"
@@ -51,7 +48,6 @@
                 android:gravity="center_horizontal"
                 android:textColor="@color/colorPrimaryDark"
                 android:textSize="30sp"
-                android:text="@{user.name}"
                 />
         </LinearLayout>
 
@@ -84,17 +80,11 @@
                 />
         </LinearLayout>
 
-        <com.stfalcon.chatkit.messages.MessagesList
-            android:id="@+id/messagesList"
-            android:background="@color/white"
+        <ListView
+            android:id="@+id/list_item"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"/>
 
-        <com.stfalcon.chatkit.messages.MessageInput
-            android:id="@+id/input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            />
     </LinearLayout>
 
 </layout>

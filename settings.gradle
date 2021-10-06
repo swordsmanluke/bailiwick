@@ -1,2 +1,4 @@
 include ':app'
 rootProject.name = "Bailiwick"
+include ':ipfs-lite'
+include ':lite'
