@@ -7,7 +7,9 @@ import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import java.io.File
 import threads.lite.IPFS
 import threads.lite.cid.Cid
+import threads.lite.cid.PeerId
 import threads.lite.core.Closeable
+import java.lang.RuntimeException
 
 
 class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
@@ -24,40 +26,48 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
         return peer_id
     }
 
-    override fun store(data: String): String {
-        return ipfs.storeData(data.toByteArray()).toString()
+    override fun store(data: String): Cid {
+        return ipfs.storeData(data.toByteArray())
     }
 
-    override fun publish_posts(data: String): String {
+    override fun publish_posts(data: String): Cid {
         val cid = ipfs.storeData(data.toByteArray())
         ipfs.publishName(cid, 1, this)
-        return ""
+        return cid
     }
 
-    override fun retrieve(key: String): String {
-        return ipfs.getText(Cid(key.toByteArray()), this) ?: ""
+    override fun retrieve(key: Cid): String {
+        return ipfs.getText(key, this) ?: ""
     }
 
     override fun retrieve_posts(key: String): String {
         val resName = ipfs.resolveName(key, 100, this)
         val cid = resName?.hash ?: return ""
 
-        return retrieve(cid)
+        return retrieve(Cid(cid.toByteArray()))
     }
 
-    override fun retrieve_file(key: String): File? {
+    override fun retrieve_file(key: Cid): File? {
         TODO("Not yet implemented")
     }
 
     // TODO: This should be managed externally.
     override var identity: Identity
         get(){
-            val identityJson = retrieve("$baseIPNS/identity")
-            return if (identityJson.isBlank()) {
+            val resName = ipfs.resolveName("$baseIPNS/identity", 100, this)
+            val cid: String? = resName?.hash
+            return if (cid.isNullOrBlank()){
                 // FIXME: if we have no identity, we should return something else
                 Identity("", "", null)
             } else {
-                Gson().fromJson(identityJson, Identity::class.java)
+                val identityJson = retrieve(Cid(cid.toByteArray()))
+                return if (identityJson.isBlank()) {
+                    // FIXME: if we have no identity, we should return something else
+                    Identity("", "", null)
+                } else {
+                    Gson().fromJson(identityJson, Identity::class.java)
+
+                }
             }
         }
         set(value) {

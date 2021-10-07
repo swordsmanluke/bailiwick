@@ -9,6 +9,7 @@ import com.perfectlunacy.bailiwick.models.db.PostConverter
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import threads.lite.cid.Cid
 
 class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatabase): ViewModel() {
     // Currently visible content from the network
@@ -59,7 +60,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatab
         val convert = PostConverter(users, files)
         // FIXME: Add pagination to avoid loading _everything_ into memory
         users.all().forEach { u ->
-            val id = Identity(u.name, u.uid, bwNetwork.retrieve_file(u.profilePicCid))
+            val id = Identity(u.name, u.uid, bwNetwork.retrieve_file(Cid(u.profilePicCid.toByteArray())))
             content.put(id, posts.postsForUser(u.id).map { p ->
                 convert.toPostModel(p)
             })

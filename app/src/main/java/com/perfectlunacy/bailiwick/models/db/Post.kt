@@ -94,7 +94,7 @@ class PostConverter(val users: UserDao, val files: PostFileDao) {
     }
 
     fun toDbFile(source: com.perfectlunacy.bailiwick.models.PostFile, post_id: Int): PostFile {
-        return PostFile(0, post_id, source.mimeType, source.cid, source.signature)
+        return PostFile(0, post_id, source.mimeType, source.path, source.signature)
     }
 
     fun toPostFileModel(source: PostFile): com.perfectlunacy.bailiwick.models.PostFile {

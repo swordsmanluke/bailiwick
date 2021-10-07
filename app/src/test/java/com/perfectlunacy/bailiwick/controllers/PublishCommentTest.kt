@@ -2,11 +2,8 @@ package com.perfectlunacy.bailiwick.controllers
 
 import com.perfectlunacy.bailiwick.InMemoryStore
 import com.perfectlunacy.bailiwick.models.Interaction
-import com.perfectlunacy.bailiwick.models.Post
-import com.perfectlunacy.bailiwick.models.PostFile
 import org.junit.Assert
 import org.junit.Test
-import java.util.*
 
 class PublishCommentTest {
 
@@ -30,7 +27,7 @@ class PublishCommentTest {
         val cid = commenter.postComment("post_id", "parent_id", "comment text")
 
         val comment = Interaction.fromJson(dht.retrieve(cid))
-        val contents = comment.files.map{ f -> dht.retrieve(f.cid) }
+        val contents = comment.files.map{ f -> dht.retrieve(f.path) }
 
         Assert.assertEquals(1, contents.size)
         Assert.assertEquals("comment text", contents.first())

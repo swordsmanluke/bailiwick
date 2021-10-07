@@ -2,14 +2,15 @@ package com.perfectlunacy.bailiwick.models
 
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.models.db.User
+import threads.lite.cid.Cid
 import java.lang.RuntimeException
 
 data class PostFile(
     val mimeType: String,
-    val cid: String,
+    val path: String,
     val signature: String
 ) {
-    fun toJson() = "[$mimeType, $cid, $signature]"
+    fun toJson() = "[$mimeType, $path, $signature]"
 
     companion object {
         fun fromDbPostFile(f: com.perfectlunacy.bailiwick.models.db.PostFile): PostFile {
@@ -64,5 +65,5 @@ data class Post(
     }
 
     private fun sigStr() = "$version$timestamp$text" +
-            files.map { f -> "${f.mimeType}${f.cid}${f.signature}" }.sorted().joinToString("")
+            files.map { f -> "${f.mimeType}${f.path}${f.signature}" }.sorted().joinToString("")
 }

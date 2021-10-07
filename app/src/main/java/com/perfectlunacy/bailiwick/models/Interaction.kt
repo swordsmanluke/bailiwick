@@ -48,5 +48,5 @@ data class Interaction(
     }
 
     private fun sigStr() = "$type$version$id$timestampMillis$post$parent" +
-            files.map { f -> "${f.mimeType}${f.cid}${f.signature}" }.sorted().joinToString("")
+            files.map { f -> "${f.mimeType}${f.path}${f.signature}" }.sorted().joinToString("")
 }
