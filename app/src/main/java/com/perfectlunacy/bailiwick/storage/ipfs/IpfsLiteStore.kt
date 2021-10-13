@@ -1,15 +1,12 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
-import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import java.io.File
 import threads.lite.IPFS
-import threads.lite.cid.Cid
-import threads.lite.cid.PeerId
 import threads.lite.core.Closeable
-import java.lang.RuntimeException
+import threads.lite.core.TimeoutCloseable
 
 
 class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
@@ -20,47 +17,47 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
     private var sequence = 0L
 
     private val version = "0.1"
-    private val baseIPNS = "/ipfs/$peer_id/bw/$version"
+    private val baseIPNS = "/ipns/$peer_id/bw/$version"
 
     override fun myId(): String {
         return peer_id
     }
 
-    override fun store(data: String): Cid {
-        return ipfs.storeData(data.toByteArray())
+    override fun store(data: String): String {
+        val cid = ipfs.storeData(data.toByteArray())
+        return cid.key
     }
 
-    override fun publish_posts(data: String): Cid {
+    override fun publish_posts(data: String): String {
         val cid = ipfs.storeData(data.toByteArray())
         ipfs.publishName(cid, 1, this)
-        return cid
+        return cid.key
     }
 
-    override fun retrieve(key: Cid): String {
-        return ipfs.getText(key, this) ?: ""
+    override fun retrieve(key: String): String {
+        val cid = ipfs.resolve(key, TimeoutCloseable(30))
+        return ipfs.getText(cid!!, TimeoutCloseable(30)) ?: ""
     }
 
     override fun retrieve_posts(key: String): String {
-        val resName = ipfs.resolveName(key, 100, this)
-        val cid = resName?.hash ?: return ""
+        val cid = ipfs.resolve(key, TimeoutCloseable(30))
 
-        return retrieve(Cid(cid.toByteArray()))
+        return retrieve(cid!!.key)
     }
 
-    override fun retrieve_file(key: Cid): File? {
+    override fun retrieve_file(key: String): File? {
         TODO("Not yet implemented")
     }
 
     // TODO: This should be managed externally.
     override var identity: Identity
         get(){
-            val resName = ipfs.resolveName("$baseIPNS/identity", 100, this)
-            val cid: String? = resName?.hash
+            val cid = ipfs.resolve("$baseIPNS/identity",TimeoutCloseable(10))?.key
             return if (cid.isNullOrBlank()){
                 // FIXME: if we have no identity, we should return something else
                 Identity("", "", null)
             } else {
-                val identityJson = retrieve(Cid(cid.toByteArray()))
+                val identityJson = retrieve(String(cid.toByteArray()))
                 return if (identityJson.isBlank()) {
                     // FIXME: if we have no identity, we should return something else
                     Identity("", "", null)

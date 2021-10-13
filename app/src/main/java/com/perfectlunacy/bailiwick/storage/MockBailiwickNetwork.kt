@@ -2,7 +2,6 @@ package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
 import com.perfectlunacy.bailiwick.models.Identity
-import threads.lite.cid.Cid
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -16,7 +15,7 @@ class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
             return path
         }
 
-    override fun store(data: String): Cid {
+    override fun store(data: String): String {
         val name = data.hashCode().toString() + ".hash"
         val file = File(basePath, name)
         val stream = FileOutputStream(file)
@@ -26,15 +25,15 @@ class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
             stream.close()
         }
 
-        return Cid(file.path.toByteArray())
+        return file.path
     }
 
-    override fun publish_posts(data: String): Cid {
+    override fun publish_posts(data: String): String {
         // TODO: Append to the posts file
         return store(data)
     }
 
-    override fun retrieve(key: Cid): String {
+    override fun retrieve(key: String): String {
         val file = File(key.toString())
         if (file.exists() && file.isFile) {
             return FileInputStream(file).readBytes().toString()
@@ -46,7 +45,7 @@ class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
         TODO("Not yet implemented")
     }
 
-    override fun retrieve_file(key: Cid): File? {
+    override fun retrieve_file(key: String): File? {
         val f = File(key.toString())
         return when {
             f.exists() -> f
