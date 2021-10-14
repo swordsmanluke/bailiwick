@@ -43,7 +43,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatab
     var name: String
         get() = bwNetwork.identity.name
         set(value) {
-            bwNetwork.identity = Identity(value, bwNetwork.identity.cid, bwNetwork.identity.profilePicFile)
+            bwNetwork.identity = Identity(value, bwNetwork.myId(), bwNetwork.identity.profilePicFile)
         }
 
     init {

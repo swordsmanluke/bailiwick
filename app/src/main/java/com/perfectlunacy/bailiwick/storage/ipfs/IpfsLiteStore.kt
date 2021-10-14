@@ -1,21 +1,21 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
+import android.content.Context
+import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import java.io.File
 import threads.lite.IPFS
-import threads.lite.core.Closeable
 import threads.lite.core.TimeoutCloseable
 
 
-class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwork, Closeable {
+class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String, private val context: Context): BailiwickNetwork {
     companion object {
         val TAG = "IpfsLiteStore"
     }
 
     private var sequence = 0L
-
     private val version = "0.1"
     private val baseIPNS = "/ipns/$peer_id/bw/$version"
 
@@ -30,7 +30,7 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
 
     override fun publish_posts(data: String): String {
         val cid = ipfs.storeData(data.toByteArray())
-        ipfs.publishName(cid, 1, this)
+        ipfs.publishName(cid, 1, TimeoutCloseable(30))
         return cid.key
     }
 
@@ -69,6 +69,12 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
         }
         set(value) {
             //TODO: Write Identity to a file <PEERID>/bw/v0.1/identity <-- IPLD?
+            Log.i(TAG, "Trying to create identity with ${value}")
+            // 1) Create our BW directory structure.
+
+            // 2) Save identity file
+
+            // 3) publish the root to IPNS
         }
 
     private fun ipnsRecord(
@@ -80,10 +86,6 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String): BailiwickNetwo
         hashMap["pid"] = host // TODO remove in the future
         hashMap["seq"] = "" + sequence
         return hashMap
-    }
-
-    override fun isClosed(): Boolean {
-        return false
     }
 
     private data class User(val pid: String)

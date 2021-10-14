@@ -23,7 +23,7 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private fun initBailiwick() {
-        val bwNetwork = IpfsLiteStore(IPFS.getInstance(applicationContext), IPFS.getInstance(applicationContext).peerID.toString())
+        val bwNetwork = IpfsLiteStore(IPFS.getInstance(applicationContext), IPFS.getInstance(applicationContext).peerID.toString(), applicationContext)
         val db = BailiwickDatabase.getInstance(applicationContext)
         bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork, db) }).value
     }
