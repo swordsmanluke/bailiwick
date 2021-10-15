@@ -51,16 +51,16 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String, private val con
 
     // TODO: This should be managed externally.
     override var identity: Identity
-        get(){
-            val cid = ipfs.resolve("$baseIPNS/identity",TimeoutCloseable(10))?.key
-            return if (cid.isNullOrBlank()){
+        get() {
+            val cid = ipfs.resolve("$baseIPNS/identity", TimeoutCloseable(10))?.key
+            return if (cid.isNullOrBlank()) {
                 // FIXME: if we have no identity, we should return something else
-                Identity("", "", null)
+                Identity("", "")
             } else {
                 val identityJson = retrieve(String(cid.toByteArray()))
                 return if (identityJson.isBlank()) {
                     // FIXME: if we have no identity, we should return something else
-                    Identity("", "", null)
+                    Identity("", "")
                 } else {
                     Gson().fromJson(identityJson, Identity::class.java)
 
@@ -77,16 +77,4 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String, private val con
             // 3) publish the root to IPNS
         }
 
-    private fun ipnsRecord(
-        cid: String,
-        host: String?
-    ): HashMap<String?, String?> {
-        val hashMap: HashMap<String?, String?> = HashMap()
-        hashMap["ipns"] = cid
-        hashMap["pid"] = host // TODO remove in the future
-        hashMap["seq"] = "" + sequence
-        return hashMap
-    }
-
-    private data class User(val pid: String)
 }

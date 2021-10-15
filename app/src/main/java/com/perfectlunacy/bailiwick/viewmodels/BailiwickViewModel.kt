@@ -43,7 +43,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatab
     var name: String
         get() = bwNetwork.identity.name
         set(value) {
-            bwNetwork.identity = Identity(value, bwNetwork.myId(), bwNetwork.identity.profilePicFile)
+            bwNetwork.identity = Identity(value, bwNetwork.myId())
         }
 
     init {
@@ -60,7 +60,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatab
         val convert = PostConverter(users, files)
         // FIXME: Add pagination to avoid loading _everything_ into memory
         users.all().forEach { u ->
-            val id = Identity(u.name, u.uid, bwNetwork.retrieve_file(u.profilePicCid))
+            val id = Identity(u.name, u.uid)
             content.put(id, posts.postsForUser(u.id).map { p ->
                 convert.toPostModel(p)
             })

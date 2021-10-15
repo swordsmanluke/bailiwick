@@ -26,7 +26,7 @@ class IpfsTest {
         return File.createTempFile("temp", ".io.ipfs.cid", context.cacheDir)
     }
 
-//    @Test
+    @Test
     fun peerIdIsACid() {
         val ipfs = TestEnv.getTestInstance(context)
 
@@ -40,7 +40,6 @@ class IpfsTest {
         val ipfs = TestEnv.getTestInstance(context)
         val pid = ipfs.peerID
         val content = "Some text"
-
 
         // Store our stuff.
         val cid = ipfs.storeText(content)
