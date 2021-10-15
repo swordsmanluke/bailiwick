@@ -1,7 +1,7 @@
 package com.perfectlunacy.bailiwick.controllers
 
-import com.perfectlunacy.bailiwick.models.Identity
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
+import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import java.io.File
 
 class InMemoryStore(private val myPeerId: String): BailiwickNetwork {

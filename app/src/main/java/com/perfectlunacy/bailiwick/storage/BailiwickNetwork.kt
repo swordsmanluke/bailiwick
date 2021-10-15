@@ -1,7 +1,6 @@
 package com.perfectlunacy.bailiwick.storage
 
-import android.net.Uri
-import com.perfectlunacy.bailiwick.models.Identity
+import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import java.io.File
 
 interface BailiwickNetwork {

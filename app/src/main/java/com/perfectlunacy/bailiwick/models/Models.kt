@@ -1,6 +1,10 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
-import java.sql.Time
+import threads.lite.cid.PeerId
+
+data class User(val name: String, val peerId: String, val profilePicCid: String)
+
+data class Identity(val name: String, val profilePicCid: String)
 
 data class Subscriptions(val peers: List<String>, val circles: Map<String, List<String>>)
 
@@ -18,7 +22,7 @@ data class Action(val type: ActionType, val data: Map<String, String>)
 
 data class Post(val version: String,
                 val timestamp: Long,
-                val parentCid: String,
+                val parentCid: String?,
                 val text: String,
                 val files: List<FileDef>,
                 val signature: String)

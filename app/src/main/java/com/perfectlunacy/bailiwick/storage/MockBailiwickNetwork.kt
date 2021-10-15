@@ -1,7 +1,7 @@
 package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
-import com.perfectlunacy.bailiwick.models.Identity
+import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream

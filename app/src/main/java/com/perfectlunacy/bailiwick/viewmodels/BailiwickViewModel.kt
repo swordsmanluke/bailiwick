@@ -2,16 +2,13 @@ package com.perfectlunacy.bailiwick.viewmodels
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.perfectlunacy.bailiwick.models.Identity
-import com.perfectlunacy.bailiwick.models.Post
-import com.perfectlunacy.bailiwick.models.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.models.db.PostConverter
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
+import com.perfectlunacy.bailiwick.storage.ipfs.Identity
+import com.perfectlunacy.bailiwick.storage.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import threads.lite.cid.Cid
 
-class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatabase): ViewModel() {
+class BailiwickViewModel(val bwNetwork: BailiwickNetwork): ViewModel() {
     // Currently visible content from the network
     // TODO: LiveData?
     val content = HashMap<Identity, List<Post>>()
@@ -50,21 +47,8 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val db: BailiwickDatab
         GlobalScope.launch { refreshContent() }
     }
 
-    /***
-     * Pulls currently known content from DB and stores it in the `content` map.
-     */
     fun refreshContent() {
-        val users = db.getUserDao()
-        val posts = db.getPostDao()
-        val files = db.getPostFileDao()
-        val convert = PostConverter(users, files)
-        // FIXME: Add pagination to avoid loading _everything_ into memory
-        users.all().forEach { u ->
-            val id = Identity(u.name, u.uid)
-            content.put(id, posts.postsForUser(u.id).map { p ->
-                convert.toPostModel(p)
-            })
-        }
+        // TODO: Pull data from IPFS - should be quick since its local
     }
 
     companion object {

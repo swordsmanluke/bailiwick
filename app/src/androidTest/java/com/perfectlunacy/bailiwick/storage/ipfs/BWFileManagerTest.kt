@@ -3,11 +3,9 @@ package com.perfectlunacy.bailiwick.storage.ipfs
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.perfectlunacy.bailiwick.models.Identity
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import threads.lite.IpfsTest
 import threads.lite.TestEnv
 
 
