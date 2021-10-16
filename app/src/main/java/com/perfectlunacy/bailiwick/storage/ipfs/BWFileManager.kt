@@ -21,23 +21,26 @@ class BWFileManager(private val ipfs: IPFS, private val context: Context) {
     val sequence: Int
         get() = _sequence
 
-    fun initBase(myPeerId: PeerId) {
-        if(cidForPath(myPeerId, "/bw", sequence) != null) {
-            Log.i(TAG, "/bw already exists - skipping initialization")
-            return
-        }
-
+    fun initDirectoryStructure(myPeerId: PeerId): String {
         Log.w(TAG, "Initializing Bailiwick structure. This will delete any existing data!!!")
-        val versionCid = ipfs.createEmptyDir()!!
-        val bwDir = ipfs.createEmptyDir()!!
-        val bwCid = ipfs.addLinkToDir(bwDir, VERSION, versionCid)!!
-        val root = ipfs.createEmptyDir()!!
-        val rootCid = ipfs.addLinkToDir(root, "bw", bwCid)!!
+        // Try to resolve the /bw/VERSION directory, but be cautious to respect existing records
+        val version = cidForPath(myPeerId, "/bw/$VERSION", sequence)
+        val bw = cidForPath(myPeerId, "/bw", sequence)
+        val root = cidForPath(myPeerId, "", sequence)
+        if(version != null) { return root!!.String() }
+
+        // Version is null, create it and any other directories we need
+        val verCid = ipfs.createEmptyDir()!!
+        val bwCid = ipfs.addLinkToDir( bw ?: ipfs.createEmptyDir()!!, VERSION, verCid)!!
+        val rootCid = ipfs.addLinkToDir( root ?: ipfs.createEmptyDir()!!, "bw", bwCid)!!
+
         Log.i(TAG, "Created Bailiwick structure. Publishing...")
 
         // Finally, publish the baseDir to IPNS
         publishRoot(myPeerId, rootCid)
         Log.i(TAG, "Published empty dirs with root: ${rootCid.String()}")
+
+        return rootCid.String()
     }
 
     fun manifestFor(peerId: PeerId, minSequence: Int): Manifest? {
@@ -67,8 +70,8 @@ class BWFileManager(private val ipfs: IPFS, private val context: Context) {
     private fun currentSequence(peerId: PeerId): Int {
         // Query a few times to get the latest IPNS record, then take our most recent sequence number
         return (0..3).map {
-            val ipnsRecord = ipfs.resolveName(peerId.toBase32(), 0, TimeoutCloseable(SHORT_TIMEOUT))!!
-            ipnsRecord.sequence.toInt()
+            val ipnsRecord = ipfs.resolveName(peerId.toBase32(), 0, TimeoutCloseable(SHORT_TIMEOUT))
+            ipnsRecord?.sequence?.toInt() ?: 0
         }.maxOrNull()!!
     }
 
@@ -117,11 +120,13 @@ class BWFileManager(private val ipfs: IPFS, private val context: Context) {
     }
 
     private fun cidForPath(pid: PeerId, path: String, minSequence: Int): Cid? {
-        var ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(SHORT_TIMEOUT))!!
-        Log.i(TAG, "hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
+        var ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(SHORT_TIMEOUT))
+        if (ipnsRecord == null){ return null }
+
+        Log.i(TAG, "hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence ?:0}")
 
         // TODO: This only works if I already know the expected sequence number.
-        while (ipnsRecord.sequence < minSequence) {
+        while (ipnsRecord!!.sequence < minSequence) {
             ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(SHORT_TIMEOUT))!!
             Log.i(TAG, "Checking again... hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
         }

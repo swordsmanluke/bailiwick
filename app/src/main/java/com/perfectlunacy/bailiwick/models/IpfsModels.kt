@@ -1,10 +1,15 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
+import androidx.room.Entity
 import threads.lite.cid.PeerId
 
-data class User(val name: String, val peerId: String, val profilePicCid: String)
+data class BailiwickAccount(val peerId: String,
+                            val keyFileCid: String)
 
+data class User(val name: String, val peerId: String, val profilePicCid: String)
 data class Identity(val name: String, val profilePicCid: String)
+
+data class KeyList(val keys: Map<String, List<String>>)
 
 data class Subscriptions(val peers: List<String>, val circles: Map<String, List<String>>)
 

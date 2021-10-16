@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
+import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import java.io.File
 import java.io.FileInputStream
@@ -8,6 +9,10 @@ import java.io.FileOutputStream
 
 class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
     override fun myId() = "<peerid>"
+    override fun newAccount(username: String, passwordHash: String): Account {
+        return Account(username, passwordHash, myId(), context.filesDir.toString(), 0, false)
+    }
+
     val basePath: String
         get() {
             val path = context.filesDir.toString() + "/bw/0.1/"

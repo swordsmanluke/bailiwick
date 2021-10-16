@@ -10,30 +10,67 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
-
+        android:orientation="horizontal">
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingTop="15dp"
+                android:paddingBottom="10dp"
                 android:text="@string/new_user_name"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="15dp"
+                android:paddingBottom="10dp"
+                android:text="@string/password"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="15dp"
+                android:paddingBottom="10dp"
+                android:text="@string/confirm"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
             <EditText
                 android:id="@+id/new_user_name"
-                android:layout_width="100dp"
+                android:layout_width="200dp"
                 android:layout_height="wrap_content"
                 android:hint="@string/new_user_name_hint"
                 android:inputType="text"
                 android:text="@{name}"
                 android:autofillHints="@string/new_user_name_hint" />
+            <EditText
+                android:id="@+id/new_password"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:autofillHints="Password"
+                android:hint="@string/password"
+                android:inputType="textPassword"
+                android:text="@{name}" />
+            <EditText
+                android:id="@+id/confirm_password"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/confirm_password"
+                android:inputType="textPassword"
+                android:text="@{name}"
+                android:autofillHints="Password" />
+            <Button
+                android:id="@+id/new_user_btn_go"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:enabled="false"
+                android:text="@string/new_user_btn_go"/>
         </LinearLayout>
-
-       <Button
-           android:id="@+id/new_user_btn_go"
-           android:layout_width="wrap_content"
-           android:layout_height="wrap_content"
-           android:text="@string/new_user_btn_go"/>
-
     </LinearLayout>
 </layout>

@@ -2,10 +2,9 @@ package com.perfectlunacy.bailiwick.storage.ipfs
 
 import android.content.Context
 import android.util.Log
-import com.google.gson.Gson
+import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import threads.lite.IPFS
-import threads.lite.cid.PeerId
 import threads.lite.core.TimeoutCloseable
 import java.io.File
 
@@ -20,6 +19,16 @@ class IpfsLiteStore(val ipfs: IPFS, private val context: Context): BailiwickNetw
 
     override fun myId(): String {
         return ipfs.peerID.toBase32()
+    }
+
+    override fun newAccount(username: String, passwordHash: String): Account {
+        val rootCid = files.initDirectoryStructure(ipfs.peerID)
+        return Account(
+            username, passwordHash,
+            ipfs.peerID.toBase32(),
+            rootCid,
+            files.sequence,
+            false)
     }
 
     override fun store(data: String): String {

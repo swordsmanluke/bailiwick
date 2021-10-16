@@ -21,7 +21,7 @@ class BWFileManagerTest {
     fun identityLoop() {
         val ipfs = TestEnv.getTestInstance(context)
         val bwfm = BWFileManager(ipfs, context)
-        bwfm.initBase(ipfs.peerID)
+        bwfm.initDirectoryStructure(ipfs.peerID)
 
         val ident = Identity("My Name", "")
         bwfm.storeIdentity(ipfs.peerID, ident)

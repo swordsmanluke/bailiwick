@@ -30,7 +30,7 @@ class SplashFragment : BailiwickFragment() {
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 val nav = requireView().findNavController()
-                if (bwModel.name.isBlank()) {
+                if (bwModel.activeAccount == null) {
                     Handler(context!!.mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }
                 } else {
                     Handler(context!!.mainLooper).post { nav.navigate(R.id.action_splashFragment_to_contentFragment) }

@@ -2,13 +2,20 @@ package com.perfectlunacy.bailiwick.viewmodels
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.perfectlunacy.bailiwick.models.db.Account
+import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
+import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import com.perfectlunacy.bailiwick.storage.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
+import java.util.*
+import javax.crypto.Cipher
+import kotlin.collections.HashMap
 
-class BailiwickViewModel(val bwNetwork: BailiwickNetwork): ViewModel() {
+class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val bwDb: BailiwickDatabase): ViewModel() {
     // Currently visible content from the network
     // TODO: LiveData?
     val content = HashMap<Identity, List<Post>>()
@@ -42,6 +49,31 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork): ViewModel() {
         set(value) {
             bwNetwork.identity = Identity(value, bwNetwork.myId())
         }
+
+    val activeAccount: Account?
+        get() = bwDb.accountDao().activeAccount()
+
+    fun login(username: String, password: String) {
+        val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
+        val passwordHash = Base64.getEncoder().encode(hash).toString()
+
+        val account = bwDb.accountDao().getByLogin(username, passwordHash)
+        if (account != null) {
+            // Log out any previously logged in account
+            bwDb.accountDao().logout()
+            // Activate the current account
+            bwDb.accountDao().activate(account.peerId)
+
+            // TODO: grab keys from account and set peerID/public/private keys
+        }
+    }
+
+    fun createAccount(username: String, password: String) {
+        val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
+        val passwordHash = Base64.getEncoder().encode(hash).toString()
+        val account= bwNetwork.newAccount(username, passwordHash)
+        bwDb.accountDao().insert(account)
+    }
 
     init {
         GlobalScope.launch { refreshContent() }

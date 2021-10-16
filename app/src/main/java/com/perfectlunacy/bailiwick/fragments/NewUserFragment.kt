@@ -1,17 +1,21 @@
 package com.perfectlunacy.bailiwick.fragments
 
 import android.os.Bundle
+import android.os.Handler
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.widget.doOnTextChanged
 import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.activityViewModels
-import com.perfectlunacy.bailiwick.BailiwickActivity
+import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
-import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
-import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 /**
  * A simple [Fragment] subclass.
@@ -19,6 +23,7 @@ import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
  * create an instance of this fragment.
  */
 class NewUserFragment : BailiwickFragment() {
+    @DelicateCoroutinesApi
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -26,11 +31,54 @@ class NewUserFragment : BailiwickFragment() {
         // Inflate the layout for this fragment
         val binding = DataBindingUtil.inflate<FragmentNewUserBinding>(inflater, R.layout.fragment_new_user, container, false)
 
-        // Display the user's saved name (probably nothing)
-        binding.name = bwModel.name
+        binding.newUserName.doOnTextChanged { text, start, before, count ->
+            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
+                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
+                    binding.newPassword.text.toString().length > 8
+
+            Log.i(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
+
+            binding.newUserBtnGo.isEnabled = goIsEnabled
+        }
+
+        // Make sure new and confirmed password fields are the same
+        binding.newPassword.doOnTextChanged { text, start, before, count ->
+            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
+                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
+                    binding.newPassword.text.toString().length > 8
+
+            Log.i(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
+            binding.newUserBtnGo.isEnabled = goIsEnabled
+        }
+
+        binding.confirmPassword.doOnTextChanged { text, start, before, count ->
+            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
+                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
+                    binding.newPassword.text.toString().length > 8
+
+            Log.i(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
+            binding.newUserBtnGo.isEnabled = goIsEnabled
+        }
+
+        binding.newUserName.text.insert(0, "swordsmanluke")
+        binding.newPassword.text.insert(0, "100themon")
+        binding.confirmPassword.text.insert(0, "100themon")
 
         binding.newUserBtnGo.setOnClickListener {
-            bwModel.name = binding.newUserName.text.toString()
+            binding.newUserBtnGo.isEnabled = false
+            binding.newPassword.isEnabled = false
+            binding.confirmPassword.isEnabled = false
+            binding.newUserName.isEnabled = false
+
+            Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+
+            // TODO: Show Spinner until this completes
+            GlobalScope.launch {
+                bwModel.createAccount(binding.newUserName.text.toString(), binding.newPassword.text.toString())
+                // TODO: After create account returns an AccountSuccess event (or something) transition
+                val nav = requireView().findNavController()
+                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
+            }
         }
 
         return binding.root
@@ -47,5 +95,7 @@ class NewUserFragment : BailiwickFragment() {
          */
         @JvmStatic
         fun newInstance() = NewUserFragment()
+
+        const val TAG = "NewUserFragment"
     }
 }
