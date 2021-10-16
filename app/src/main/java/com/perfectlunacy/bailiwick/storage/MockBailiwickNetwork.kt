@@ -54,10 +54,10 @@ class MockBailiwickNetwork(val context: Context) : BailiwickNetwork {
     }
 
     private var _identity = Identity("swordsmanluke", myId())
-    override var identity: Identity
+    override var identity: Identity?
         get() = _identity
         set(value) {
-            _identity = value
+            _identity = value!!
         }
 
 }

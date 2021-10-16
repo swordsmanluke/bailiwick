@@ -11,5 +11,5 @@ interface BailiwickNetwork {
     fun retrieve_posts(key: String): String
     fun retrieve_file(key: String): File?
 
-    var identity: Identity
+    var identity: Identity?
 }

@@ -38,7 +38,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork): ViewModel() {
 
     // The User
     var name: String
-        get() = bwNetwork.identity.name
+        get() = bwNetwork.identity!!.name
         set(value) {
             bwNetwork.identity = Identity(value, bwNetwork.myId())
         }

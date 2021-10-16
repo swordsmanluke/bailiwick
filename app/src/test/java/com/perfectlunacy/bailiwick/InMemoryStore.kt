@@ -36,7 +36,7 @@ class InMemoryStore(private val myPeerId: String): BailiwickNetwork {
         return null; // implement if needed
     }
 
-    override var identity: Identity
+    override var identity: Identity?
         get() = Identity("myPeerId", myPeerId);
         set(value) {}
 

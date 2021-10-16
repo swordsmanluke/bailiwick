@@ -5,21 +5,21 @@ import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import threads.lite.IPFS
+import threads.lite.cid.PeerId
 import threads.lite.core.TimeoutCloseable
 import java.io.File
 
 
-class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String, private val context: Context): BailiwickNetwork {
+class IpfsLiteStore(val ipfs: IPFS, private val context: Context): BailiwickNetwork {
     companion object {
         val TAG = "IpfsLiteStore"
     }
 
-    private var sequence = 0L
-    private val version = "0.1"
-    private val baseIPNS = "/ipns/$peer_id/bw/$version"
+    // TODO: Inject BWFileManager
+    val files = BWFileManager(ipfs, context)
 
     override fun myId(): String {
-        return peer_id
+        return ipfs.peerID.toBase32()
     }
 
     override fun store(data: String): String {
@@ -49,31 +49,14 @@ class IpfsLiteStore(val ipfs: IPFS, private val peer_id: String, private val con
     }
 
     // TODO: This should be managed externally.
-    override var identity: Identity
+    override var identity: Identity?
         get() {
-            val cid = ipfs.resolve("$baseIPNS/identity", TimeoutCloseable(10))?.key
-            return if (cid.isNullOrBlank()) {
-                // FIXME: if we have no identity, we should return something else
-                Identity("", "")
-            } else {
-                val identityJson = retrieve(String(cid.toByteArray()))
-                return if (identityJson.isBlank()) {
-                    // FIXME: if we have no identity, we should return something else
-                    Identity("", "")
-                } else {
-                    Gson().fromJson(identityJson, Identity::class.java)
-
-                }
-            }
+            return files.identityFor(ipfs.peerID, files.sequence)
         }
         set(value) {
             //TODO: Write Identity to a file <PEERID>/bw/v0.1/identity <-- IPLD?
             Log.i(TAG, "Trying to create identity with ${value}")
-            // 1) Create our BW directory structure.
-
-            // 2) Save identity file
-
-            // 3) publish the root to IPNS
+            files.storeIdentity(ipfs.peerID, value!!)
         }
 
 }

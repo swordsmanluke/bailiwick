@@ -39,7 +39,7 @@ class InMemoryStore(private val myPeerId: String): BailiwickNetwork {
         }
     }
 
-    override var identity: Identity
+    override var identity: Identity?
         get() = TODO("Not yet implemented")
         set(value) {}
 
