@@ -22,7 +22,11 @@ class IpfsLiteStore(val ipfs: IPFS, private val context: Context): BailiwickNetw
     }
 
     override fun newAccount(username: String, passwordHash: String): Account {
-        val rootCid = files.initDirectoryStructure(ipfs.peerID)
+        val rootCid = files.initializeBailiwick(ipfs.peerID)
+        Log.i(BWFileManager.TAG, "Created Bailiwick structure. Publishing...")
+        // Finally, publish the baseDir to IPNS
+        files.publishRoot(rootCid)
+
         return Account(
             username, passwordHash,
             ipfs.peerID.toBase32(),

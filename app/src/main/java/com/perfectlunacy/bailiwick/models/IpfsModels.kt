@@ -1,10 +1,8 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
-import androidx.room.Entity
-import threads.lite.cid.PeerId
-
 data class BailiwickAccount(val peerId: String,
-                            val keyFileCid: String)
+                            val keyFileCid: String,
+                            val subscriptionsCid: String)
 
 data class User(val name: String, val peerId: String, val profilePicCid: String)
 data class Identity(val name: String, val profilePicCid: String)
@@ -38,4 +36,4 @@ data class Feed(val updatedAt: Long,
                 val actions: List<Action>,
                 val identity: String)
 
-data class Manifest(val feeds: List<Feed>, val interactions: List<Interaction>, val identity: String)
+data class Manifest(val feeds: List<Feed>, val interactions: List<Interaction>)
