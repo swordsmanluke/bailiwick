@@ -36,16 +36,7 @@ class SplashFragment : BailiwickFragment() {
     @DelicateCoroutinesApi
     private fun showSplashScreen() {
         GlobalScope.launch {
-            val ipfs = IPFS.getInstance(requireContext())
-            val connectivityManager =
-                requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = connectivityManager.activeNetwork
-            val linkProperties = connectivityManager.getLinkProperties(network)
-            if (linkProperties != null) {
-                val interfaceName = linkProperties.interfaceName
-                ipfs.updateNetwork(interfaceName!!)
-            }
-            ipfs.bootstrap()
+            bwModel.bootstrap(requireContext())
             Log.i(TAG, "Connected to IPFS network")
             // Now that we're connected to IPFS, check for an account and go!
             val nav = requireView().findNavController()

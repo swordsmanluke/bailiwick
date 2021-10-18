@@ -101,12 +101,6 @@ dependencies {
     // JSON Parsing
     implementation 'com.google.code.gson:gson:2.8.8'
 
-    // Protobufs
-    implementation 'com.google.protobuf:protobuf-java:3.15.6'
-
-    // DNS
-    implementation 'org.minidns:minidns-client:1.0.0'
-
     // AndroidX Nav
     implementation 'androidx.navigation:navigation-fragment-ktx:2.3.5'
     implementation 'androidx.navigation:navigation-ui-ktx:2.3.5'

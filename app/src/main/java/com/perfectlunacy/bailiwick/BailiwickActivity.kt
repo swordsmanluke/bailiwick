@@ -2,14 +2,13 @@ package com.perfectlunacy.bailiwick
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-import android.content.Context
-import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.storage.ipfs.IpfsLiteStore
+import com.perfectlunacy.bailiwick.storage.BailiwickImpl
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import threads.lite.IPFS
@@ -25,11 +24,10 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private fun initBailiwick() {
-        val ipfs = IPFS.getInstance(applicationContext)
-
-        val bwNetwork = IpfsLiteStore(ipfs, applicationContext)
+        val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext))
         val bwDb = getBailiwickDb(applicationContext)
-        bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork, bwDb) }).value
+        val bwNetwork = BailiwickImpl(ipfs, applicationContext, bwDb)
+        bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork) }).value
     }
 
     private fun showDisplay() {

@@ -7,11 +7,9 @@ import android.view.ViewGroup
 import android.widget.ListView
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
-import com.perfectlunacy.bailiwick.MockDataWriter
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
-import com.perfectlunacy.bailiwick.storage.MockBailiwickNetwork
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -21,11 +19,6 @@ import kotlin.collections.ArrayList
  * The main [Fragment] of Bailiwick. This class manages the doomscrollable view of downloaded Content
  */
 class ContentFragment : BailiwickFragment() {
-
-    val mocker:MockDataWriter
-        get() {
-            return MockDataWriter(bwModel.bwNetwork as MockBailiwickNetwork)
-        }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -39,7 +32,6 @@ class ContentFragment : BailiwickFragment() {
         )
 
         binding.btnMockData.setOnClickListener {
-            mocker.generateFakePost(requireContext())
             refreshContent(adapter.get())
         }
 

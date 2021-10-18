@@ -1,21 +1,17 @@
 package com.perfectlunacy.bailiwick.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.perfectlunacy.bailiwick.models.db.Account
-import com.perfectlunacy.bailiwick.signatures.Sha1Signature
-import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
-import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
+import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ipfs.Identity
 import com.perfectlunacy.bailiwick.storage.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.security.MessageDigest
-import java.util.*
-import javax.crypto.Cipher
 import kotlin.collections.HashMap
 
-class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val bwDb: BailiwickDatabase): ViewModel() {
+class BailiwickViewModel(val bwNetwork: Bailiwick): ViewModel() {
     // Currently visible content from the network
     // TODO: LiveData?
     val content = HashMap<Identity, List<Post>>()
@@ -45,35 +41,20 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val bwDb: BailiwickDat
 
     // The User
     var name: String
-        get() = bwNetwork.identity!!.name
+        get() = bwNetwork.identity.name
         set(value) {
-            bwNetwork.identity = Identity(value, bwNetwork.myId())
+            bwNetwork.identity = Identity(value, bwNetwork.peerId)
         }
 
     val activeAccount: Account?
-        get() = bwDb.accountDao().activeAccount()
+        get() = bwNetwork.account
 
-    fun login(username: String, password: String) {
-        val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
-        val passwordHash = Base64.getEncoder().encode(hash).toString()
-
-        val account = bwDb.accountDao().getByLogin(username, passwordHash)
-        if (account != null) {
-            // Log out any previously logged in account
-            bwDb.accountDao().logout()
-            // Activate the current account
-            bwDb.accountDao().activate(account.peerId)
-
-            // TODO: grab keys from account and set peerID/public/private keys
-        }
+    fun bootstrap(context: Context) {
+        bwNetwork.ipfs.bootstrap(context)
     }
 
     fun createAccount(username: String, password: String) {
-        val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
-        val passwordHash = Base64.getEncoder().encode(hash).toString()
-        val account= bwNetwork.newAccount(username, passwordHash)
-        bwDb.accountDao().insert(account)
-        bwDb.accountDao().activate(account.peerId)
+        bwNetwork.newAccount(username, password)
     }
 
     init {

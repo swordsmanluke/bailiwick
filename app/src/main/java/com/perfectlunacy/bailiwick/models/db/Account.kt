@@ -5,11 +5,11 @@ import java.security.PublicKey
 
 @Entity
 data class Account(@PrimaryKey val username: String,
-                   val passwordHash: String,
+                   var passwordHash: String,
                    val peerId: String,
-                   val rootCid: String,
-                   val sequence: Int,
-                   val loggedIn: Boolean)
+                   var rootCid: String,
+                   var sequence: Int,
+                   var loggedIn: Boolean)
 
 @Dao
 interface AccountDao {
@@ -27,4 +27,7 @@ interface AccountDao {
 
     @Query("UPDATE account SET loggedIn = 1 where account.peerId = :peerId")
     fun activate(peerId: String)
+
+    @Update
+    fun update(account: Account)
 }
