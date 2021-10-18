@@ -81,6 +81,18 @@ class NewUserFragment : BailiwickFragment() {
             }
         }
 
+        // FIXME: Delete this permanently once account creation is deemed ready
+        binding.btnSwdslk.setOnClickListener {
+             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+
+            GlobalScope.launch {
+                bwModel.createAccount("swordsmanluke", "fake1@3pass")
+                // TODO: After create account returns an AccountSuccess event (or something) transition
+                val nav = requireView().findNavController()
+                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
+            }
+        }
+
         return binding.root
     }
 

@@ -71,6 +71,12 @@
                 android:layout_gravity="end"
                 android:enabled="false"
                 android:text="@string/new_user_btn_go"/>
+            <Button
+                android:id="@+id/btn_swdslk"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="swordsmanluke"/>
         </LinearLayout>
     </LinearLayout>
 </layout>

@@ -73,6 +73,7 @@ class BailiwickViewModel(val bwNetwork: BailiwickNetwork, val bwDb: BailiwickDat
         val passwordHash = Base64.getEncoder().encode(hash).toString()
         val account= bwNetwork.newAccount(username, passwordHash)
         bwDb.accountDao().insert(account)
+        bwDb.accountDao().activate(account.peerId)
     }
 
     init {
