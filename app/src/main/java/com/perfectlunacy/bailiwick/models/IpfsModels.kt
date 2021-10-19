@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
+import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 
 data class BailiwickAccount(val peerId: String,
@@ -32,9 +33,9 @@ data class Post(val timestamp: Long,
                 val signature: String)
 
 data class Feed(val updatedAt: Long,
-                val posts: List<Post>,
-                val interactions: List<Interaction>,
-                val actions: List<Action>,
-                val identity: String)
+                val posts: List<ContentId>,
+                val interactions: List<ContentId>,
+                val actions: List<ContentId>,
+                val identity: ContentId)
 
-data class Manifest(val feeds: List<Feed>, val interactions: List<Interaction>)
+data class Manifest(val feeds: List<ContentId>)

@@ -1,26 +1,25 @@
 package com.perfectlunacy.bailiwick.storage
 
-import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.Encryptor
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RSAEncryptor
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.*
-import java.security.KeyFactory
+import org.bouncycastle.jcajce.provider.asymmetric.RSA
 import java.security.KeyPair
 import java.security.SecureRandom
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
 class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, private val db: BailiwickDatabase):
     Bailiwick {
     companion object {
-        val TAG = "IpfsLiteStore"
+        val TAG = javaClass.simpleName
         const val VERSION = "0.2"
         const val SHORT_TIMEOUT = 10L
         const val LONG_TIMEOUT = 30L
@@ -47,15 +46,57 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
         set(value) {
 
         }
+
+    private var _manifest: Manifest? = null
     override var manifest: Manifest
-        get() = TODO("Not yet implemented")
-        set(value) {}
+        get() {
+            if (_manifest == null) {
+                val encKey = keyFile.keys["$peerId:public"]?.lastOrNull()!!
+                val aes = AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(encKey), "AES"))
+                val manCid = cidForPath(peerId, "bw/$VERSION/manifest.json", sequence)!!
+                _manifest = retrieve(manCid, aes, Manifest::class.java)
+            }
+            return _manifest!!
+        }
+        set(value) {
+            val encKey = keyFile.keys["$peerId:public"]?.lastOrNull()!!
+            val aes = AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(encKey), "AES"))
+            publishRoot(addFileToDir("bw/$VERSION", "manifest.json", store(value, aes)))
+            _manifest = value
+        }
+
+
+    private var _identity: Identity? = null
     override var identity: Identity
-        get() = TODO("Not yet implemented")
-        set(value) {}
-    override var keys: KeyFile
-        get() = TODO("Not yet implemented")
-        set(value) {}
+        get() {
+            if(_identity == null) {
+                val cid = cidForPath(peerId, "bw/$VERSION/identity.json", sequence)!!
+                _identity = retrieve(cid, NoopEncryptor(), Identity::class.java)
+            }
+            return _identity!!
+        }
+        set(value) {
+            publishRoot(addFileToDir("bw/$VERSION", "identity.json", store(value, NoopEncryptor())))
+            _identity = value
+        }
+
+    private var _keyFile: KeyFile? = null
+    override var keyFile: KeyFile
+        get() {
+            if(_keyFile == null) {
+                val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+                _keyFile = retrieve(bailiwickAccount.keyFileCid, rsa, KeyFile::class.java)
+            }
+
+            return _keyFile!!
+        }
+        set(value) {
+            val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+            val keyFileCid = store(value, rsa)
+
+            // Update our account file
+            bailiwickAccount = BailiwickAccount(peerId, keyFileCid, bailiwickAccount.subscriptionsCid)
+        }
 
     private val sequence: Int
         get() = account?.sequence ?: 1
@@ -64,30 +105,19 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
     private var bailiwickAccount: BailiwickAccount
         get() {
             if(_bwAcct == null) {
-                // move down the directory until we find the account file
-                val bwCid =
-                    ipfs.getLinks(account!!.rootCid, false, 10)
-                        ?.find { it.name == "bw" }?.cid!!
-                val versionCid = ipfs.getLinks(bwCid.String(), false, 10)
-                    ?.find { it.name == VERSION }?.cid!!
-                val acctCid = ipfs.getLinks(versionCid.String(), false, 10)
-                    ?.find { it.name == "account.json" }?.cid!!
-                val acctEncrypted = ipfs.getData(acctCid.String(), 10)
+                val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+                val acctCid = ipfs.resolveNode(account!!.rootCid, mutableListOf("bw", VERSION, "account.json"), 10)
 
-                val kp = keyPair
-                val acctJson = String(RSAEncryptor(kp.private, kp.public).decrypt(acctEncrypted))
-
-                _bwAcct = Gson().fromJson(acctJson, BailiwickAccount::class.java)
+                _bwAcct = retrieve(acctCid!!, rsa, BailiwickAccount::class.java)
             }
             return _bwAcct!!
         }
         set(value) {
-            val kp = keyPair
-            val acctJson = Gson().toJson(value)
-            val acctEncrypted = RSAEncryptor(kp.private, kp.public).encrypt(acctJson.toByteArray())
-            val acctCid = ipfs.storeData(acctEncrypted)
+            val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+            val cid = store(value, rsa)
 
-            val newRoot = addFileToDir("bw/$VERSION", "account.json", acctCid)
+            val newRoot = addFileToDir("bw/$VERSION", "account.json", cid)
+            publishRoot(newRoot)
             val acct = account!!
             acct.rootCid = newRoot
             acct.sequence += 1
@@ -123,8 +153,17 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
         return ipfs.storeData(data)
     }
 
+    override fun <T> store(thing: T, cipher: Encryptor): ContentId {
+        return store(cipher.encrypt(Gson().toJson(thing).toByteArray()))
+    }
+
     override fun download(cid: ContentId): ByteArray? {
         return ipfs.getData(cid, 10)
+    }
+
+    override fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
+        val data = download(cid) ?: return null
+        return Gson().fromJson(String(cipher.decrypt(data)), clazz)
     }
 
     override fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId {
@@ -170,9 +209,7 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
             subsFileCid
         )
 
-        val encAcctFile = rsaEnc.encrypt(Gson().toJson(acctFile).toByteArray())
-
-        val acctFileCid = ipfs.storeData(encAcctFile)
+        val acctFileCid = store(acctFile, rsaEnc)
         Log.i(TAG, "Created acct file @ ${acctFileCid}")
         verCid = ipfs.addLinkToDir(verCid, "account.json", acctFileCid)!!
 
@@ -182,11 +219,9 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
         val encKey = b64Dec.decode(publicSubsKey)
         Log.i(TAG, "Found public subscriber encryption key")
 
-        val manifest = Gson().toJson(Manifest(emptyList(), emptyList()))
+        val manifest = Gson().toJson(Manifest(emptyList()))
         val aes = AESEncryptor(SecretKeySpec(encKey, "AES"))
-        val IV = ByteArray(16)
-        SecureRandom().nextBytes(IV)
-        val ciphertext = aes.encrypt(manifest.toByteArray(), IV)
+        val ciphertext = aes.encrypt(manifest.toByteArray())
         val manifestCid = ipfs.storeData(ciphertext)
         Log.i(TAG, "Stored encrypted manifest @ ${manifestCid}")
 
@@ -210,7 +245,6 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
     private fun addFileToDir(path: String, filename: String, content: ContentId): ContentId {
         Log.i(TAG, "Adding $filename to $path")
         val dirs = path.split("/")
-        val peerId = threads.lite.cid.PeerId(peerId.toByteArray())
         var dir = ""
         val root = PathNode("/", null, cidForPath(peerId, "", sequence)!!)
         var parent = root
@@ -242,8 +276,8 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
         return parent.cid
     }
 
-    private fun cidForPath(pid: threads.lite.cid.PeerId, path: String, minSequence: Int): ContentId? {
-        var ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, SHORT_TIMEOUT)
+    private fun cidForPath(pid: PeerId, path: String, minSequence: Int): ContentId? {
+        var ipnsRecord = ipfs.resolveName(pid, 0, SHORT_TIMEOUT)
         if (ipnsRecord == null) {
             return null
         }
@@ -251,9 +285,11 @@ class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, priva
         Log.i(TAG, "hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
 
         // TODO: This only works if I already know the expected sequence number.
-        while (ipnsRecord!!.sequence < minSequence) {
-            ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, SHORT_TIMEOUT)!!
-            Log.i(TAG, "Checking again... hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
+        var tries = 0
+        while (ipnsRecord!!.sequence < minSequence && tries < 100) {
+            ipnsRecord = ipfs.resolveName(pid, 0, SHORT_TIMEOUT)!!
+            Log.i(TAG, "Checking ${path} again... hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
+//            tries += 1
         }
 
         val link = "/ipfs/" + ipnsRecord.hash + path

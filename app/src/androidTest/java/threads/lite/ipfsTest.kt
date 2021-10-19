@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,7 +55,7 @@ class IpfsTest {
         val bwDir = ipfs.createEmptyDir()!!
         Log.i(TAG, "BW dir cid: ${bwDir.String()}")
 
-        val bwCid = ipfs.addLinkToDir(bwDir, "0.1", versionCid)!!
+        val bwCid = ipfs.addLinkToDir(bwDir, BailiwickImpl.VERSION, versionCid)!!
         Log.i(TAG, "Linked bw -> version")
 
         val root = ipfs.createEmptyDir()!!
@@ -70,7 +71,7 @@ class IpfsTest {
 
         // Now, try to get back to ipns/peerid/bw/0.1/identity
         val ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(timeout))!!
-        val link = IPFS.IPFS_PATH + ipnsRecord.hash + "/bw/0.1/identity"
+        val link = IPFS.IPFS_PATH + ipnsRecord.hash + "/bw/${BailiwickImpl.VERSION}/identity"
         Log.i(TAG, "Looking for node at: $link")
 
         val node = ipfs.resolveNode(link, TimeoutCloseable(timeout))!!

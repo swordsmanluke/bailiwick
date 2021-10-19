@@ -74,31 +74,40 @@ class MockIPFS(val filesDir: String) : IPFS {
 
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
         return if(peerId == this.peerID) {
-            IPNSRecord(basePath, sequence)
+            IPNSRecord(basePath, _seq.toLong())
         } else {
-            IPNSRecord("$filesDir/$peerId/bw/0.1/", sequence)
+            IPNSRecord("$filesDir/$peerId/bw/0.2/", _seq.toLong())
         }
     }
 
     override fun resolveNode(link: String, timeoutSeconds: Long): ContentId? {
-        return link
+        if(File(link).exists()) {
+            return link
+        } else if(File(filesDir+"/"+Path(link).fileName).exists()) {
+            return filesDir + "/" + Path(link).fileName
+        } else {
+            Log.i(TAG, "No such file: $link")
+            return null
+        }
     }
 
     override fun resolveNode(root: ContentId, path: MutableList<String>,timeoutSeconds: Long): ContentId? {
-        return resolveNode(path.joinToString("/"), timeoutSeconds)
+        return resolveNode(filesDir + "/" + path.joinToString("/"), timeoutSeconds)
     }
 
     private var _root: ContentId = filesDir
+    private var _seq: Int = 0
     override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {
         _root = root
+        _seq = sequence
     }
 
     val basePath: String
         get() {
-            val path = filesDir + "/bw/0.1/"
+            val path = filesDir + "/bw/${BailiwickImpl.VERSION}/"
             File(path).also {
                 if (!it.exists()) {
-                    Log.i(TAG, "Creating base dirs: ${filesDir+"/bw/0.1/"}")
+                    Log.i(TAG, "Creating base dirs: ${filesDir+"/bw/${BailiwickImpl.VERSION}"}")
                     it.mkdirs()
                 }
             }

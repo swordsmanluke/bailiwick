@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.storage
 
+import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 
@@ -13,12 +14,14 @@ interface Bailiwick {
     var subscriptions: Subscriptions
     var manifest: Manifest
     var identity: Identity
-    var keys: KeyFile
+    var keyFile: KeyFile
 
     fun newAccount(username: String, password: String): Account
 
     fun store(data: ByteArray): ContentId
+    fun <T>store(thing :T, cipher: Encryptor): ContentId
     fun download(cid: ContentId): ByteArray?
+    fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T?
     fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId
     fun publishRoot(newRoot: ContentId)
 
