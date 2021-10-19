@@ -12,16 +12,16 @@ class AESEncryptor(private val key: SecretKey) {
         val ivSpec = IvParameterSpec(IV)
         c.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
 
-        return c.doFinal(data)
+        return ivSpec.iv + c.doFinal(data)
     }
 
     fun decrypt(data: ByteArray): ByteArray {
-        val IV = data.sliceArray(0..16)
+        val IV = data.sliceArray(0..15)
         val c = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         val keySpec = SecretKeySpec(key.encoded, "AES")
         val ivSpec = IvParameterSpec(IV)
         c.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
 
-        return c.doFinal(data.sliceArray(16..data.size))
+        return c.doFinal(data.sliceArray(16 until data.size))
     }
 }

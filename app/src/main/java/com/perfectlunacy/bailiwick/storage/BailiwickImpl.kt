@@ -17,7 +17,7 @@ import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
-class BailiwickImpl(override val ipfs: IPFS, private val context: Context, private val db: BailiwickDatabase):
+class BailiwickImpl(override val ipfs: IPFS, private val keyPair: KeyPair, private val db: BailiwickDatabase):
     Bailiwick {
     companion object {
         val TAG = "IpfsLiteStore"
@@ -120,11 +120,11 @@ class BailiwickImpl(override val ipfs: IPFS, private val context: Context, priva
     }
 
     override fun store(data: ByteArray): ContentId {
-        TODO("Not yet implemented")
+        return ipfs.storeData(data)
     }
 
     override fun download(cid: ContentId): ByteArray? {
-        TODO("Not yet implemented")
+        return ipfs.getData(cid, 10)
     }
 
     override fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId {
@@ -260,36 +260,6 @@ class BailiwickImpl(override val ipfs: IPFS, private val context: Context, priva
         Log.i(TAG, "Resolving $link")
         return ipfs.resolveNode(link, SHORT_TIMEOUT)
     }
-
-    private val keyPair: KeyPair
-        get() {
-            val decoder = Base64.getDecoder()
-
-            val privateKeyData = decoder.decode(privateKeyString)
-            val publicKeyData = decoder.decode(publicKeyString)
-
-            val publicKey =
-                KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
-
-            val privateKey =
-                KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(privateKeyData))
-
-            return KeyPair(publicKey, privateKey)
-        }
-
-    private val privateKeyString: String?
-        get() {
-            // Use the IPFS private key
-            val sharedPref = context.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
-            return sharedPref.getString("privateKey", null)!!
-        }
-
-    private val publicKeyString: String?
-        get() {
-            // Use the IPFS private key
-            val sharedPref = context.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
-            return sharedPref.getString("publicKey", null)!!
-        }
 
     data class PathNode(val name: String, val parent: PathNode?, var cid: ContentId)
 }

@@ -2,6 +2,7 @@ package com.perfectlunacy.bailiwick
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -12,6 +13,11 @@ import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import threads.lite.IPFS
+import java.security.KeyFactory
+import java.security.KeyPair
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
+import java.util.*
 
 class BailiwickActivity : AppCompatActivity() {
     lateinit var bwModel: BailiwickViewModel
@@ -26,7 +32,7 @@ class BailiwickActivity : AppCompatActivity() {
     private fun initBailiwick() {
         val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext))
         val bwDb = getBailiwickDb(applicationContext)
-        val bwNetwork = BailiwickImpl(ipfs, applicationContext, bwDb)
+        val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb)
         bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork) }).value
     }
 
@@ -40,4 +46,34 @@ class BailiwickActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, arrayOf(READ_EXTERNAL_STORAGE), 1)
         ActivityCompat.requestPermissions(this, arrayOf(WRITE_EXTERNAL_STORAGE), 1)
     }
+
+    private val keyPair: KeyPair
+        get() {
+            val decoder = Base64.getDecoder()
+
+            val privateKeyData = decoder.decode(privateKeyString)
+            val publicKeyData = decoder.decode(publicKeyString)
+
+            val publicKey =
+                KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
+
+            val privateKey =
+                KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(privateKeyData))
+
+            return KeyPair(publicKey, privateKey)
+        }
+
+    private val privateKeyString: String?
+        get() {
+            // Use the IPFS private key
+            val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
+            return sharedPref.getString("privateKey", null)!!
+        }
+
+    private val publicKeyString: String?
+        get() {
+            // Use the IPFS private key
+            val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
+            return sharedPref.getString("publicKey", null)!!
+        }
 }

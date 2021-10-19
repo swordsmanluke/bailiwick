@@ -25,8 +25,7 @@ data class FileDef(val mimeType: String, val cid: String)
 enum class ActionType { Delete, UpdateKey, Introduce }
 data class Action(val type: ActionType, val data: Map<String, String>)
 
-data class Post(val version: String,
-                val timestamp: Long,
+data class Post(val timestamp: Long,
                 val parentCid: String?,
                 val text: String,
                 val files: List<FileDef>,

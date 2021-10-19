@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
+import android.util.Log
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 import threads.lite.utils.Link
@@ -14,6 +15,10 @@ import java.util.*
 import kotlin.io.path.Path
 
 class MockIPFS(val filesDir: String) : IPFS {
+    companion object {
+        const val TAG = "MockIPFS"
+    }
+
     override val peerID: PeerId
         get() = "myPeerId"
 
@@ -34,6 +39,8 @@ class MockIPFS(val filesDir: String) : IPFS {
     override fun storeData(data: ByteArray): ContentId {
         val name = String(data).hashCode().toString() + ".hash"
         val file = File(basePath, name)
+        Log.i(TAG, "Storing data at ${file.path}")
+
         val stream = FileOutputStream(file)
         try { stream.write(data) }
         finally { stream.close() }
@@ -42,19 +49,20 @@ class MockIPFS(val filesDir: String) : IPFS {
     }
 
     override fun createEmptyDir(): ContentId? {
-        return "/tmp" // This won't really matter
+        return filesDir // This won't really matter
     }
 
     override fun addLinkToDir(dirCid: ContentId, name: String, cid: ContentId): ContentId? {
         val source = File(cid)
         val destination = File(dirCid)
 
-        if(source.exists()) {
+        if(source.exists() && source.isFile) {
             if(!destination.exists()) {
                 destination.mkdirs()
             }
             // Copy so that we can find the data both by CID and by path+name
             // It's all a mock anyway, it's fine if it's storing things a little extra
+            Log.i(TAG, "Copying $cid to $destination/$name")
             Files.copy(Path(cid), Path("$destination/$name"), StandardCopyOption.REPLACE_EXISTING)
         }
 
@@ -80,7 +88,7 @@ class MockIPFS(val filesDir: String) : IPFS {
         return resolveNode(path.joinToString("/"), timeoutSeconds)
     }
 
-    private var _root: ContentId = "/tmp"
+    private var _root: ContentId = filesDir
     override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {
         _root = root
     }
@@ -90,6 +98,7 @@ class MockIPFS(val filesDir: String) : IPFS {
             val path = filesDir + "/bw/0.1/"
             File(path).also {
                 if (!it.exists()) {
+                    Log.i(TAG, "Creating base dirs: ${filesDir+"/bw/0.1/"}")
                     it.mkdirs()
                 }
             }
