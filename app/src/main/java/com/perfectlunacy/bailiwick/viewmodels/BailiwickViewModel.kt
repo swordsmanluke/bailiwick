@@ -5,10 +5,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.Bailiwick
-import com.perfectlunacy.bailiwick.models.Feed
-import com.perfectlunacy.bailiwick.models.Identity
-import com.perfectlunacy.bailiwick.models.Manifest
-import com.perfectlunacy.bailiwick.models.Post
+import com.perfectlunacy.bailiwick.models.ipfs.Feed
+import com.perfectlunacy.bailiwick.models.ipfs.Identity
+import com.perfectlunacy.bailiwick.models.ipfs.Manifest
+import com.perfectlunacy.bailiwick.models.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*

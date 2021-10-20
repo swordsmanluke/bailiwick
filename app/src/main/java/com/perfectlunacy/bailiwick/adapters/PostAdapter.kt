@@ -12,11 +12,8 @@ import android.widget.TextView
 import androidx.databinding.DataBindingUtil
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.PostBinding
-import com.perfectlunacy.bailiwick.models.Post
+import com.perfectlunacy.bailiwick.models.ipfs.Post
 import android.os.Looper
-
-
-
 
 class PostAdapter(private val context: Context, private val list: ArrayList<Post>): BaseAdapter() {
     override fun getCount(): Int {

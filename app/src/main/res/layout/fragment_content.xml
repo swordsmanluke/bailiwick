@@ -6,7 +6,7 @@
     tools:context=".fragments.ContentFragment">
 
     <data>
-        <variable name="user" type="com.perfectlunacy.bailiwick.models.Identity"/>
+        <variable name="user" type="com.perfectlunacy.bailiwick.models.ipfs.Identity"/>
     </data>
 
     <LinearLayout
@@ -52,6 +52,7 @@
             <EditText
                 android:id="@+id/txt_post_text"
                 android:inputType="textImeMultiLine"
+                android:hint="@string/post_hint"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:background="@color/cardview_light_background"
@@ -77,6 +78,7 @@
 
         <ListView
             android:id="@+id/list_content"
+            tools:listitem="@layout/post"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 

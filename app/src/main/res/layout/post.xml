@@ -4,7 +4,7 @@
     <data>
         <variable
             name="post"
-            type="com.perfectlunacy.bailiwick.models.Post"/>
+            type="com.perfectlunacy.bailiwick.models.ipfs.Post"/>
     </data>
     <LinearLayout
         android:id="@+id/linearLayout"
@@ -24,9 +24,18 @@
         <TextView
             android:id="@+id/txt_social_content"
             android:text="@{post.text}"
+            android:hint="@string/post_hint"
+            android:textSize="18sp"
+            android:paddingHorizontal="10dp"
             android:gravity="bottom"
             android:layout_width="match_parent"
             android:layout_height="50dp"/>
+        <LinearLayout
+            android:background="#222222"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="4dp"
+            />
 
         <LinearLayout
             android:id="@+id/layout_btn_social_bar"

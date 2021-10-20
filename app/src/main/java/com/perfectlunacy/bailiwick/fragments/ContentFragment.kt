@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
-import com.perfectlunacy.bailiwick.models.Post
+import com.perfectlunacy.bailiwick.models.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*

@@ -8,6 +8,7 @@ import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RSAEncryptor
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
+import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
@@ -319,7 +320,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     private fun cidForPath(pid: PeerId, path: String, minSequence: Int): ContentId? {
-        var ipnsRecord = ipfs.resolveName(pid, minSequence.toLong(), LONG_TIMEOUT)
+        var ipnsRecord = ipfs.resolveName(pid, 0, LONG_TIMEOUT)
         if (ipnsRecord == null) {
             Log.e(TAG, "No IPNS record found for pid: $pid")
             return null
@@ -330,7 +331,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         // TODO: This only works if I already know the expected sequence number.
         var tries = 0
         while (ipnsRecord!!.sequence < minSequence && tries < 10) {
-            ipnsRecord = ipfs.resolveName(pid, 0, LONG_TIMEOUT)!!
+            ipnsRecord = ipfs.resolveName(pid, minSequence.toLong(), LONG_TIMEOUT)!!
             Log.i(TAG, "Checking ${path} again... hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
             tries += 1
         }

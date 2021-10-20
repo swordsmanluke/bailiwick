@@ -3,6 +3,7 @@ package com.perfectlunacy.bailiwick.storage
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
+import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 import java.security.KeyPair
 
