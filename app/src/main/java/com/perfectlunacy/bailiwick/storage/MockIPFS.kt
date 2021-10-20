@@ -74,20 +74,26 @@ class MockIPFS(val filesDir: String) : IPFS {
 
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
         return if(peerId == this.peerID) {
-            IPNSRecord(basePath, _seq.toLong())
+            IPNSRecord(filesDir, _seq.toLong())
         } else {
-            IPNSRecord("$filesDir/$peerId/bw/0.2/", _seq.toLong())
+            IPNSRecord("$filesDir/$peerId", _seq.toLong())
         }
     }
 
     override fun resolveNode(link: String, timeoutSeconds: Long): ContentId? {
-        if(File(link).exists()) {
-            return link
+        val link = if(link.startsWith("/ipfs/")) {
+            link.slice(6 until link.length)
+        } else {
+            link
+        }
+
+        return if(File(link).exists() || File(link).isDirectory) {
+            link
         } else if(File(filesDir+"/"+Path(link).fileName).exists()) {
-            return filesDir + "/" + Path(link).fileName
+            filesDir + "/" + Path(link).fileName
         } else {
             Log.i(TAG, "No such file: $link")
-            return null
+            null
         }
     }
 

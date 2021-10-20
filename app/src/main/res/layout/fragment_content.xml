@@ -6,77 +6,72 @@
     tools:context=".fragments.ContentFragment">
 
     <data>
-        <variable name="user" type="com.perfectlunacy.bailiwick.storage.ipfs.Identity"/>
+        <variable name="user" type="com.perfectlunacy.bailiwick.models.Identity"/>
     </data>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
-    <LinearLayout
-        android:id="@+id/nav_header"
-        android:background="@color/cardview_light_background"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        >
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="75dp"
-            android:src="@drawable/img_bailiwick_icon"
-            android:contentDescription="@string/profile_picture" />
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-    </LinearLayout>
         <LinearLayout
-            android:id="@+id/user_header"
+            android:id="@+id/nav_header"
             android:background="@color/cardview_light_background"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             >
             <ImageView
-                android:layout_width="50dp"
-                android:layout_height="50dp"
+                android:layout_width="wrap_content"
+                android:layout_height="75dp"
+                android:src="@drawable/img_bailiwick_icon"
                 android:contentDescription="@string/profile_picture" />
-            <TextView
-                android:id="@+id/lblSelectedUser"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:textColor="@color/colorPrimaryDark"
-                android:textSize="30sp"
-                />
         </LinearLayout>
+        <HorizontalScrollView
+            android:id="@+id/user_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <LinearLayout
+                android:id="@+id/userlist"
+                android:background="@color/cardview_light_background"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:orientation="horizontal"/>
+        </HorizontalScrollView>
 
         <LinearLayout
             android:id="@+id/mock_controls"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_mock_data"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:id="@+id/img_my_avatar"
+                android:src="@drawable/avatar"
+                android:background="@color/cardview_light_background"
+                android:layout_width="50dp"
+                android:layout_height="50dp"/>
+            <EditText
+                android:id="@+id/txt_post_text"
+                android:inputType="textImeMultiLine"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="@color/cardview_light_background"
+                android:layout_weight="2"/>
+            <ImageButton
+                android:id="@+id/btn_add_image"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:layout_gravity="end"
-                android:text="Generate a Post"
+                android:background="@color/cardview_light_background"
+                android:src="@android:drawable/ic_menu_camera"
+                android:visibility="gone"
                 />
-            <Button
-                android:id="@+id/btn_prev_user"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageButton
+                android:id="@+id/btn_post"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:layout_gravity="end"
-                android:text="Prev User"
-                />
-            <Button
-                android:id="@+id/btn_next_user"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:text="Next User"
+                android:background="@color/colorPrimaryDark"
+                android:src="@drawable/ic_arrow_right_bold"
                 />
         </LinearLayout>
 

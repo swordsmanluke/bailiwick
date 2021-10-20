@@ -36,9 +36,11 @@ class SplashFragment : BailiwickFragment() {
     @DelicateCoroutinesApi
     private fun showSplashScreen() {
         GlobalScope.launch {
+
             bwModel.bootstrap(requireContext())
             Log.i(TAG, "Connected to IPFS network")
             // Now that we're connected to IPFS, check for an account and go!
+            Thread.sleep(100)
             val nav = requireView().findNavController()
             if (bwModel.activeAccount == null) {
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }

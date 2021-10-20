@@ -29,23 +29,26 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
         ipfs.updateNetwork(interfaceName!!)
 
         ipfs.bootstrap()
-        Log.i("IPFSWrapper", "Relays: ${ipfs.relays}")
-        Log.i("IPFSWrapper", "Bootstrap completed.")
+        Log.i(TAG, "Bootstrap completed.")
     }
 
     override val peerID: PeerId
         get() = ipfs.peerID.toBase32()
 
     override fun getData(cid: ContentId, timeoutSeconds: Long): ByteArray {
+        Log.i(TAG, "GetData: $cid")
         return ipfs.getData(cid.toCid(), TimeoutCloseable(timeoutSeconds))
     }
 
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {
+        Log.i(TAG, "getLinks: $cid")
         return ipfs.getLinks(cid.toCid(), resolveChildren, TimeoutCloseable(timeoutSeconds))
     }
 
     override fun storeData(data: ByteArray): ContentId {
-        return ipfs.storeData(data).key
+        val cid = ipfs.storeData(data).key
+        Log.i(TAG, "stored data: $cid")
+        return cid
     }
 
     override fun createEmptyDir(): ContentId? {
@@ -55,24 +58,31 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     }
 
     override fun addLinkToDir(dirCid: ContentId, name: String, cid: ContentId): ContentId? {
-        return ipfs.addLinkToDir(dirCid.toCid(), name, cid.toCid())?.key
+        return ipfs.addLinkToDir(dirCid.toCid(), name, cid.toCid())?.key.also {
+            Log.i(TAG, "Linked $it -> $name ($cid)")
+        }
     }
 
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
         val rec = ipfs.resolveName(peerId, sequence, TimeoutCloseable(timeoutSeconds)) ?: return null
-
+        Log.i(TAG, "Resolved $peerId:$sequence to ${rec.hash}:${rec.sequence}")
         return IPNSRecord(rec.hash, rec.sequence)
     }
 
     override fun resolveNode(link: String, timeoutSeconds: Long): ContentId? {
-        return ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key
+        return ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+            Log.i(TAG, "resolved path $link to node: $it")
+        }
     }
 
     override fun resolveNode(root: ContentId, path: MutableList<String>, timeoutSeconds: Long): ContentId? {
-        return ipfs.resolveNode(root.toCid(), path, TimeoutCloseable(timeoutSeconds))?.cid?.key
+        return ipfs.resolveNode(root.toCid(), path, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+            Log.i(TAG, "resolved path ${path.joinToString("/")} to node: $it")
+        }
     }
 
     override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {
+        Log.i(TAG, "Publishing new root cid: $root:$sequence")
         ipfs.publishName(root.toCid(), sequence, TimeoutCloseable(timeoutSeconds))
     }
 }

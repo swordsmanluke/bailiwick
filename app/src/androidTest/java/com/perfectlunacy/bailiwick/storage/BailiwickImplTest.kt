@@ -9,9 +9,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.ipfs.*
 import io.bloco.faker.Faker
 import junit.framework.Assert.assertEquals
 import junit.framework.Assert.assertNotNull

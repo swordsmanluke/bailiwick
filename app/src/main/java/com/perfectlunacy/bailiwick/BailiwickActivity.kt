@@ -9,12 +9,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
+import com.perfectlunacy.bailiwick.storage.MockIPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import threads.lite.IPFS
 import java.security.KeyFactory
 import java.security.KeyPair
+import java.security.KeyPairGenerator
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
@@ -30,7 +32,7 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private fun initBailiwick() {
-        val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext))
+        val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext)) // MockIPFS(applicationContext.filesDir.path)
         val bwDb = getBailiwickDb(applicationContext)
         val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb)
         bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork) }).value
@@ -51,29 +53,39 @@ class BailiwickActivity : AppCompatActivity() {
         get() {
             val decoder = Base64.getDecoder()
 
-            val privateKeyData = decoder.decode(privateKeyString)
-            val publicKeyData = decoder.decode(publicKeyString)
+            if(privateKeyString != null) {
+                val privateKeyData = decoder.decode(privateKeyString)
+                val publicKeyData = decoder.decode(publicKeyString)
 
-            val publicKey =
-                KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
+                val publicKey =
+                    KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
 
-            val privateKey =
-                KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(privateKeyData))
+                val privateKey =
+                    KeyFactory.getInstance("RSA")
+                        .generatePrivate(PKCS8EncodedKeySpec(privateKeyData))
 
-            return KeyPair(publicKey, privateKey)
+                return KeyPair(publicKey, privateKey)
+            } else {
+                val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
+                val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE).edit()
+                sharedPref.putString("privateKey", Base64.getEncoder().encodeToString(keyPair.private.encoded))
+                sharedPref.putString("publicKey", Base64.getEncoder().encodeToString(keyPair.public.encoded))
+                sharedPref.apply()
+                return keyPair
+            }
         }
 
     private val privateKeyString: String?
         get() {
             // Use the IPFS private key
             val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
-            return sharedPref.getString("privateKey", null)!!
+            return sharedPref.getString("privateKey", null)
         }
 
     private val publicKeyString: String?
         get() {
             // Use the IPFS private key
             val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
-            return sharedPref.getString("publicKey", null)!!
+            return sharedPref.getString("publicKey", null)
         }
 }

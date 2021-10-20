@@ -60,10 +60,6 @@ class NewUserFragment : BailiwickFragment() {
             binding.newUserBtnGo.isEnabled = goIsEnabled
         }
 
-        binding.newUserName.text.insert(0, "swordsmanluke")
-        binding.newPassword.text.insert(0, "100themon")
-        binding.confirmPassword.text.insert(0, "100themon")
-
         binding.newUserBtnGo.setOnClickListener {
             binding.newUserBtnGo.isEnabled = false
             binding.newPassword.isEnabled = false

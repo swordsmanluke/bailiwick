@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.fragments
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import androidx.fragment.app.Fragment
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
+import com.perfectlunacy.bailiwick.models.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -31,27 +33,30 @@ class ContentFragment : BailiwickFragment() {
             false
         )
 
-        binding.btnMockData.setOnClickListener {
-            refreshContent(adapter.get())
-        }
+        binding.btnPost.setOnClickListener {
+            val text = binding.txtPostText.text.toString()
+            binding.txtPostText.text.clear()
 
-        binding.btnNextUser.setOnClickListener{
-            bwModel.selectNextUser()
-            binding.user = bwModel.selectedUser
-            if(adapter.isPresent) { refreshContent(adapter.get()) }
-        }
-
-        binding.btnPrevUser.setOnClickListener{
-            bwModel.selectPrevUser()
-            binding.user = bwModel.selectedUser
-            if(adapter.isPresent) { refreshContent(adapter.get()) }
+            GlobalScope.launch {
+                val newPost = Post(
+                    Calendar.getInstance().timeInMillis,
+                    null,
+                    text,
+                    emptyList(),
+                    ""
+                )
+                bwModel.savePost(newPost, "${bwModel.bwNetwork.peerId}:everyone")
+                Log.i(TAG, "Saved new post. Refreshing...")
+                refreshContent()
+            }
         }
 
         if (bwModel.selectedUser != null) {
             binding.user = bwModel.selectedUser
         }
+
         buildAdapter(binding.listContent)
-        if(adapter.isPresent) { refreshContent(adapter.get()) }
+        refreshContent()
 
         return binding.root
     }
@@ -62,14 +67,14 @@ class ContentFragment : BailiwickFragment() {
         messagesList.setAdapter(adapter.get())
     }
 
-    private fun refreshContent(adapter: PostAdapter) {
+    private fun refreshContent() {
         GlobalScope.launch {
+            val adapter: PostAdapter = adapter.get()
             bwModel.refreshContent()
+            adapter.clear()
+            val posts = bwModel.content["everyone"]?.toList() ?: emptyList() // Wrap in the style the adapter expects
+            adapter.addToEnd(posts)
         }
-
-        adapter.clear()
-        val posts = bwModel.content[bwModel.selectedUser] ?: emptyList() // Wrap in the style the adapter expects
-        adapter.addToEnd(posts)
     }
 
     private fun buildListAdapter(): PostAdapter {
