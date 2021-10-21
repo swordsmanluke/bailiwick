@@ -1,5 +1,7 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -13,9 +15,13 @@ import androidx.databinding.DataBindingUtil
 import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
+import io.bloco.faker.Faker
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.*
+import java.net.URL
+import java.util.*
 
 /**
  * A simple [Fragment] subclass.
@@ -30,6 +36,7 @@ class NewUserFragment : BailiwickFragment() {
     ): View {
         // Inflate the layout for this fragment
         val binding = DataBindingUtil.inflate<FragmentNewUserBinding>(inflater, R.layout.fragment_new_user, container, false)
+        var avatar = BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
 
         binding.newUserName.doOnTextChanged { text, start, before, count ->
             val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
@@ -39,6 +46,15 @@ class NewUserFragment : BailiwickFragment() {
             Log.i(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
 
             binding.newUserBtnGo.isEnabled = goIsEnabled
+        }
+
+        binding.avatar.setOnClickListener {
+            // TODO: Instead of using Faker, build this URL myself. Maybe some radio buttons?
+            GlobalScope.launch {
+                val imgUrl = URL(Faker().avatar.image(Calendar.getInstance().timeInMillis.toString()))
+                avatar = BitmapFactory.decodeStream(imgUrl.openConnection().getInputStream())
+                Handler(requireContext().mainLooper).post { binding.avatar.setImageBitmap(avatar) }
+            }
         }
 
         // Make sure new and confirmed password fields are the same
@@ -70,7 +86,14 @@ class NewUserFragment : BailiwickFragment() {
 
             // TODO: Show Spinner until this completes
             GlobalScope.launch {
-                bwModel.createAccount(binding.newUserName.text.toString(), binding.newPassword.text.toString())
+                val out = ByteArrayOutputStream()
+                avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
+                val avatarCid = bwModel.bwNetwork.store(out.toByteArray())
+                bwModel.createAccount(binding.newPublicName.text.toString(),
+                    binding.newUserName.text.toString(),
+                    binding.newPassword.text.toString(),
+                    avatarCid
+                )
                 // TODO: After create account returns an AccountSuccess event (or something) transition
                 val nav = requireView().findNavController()
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -79,10 +102,13 @@ class NewUserFragment : BailiwickFragment() {
 
         // FIXME: Delete this permanently once account creation is deemed ready
         binding.btnSwdslk.setOnClickListener {
-             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+            Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+            val out = ByteArrayOutputStream()
+            avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
+            val avatarCid = bwModel.bwNetwork.store(out.toByteArray())
 
             GlobalScope.launch {
-                bwModel.createAccount("swordsmanluke", "fake1@3pass")
+                bwModel.createAccount("Lucas Taylor", "swordsmanluke", "fake1@3pass", avatarCid)
                 // TODO: After create account returns an AccountSuccess event (or something) transition
                 val nav = requireView().findNavController()
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }

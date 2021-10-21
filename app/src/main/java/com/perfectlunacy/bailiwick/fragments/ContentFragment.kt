@@ -1,6 +1,8 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -10,7 +12,12 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
+import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.MultiCipher
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
+import com.perfectlunacy.bailiwick.models.User
+import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.models.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -32,6 +39,25 @@ class ContentFragment : BailiwickFragment() {
             container,
             false
         )
+
+        GlobalScope.launch {
+            val cipher = bwModel.bwNetwork.encryptorForKey("${bwModel.bwNetwork.peerId}:everyone")
+            val picCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
+                BitmapFactory.decodeByteArray(data, 0, data.size) != null
+            }
+
+            val profilePicBytes =
+                bwModel.bwNetwork.download(bwModel.bwNetwork.identity.profilePicCid)
+
+            val avatar = if (profilePicBytes == null) {
+                BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+            } else {
+                val picBytes = picCiphers.decrypt(profilePicBytes)
+                BitmapFactory.decodeByteArray(picBytes, 0, picBytes.size)
+            }
+
+            Handler(requireContext().mainLooper).post { binding.imgMyAvatar.setImageBitmap(avatar) }
+        }
 
         binding.btnPost.setOnClickListener {
             val text = binding.txtPostText.text.toString()

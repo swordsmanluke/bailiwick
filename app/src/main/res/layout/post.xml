@@ -4,14 +4,42 @@
     <data>
         <variable
             name="post"
-            type="com.perfectlunacy.bailiwick.models.ipfs.Post"/>
+            type="com.perfectlunacy.bailiwick.models.Post"/>
     </data>
     <LinearLayout
         android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:orientation="vertical">
+        <!--  User header   -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <ImageView
+                android:id="@+id/avatar"
+                android:src="@drawable/avatar2"
+                android:layout_width="50dp"
+                android:layout_height="50dp"/>
+            <TextView
+                android:id="@+id/txt_author"
+                android:hint="@string/username"
+                android:textColor="#000000"
+                android:gravity="center_vertical"
+                android:textSize="24sp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"/>
+        </LinearLayout>
 
+        <!--  Post Content  -->
+        <LinearLayout
+            android:background="@color/colorPrimaryDark"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="4dp"
+            />
         <ImageView
             android:id="@+id/img_social_content"
             android:src="@color/colorPrimary"
@@ -24,18 +52,14 @@
         <TextView
             android:id="@+id/txt_social_content"
             android:text="@{post.text}"
-            android:hint="@string/post_hint"
+            android:hint="@string/lorem_ipsum"
             android:textSize="18sp"
+            android:textColor="#000000"
             android:paddingHorizontal="10dp"
-            android:gravity="bottom"
             android:layout_width="match_parent"
-            android:layout_height="50dp"/>
-        <LinearLayout
-            android:background="#222222"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_margin="4dp"
+            android:layout_height="wrap_content"
             />
+        <!--  Interaction Footer  -->
 
         <LinearLayout
             android:id="@+id/layout_btn_social_bar"
@@ -63,5 +87,11 @@
                 style="?android:attr/buttonBarButtonStyle"
                 android:text="@string/tag"/>
         </LinearLayout>
+        <LinearLayout
+            android:background="@color/cardview_dark_background"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="4dp"
+            />
     </LinearLayout>
 </layout>

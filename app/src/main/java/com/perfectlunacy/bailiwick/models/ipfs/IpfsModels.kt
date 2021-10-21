@@ -3,6 +3,12 @@ package com.perfectlunacy.bailiwick.models.ipfs
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 
+/***
+ * These files Represent the objects written to and read from the IPFS network.
+ *
+ * They're all POJO structs intended to be able to serialize to/from JSON easily
+ */
+
 data class BailiwickAccount(val peerId: String,
                             val keyFileCid: String,
                             val subscriptionsCid: String)

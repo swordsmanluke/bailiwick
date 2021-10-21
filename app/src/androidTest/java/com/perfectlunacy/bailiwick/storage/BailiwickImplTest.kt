@@ -9,7 +9,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
-import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
@@ -35,7 +34,7 @@ class BailiwickImplTest {
     private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
     private val key = KeyGenerator.getInstance("AES").generateKey()
     private val keyFile = KeyFile(mapOf(Pair("everyone", listOf(Base64.getEncoder().encodeToString(key.encoded)))))
-    private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db)
+    private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db, MockFileCache())
 
     init {
         if(db.accountDao().activeAccount() == null) {
@@ -102,8 +101,7 @@ class BailiwickImplTest {
                     keyPair.private
                 ).sign(unsigned.toByteArray())
             )
-        val finalPost = Post(p.timestamp, p.parentCid, p.text, p.files, signature)
-        return finalPost
+        return Post(p.timestamp, p.parentCid, p.text, p.files, signature)
     }
 
     @Test

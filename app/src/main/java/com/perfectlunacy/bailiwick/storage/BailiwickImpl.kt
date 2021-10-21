@@ -6,19 +6,18 @@ import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RSAEncryptor
-import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.ipfs.*
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
 import java.security.SecureRandom
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
-class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, private val db: BailiwickDatabase):
+class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, private val db: BailiwickDatabase, private val cache: IpfsCache):
     Bailiwick {
     companion object {
         val TAG = "BailiwickImpl"
@@ -137,12 +136,12 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             _bwAcct = value
         }
 
-    override fun newAccount(username: String, password: String): Account {
-
+    override fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account {
         val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
         val passwordHash = Base64.getEncoder().encode(hash).toString()
 
-        val rootCid = initializeBailiwick(ipfs.peerID)
+        // TODO: CID of random Robot/Kitten/whatever for avatar
+        val rootCid = initializeBailiwick(ipfs.peerID, publicName, profilePicCid ?: "")
         Log.i(TAG, "Created Bailiwick structure. Publishing...")
         // Finally, publish the baseDir to IPNS
         publishRoot(rootCid)
@@ -179,7 +178,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun store(data: ByteArray): ContentId {
-        return ipfs.storeData(data)
+        val cid = ipfs.storeData(data)
+        cache.cache(cid, data)
+        return cid
     }
 
     override fun <T> store(thing: T, cipher: Encryptor): ContentId {
@@ -187,7 +188,11 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun download(cid: ContentId): ByteArray? {
-        return ipfs.getData(cid, 10)
+        return cache.get(cid) ?: run {
+            val data = ipfs.getData(cid, 10)
+            cache.cache(cid, data)
+            data
+        }
     }
 
     override fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
@@ -217,7 +222,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return Post(post.timestamp, post.parentCid, post.text, post.files, signature)
     }
 
-    private fun initializeBailiwick(myPeerId: PeerId): String {
+    private fun initializeBailiwick(myPeerId: PeerId, name: String, profilePicCid: ContentId): String {
         var verCid = ipfs.createEmptyDir()!!
         Log.i(TAG, "Created version dir. Adding files...")
 
@@ -263,7 +268,16 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         Log.i(TAG, "Found public subscriber encryption key")
         val aes = AESEncryptor(SecretKeySpec(encKey, "AES"))
 
-        val everyoneFeed = Feed(Calendar.getInstance().timeInMillis, emptyList(), emptyList(), emptyList(), "")
+        val identity = Identity(name, profilePicCid)
+        val publicIdCid = store(identity, NoopEncryptor())
+        verCid= ipfs.addLinkToDir(verCid, "identity.json", publicIdCid)!!
+
+        // The <everyone> Feed which is created by default inherits the public Identity,
+        // but this can be later changed. So, store an encrypted copy and we'll overwrite
+        // it later if needed.
+        val feedIdCid = store(identity, aes)
+        val everyoneFeed = Feed(Calendar.getInstance().timeInMillis, emptyList(), emptyList(), emptyList(), feedIdCid)
+
         val feedCid = store(everyoneFeed, aes)
         val manifestCid = store(Manifest(listOf(feedCid)), aes)
         Log.i(TAG, "Stored encrypted manifest @ ${manifestCid}")

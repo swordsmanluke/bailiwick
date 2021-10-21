@@ -1,19 +1,17 @@
 package com.perfectlunacy.bailiwick.adapters
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.databinding.DataBindingUtil
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.PostBinding
-import com.perfectlunacy.bailiwick.models.ipfs.Post
-import android.os.Looper
+import com.perfectlunacy.bailiwick.models.Post
 
 class PostAdapter(private val context: Context, private val list: ArrayList<Post>): BaseAdapter() {
     override fun getCount(): Int {
@@ -39,6 +37,11 @@ class PostAdapter(private val context: Context, private val list: ArrayList<Post
         }
         binding.post = post
         binding.root.tag = binding
+
+        val avatar = post.author.avatar ?: BitmapFactory.decodeStream(context.assets.open("avatar.png"))
+        binding.avatar.setImageBitmap(avatar)
+
+        binding.txtAuthor.text = post.author.name
 
         // TODO: Examine Files and add images if necessary
         // for f in post.files.select{f -> f.is_image}

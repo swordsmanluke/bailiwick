@@ -20,6 +20,12 @@
                 android:layout_height="wrap_content"
                 android:paddingTop="15dp"
                 android:paddingBottom="10dp"
+                android:text="@string/public_name"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="15dp"
+                android:paddingBottom="10dp"
                 android:text="@string/new_user_name"/>
             <TextView
                 android:layout_width="wrap_content"
@@ -40,6 +46,14 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <EditText
+                android:id="@+id/new_public_name"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/blank_for_anonymous"
+                android:inputType="text"
+                android:text="@{name}"
+                android:autofillHints="@string/new_user_name_hint" />
             <EditText
                 android:id="@+id/new_user_name"
                 android:layout_width="200dp"
@@ -78,5 +92,15 @@
                 android:layout_gravity="end"
                 android:text="swordsmanluke"/>
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/avatar"
+            android:src="@drawable/avatar"
+            android:background="@drawable/border"
+            android:scaleType="fitCenter"
+            android:layout_marginStart="25dp"
+            android:layout_width="100dip"
+            android:layout_height="100dip"
+            android:contentDescription="@string/desc_user_avatar" />
     </LinearLayout>
 </layout>

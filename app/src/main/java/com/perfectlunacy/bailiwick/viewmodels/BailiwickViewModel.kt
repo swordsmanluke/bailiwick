@@ -3,12 +3,17 @@ package com.perfectlunacy.bailiwick.viewmodels
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.perfectlunacy.bailiwick.ciphers.MultiCipher
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.models.Post
+import com.perfectlunacy.bailiwick.models.User
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.models.ipfs.Feed
 import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.models.ipfs.Manifest
-import com.perfectlunacy.bailiwick.models.ipfs.Post
+import com.perfectlunacy.bailiwick.storage.ContentId
+import com.perfectlunacy.bailiwick.models.ipfs.Post as IpfsPost
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -39,8 +44,8 @@ class BailiwickViewModel(val bwNetwork: Bailiwick): ViewModel() {
         bwNetwork.ipfs.bootstrap(context)
     }
 
-    fun createAccount(username: String, password: String) {
-        bwNetwork.newAccount(username, password)
+    fun createAccount(name: String, username: String, password: String, avatarCid: ContentId) {
+        bwNetwork.newAccount(name, username, password, avatarCid)
     }
 
     init {
@@ -59,8 +64,18 @@ class BailiwickViewModel(val bwNetwork: Bailiwick): ViewModel() {
             //       decrypt as we are not part of that circle.
             val feeds = manifest.feeds.mapNotNull { cid -> bwNetwork.retrieve(cid, enc, Feed::class.java) }
             feeds.forEach { feed ->
-                val posts =
-                    feed.posts.mapNotNull { cid -> bwNetwork.retrieve(cid, enc, Post::class.java) }
+
+                val user = User.fromIPFS(bwNetwork, enc, feed.identity)
+
+                val posts = feed.posts.mapNotNull { cid ->
+                    val ipfsPost = bwNetwork.retrieve(cid, enc, IpfsPost::class.java)
+                    if (ipfsPost != null) {
+                        Post.fromIPFS(bwNetwork, user, cid, ipfsPost)
+                    } else {
+                        null
+                    }
+                }
+
                 if(content["everyone"] == null) {
                     content["everyone"] = mutableSetOf()
                 }
@@ -69,7 +84,7 @@ class BailiwickViewModel(val bwNetwork: Bailiwick): ViewModel() {
         }
     }
 
-    fun savePost(newPost: Post, keyName: String) {
+    fun savePost(newPost: IpfsPost, keyName: String) {
         // Store the Post
         val signed = bwNetwork.sign(newPost)
         val aes = bwNetwork.encryptorForKey(keyName)

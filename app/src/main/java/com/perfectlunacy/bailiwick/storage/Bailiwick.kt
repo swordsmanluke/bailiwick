@@ -1,7 +1,6 @@
 package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ipfs.*
@@ -20,7 +19,7 @@ interface Bailiwick {
     var keyFile: KeyFile
     val keyPair: KeyPair
 
-    fun newAccount(username: String, password: String): Account
+    fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account
     fun manifestFor(peerId: PeerId, encryptor: Encryptor): Manifest?
     fun encryptorForKey(keyId: String): Encryptor
 
