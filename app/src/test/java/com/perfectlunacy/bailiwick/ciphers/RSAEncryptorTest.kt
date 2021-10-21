@@ -14,7 +14,7 @@ class RSAEncryptorTest {
         keyGen.initialize(2048, random);
         val pair = keyGen.genKeyPair()
 
-        val cipher = RSAEncryptor(pair.private, pair.public)
+        val cipher = RsaWithAesEncryptor(pair.private, pair.public)
         val data = "Test message".toByteArray()
         val ciphered = cipher.encrypt(data)
         val deciphered = cipher.decrypt(ciphered)

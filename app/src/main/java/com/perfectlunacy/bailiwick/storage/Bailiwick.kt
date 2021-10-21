@@ -1,10 +1,12 @@
 package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
+import com.perfectlunacy.bailiwick.models.SubscriptionRequest
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 import java.security.KeyPair
+import java.security.PublicKey
 
 typealias PeerId=String
 typealias ContentId=String
@@ -30,6 +32,8 @@ interface Bailiwick {
     fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId
     fun publishRoot(newRoot: ContentId)
     fun sign(post: Post): Post
+    fun addSubscriber(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>)
+    fun createSubscribeRequest(identityCid: ContentId, password: String): ByteArray
 
     /***
      * TODO later:

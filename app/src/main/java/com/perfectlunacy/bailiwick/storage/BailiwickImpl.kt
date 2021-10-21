@@ -5,14 +5,17 @@ import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
-import com.perfectlunacy.bailiwick.ciphers.RSAEncryptor
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
+import com.perfectlunacy.bailiwick.models.SubscriptionRequest
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
+import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
+import java.security.PublicKey
 import java.security.SecureRandom
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
@@ -24,6 +27,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         const val VERSION = "0.2"
         const val SHORT_TIMEOUT = 10L
         const val LONG_TIMEOUT = 30L
+        const val USER_PRIVATE = "user_private"
     }
 
     override val peerId: PeerId = ipfs.peerID
@@ -35,17 +39,17 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override var subscriptions: Subscriptions
         get() {
             if(_subscriptionFile == null) {
-                val encFile = ipfs.getData(bailiwickAccount.subscriptionsCid, 10)
-                val kp = keyPair
-                val acctJson = String(RSAEncryptor(kp.private, kp.public).decrypt(encFile))
-
-                _subscriptionFile = Gson().fromJson(acctJson, Subscriptions::class.java)
+                val rsa = encryptorForKey(USER_PRIVATE)
+                _subscriptionFile = retrieve(bailiwickAccount.subscriptionsCid, rsa, Subscriptions::class.java)
             }
 
             return _subscriptionFile!!
         }
         set(value) {
+            val rsa = encryptorForKey(USER_PRIVATE)
+            val newSubsCid = store(value, rsa)
 
+            bailiwickAccount = BailiwickAccount(bailiwickAccount.peerId, bailiwickAccount.keyFileCid, newSubsCid)
         }
 
     private var _manifest: Manifest? = null
@@ -58,6 +62,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             }
             return _manifest!!
         }
+
         set(value) {
             val aes = encryptorForKey("$peerId:everyone")
             val newRoot = addFileToDir("bw/$VERSION", "manifest.json", store(value, aes))
@@ -67,7 +72,6 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             acct.sequence += 1
             db.accountDao().update(acct)
             _manifest = value
-
         }
 
 
@@ -94,14 +98,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override var keyFile: KeyFile
         get() {
             if(_keyFile == null) {
-                val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+                val rsa = encryptorForKey(USER_PRIVATE)
                 _keyFile = retrieve(bailiwickAccount.keyFileCid, rsa, KeyFile::class.java)
             }
 
             return _keyFile!!
         }
         set(value) {
-            val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+            val rsa = encryptorForKey(USER_PRIVATE)
             val keyFileCid = store(value, rsa)
 
             // Update our account file
@@ -115,7 +119,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     private var bailiwickAccount: BailiwickAccount
         get() {
             if(_bwAcct == null) {
-                val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+                val rsa = encryptorForKey(USER_PRIVATE)
                 val acctCid = ipfs.resolveNode(account!!.rootCid, mutableListOf("bw", VERSION, "account.json"), 10)
 
                 _bwAcct = retrieve(acctCid!!, rsa, BailiwickAccount::class.java)
@@ -123,7 +127,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             return _bwAcct!!
         }
         set(value) {
-            val rsa = RSAEncryptor(keyPair.private, keyPair.public)
+            val rsa = encryptorForKey(USER_PRIVATE)
             val cid = store(value, rsa)
 
             val newRoot = addFileToDir("bw/$VERSION", "account.json", cid)
@@ -165,8 +169,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun encryptorForKey(keyId: String): Encryptor {
-        if(keyId == "user_private") {
-            return RSAEncryptor(keyPair.private, keyPair.public)
+        if(keyId == USER_PRIVATE) {
+            Log.i(TAG, "Retrieving encryptor with pub key ${Base64.getEncoder().encodeToString(keyPair.public.encoded)}")
+            return RsaWithAesEncryptor(keyPair.private, keyPair.public)
         }
 
         if (keyId == "public") {
@@ -197,7 +202,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
 
     override fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
         val data = download(cid) ?: return null
-        return Gson().fromJson(String(cipher.decrypt(data)), clazz)
+        val rawJson = String(cipher.decrypt(data))
+        Log.d(TAG, "Parsing ${clazz.simpleName} from '${rawJson}")
+        return Gson().fromJson(rawJson, clazz)
     }
 
     override fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId {
@@ -222,16 +229,37 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return Post(post.timestamp, post.parentCid, post.text, post.files, signature)
     }
 
+    override fun addSubscriber(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>) {
+        val newSub = Subscriber(peerId, identityCid, Base64.getEncoder().encodeToString(publicKey.encoded))
+        circles.forEach { circle ->
+            subscriptions.circles.getOrPut(circle, { mutableListOf() }).add(newSub)
+        }
+
+        subscriptions.peers.add(peerId)
+
+        // TODO: This self assignment triggers the "updated subscriptions" code. This needs a function instead
+        subscriptions = subscriptions
+    }
+
+    override fun createSubscribeRequest(identityCid: ContentId, password: String): ByteArray {
+        val request = Gson().toJson(SubscriptionRequest(
+            peerId,
+            identityCid,
+            Base64.getEncoder().encodeToString(keyPair.public.encoded)))
+
+        val aesKey = SecretKeySpec(Md5Signature().sign(password.toByteArray()), "AES")
+        val aes = AESEncryptor(aesKey)
+        return aes.encrypt(request.toByteArray())
+    }
+
     private fun initializeBailiwick(myPeerId: PeerId, name: String, profilePicCid: ContentId): String {
         var verCid = ipfs.createEmptyDir()!!
         Log.i(TAG, "Created version dir. Adding files...")
 
         // Now create and add our basic files
-        val kp = keyPair
-        val rsaEnc = RSAEncryptor(kp.private, kp.public)
+        val rsa = encryptorForKey(USER_PRIVATE)
         val b64Enc = Base64.getEncoder()
         val b64Dec = Base64.getDecoder()
-        var acctFile: BailiwickAccount? = null
         var keyFile: KeyFile? = null
 
         // Create encrypted account file
@@ -244,25 +272,22 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         Log.d(TAG, "Public key: $publicEncKey")
 
         keyFile = KeyFile(keys)
-        val keyFileCid = ipfs.storeData(rsaEnc.encrypt(Gson().toJson(keyFile).toByteArray()))
+        val keyFileCid = store(keyFile, rsa)
         Log.i(TAG, "Created key file @ ${keyFileCid}")
 
-        val subscriptions = Gson().toJson(Subscriptions(emptyList(), emptyMap()))
-        val subsFileCid = ipfs.storeData(rsaEnc.encrypt(subscriptions.toByteArray()))
+        val subscriptions = Subscriptions(mutableListOf(), mutableMapOf())
+        val subsFileCid = store(subscriptions, rsa)
         Log.i(TAG, "Created subs file @ ${subsFileCid}")
 
-        acctFile = BailiwickAccount(
-            myPeerId,
-            keyFileCid,
-            subsFileCid
-        )
+        val acctFileCid = store(BailiwickAccount(myPeerId,
+                                                keyFileCid,
+                                                subsFileCid), rsa)
 
-        val acctFileCid = store(acctFile, rsaEnc)
-        Log.i(TAG, "Created acct file @ ${acctFileCid}")
+        Log.i(TAG, "Created acct file @ $acctFileCid")
         verCid = ipfs.addLinkToDir(verCid, "account.json", acctFileCid)!!
 
         // Create the subscriber-facing manifest
-        val publicSubsKey = keyFile!!.keys.get("$myPeerId:everyone")?.lastOrNull()!!
+        val publicSubsKey = keyFile.keys.get("$myPeerId:everyone")?.lastOrNull()!!
         Log.i(TAG, "Public subs key: $publicSubsKey")
         val encKey = b64Dec.decode(publicSubsKey)
         Log.i(TAG, "Found public subscriber encryption key")

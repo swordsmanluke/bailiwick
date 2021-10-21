@@ -9,13 +9,18 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.Encryptor
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.models.SubscriptionRequest
 import com.perfectlunacy.bailiwick.models.ipfs.*
+import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import io.bloco.faker.Faker
-import junit.framework.Assert.assertEquals
-import junit.framework.Assert.assertNotNull
+import junit.framework.Assert.*
 import org.junit.Assert
+import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -32,20 +37,24 @@ class BailiwickImplTest {
     private var context: Context = ApplicationProvider.getApplicationContext()
     private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
     private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
-    private val key = KeyGenerator.getInstance("AES").generateKey()
-    private val keyFile = KeyFile(mapOf(Pair("everyone", listOf(Base64.getEncoder().encodeToString(key.encoded)))))
     private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db, MockFileCache())
 
-    init {
-        if(db.accountDao().activeAccount() == null) {
-            bw.newAccount("swordsmanluke", "notmypass")
+    @Before
+    fun deleteCachedFiles() {
+        val bwDir = File(context.filesDir.path + "/bw")
+        if(bwDir.exists()) {
+            bwDir.deleteRecursively()
         }
+    }
+
+    @Before
+    fun initializeBailiwick() {
+        bw.newAccount("Lucas", "swordsmanluke", "notmypass", "")
     }
 
     @Test
     fun creatingAndRetrievingPostWorks() {
-        val key = Base64.getDecoder().decode(keyFile.keys["everyone"]?.lastOrNull()!!)
-        val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
+        val cipher = bw.encryptorForKey("${bw.peerId}:everyone")
 
         val finalPost = post()
         val cid = bw.store(finalPost, cipher)
@@ -57,6 +66,81 @@ class BailiwickImplTest {
         Log.i("BailiwickImplTest", "Post: $post2")
 
         assertEquals(finalPost, post2)
+    }
+
+    @Test
+    fun creatingAndRetrievingManifestWorks() {
+        val cipher = bw.encryptorForKey("${bw.peerId}:everyone")
+
+        val ogPost = postWithPicture()
+        val postCid = bw.store(ogPost, cipher)
+        val idCid = bw.store(Identity("my identity", ""), bw.encryptorForKey("public"))
+
+        bw.manifest = manifest(idCid, listOf(postCid), cipher)
+
+        val manifest = bw.manifest
+        val feed = bw.retrieve(manifest.feeds[0], cipher, Feed::class.java)!!
+        val post = bw.retrieve(feed.posts[0], cipher, Post::class.java)!!
+
+        Log.i(javaClass.simpleName, "Post: $post vs $ogPost")
+
+        assertNotNull(post)
+    }
+
+    @Test
+    fun addingSubscriberWorks() {
+        /***
+         * Create my account
+         */
+        val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
+        val idCid = bw.store(Identity("another identity", ""), myCipher)
+        bw.manifest = manifest(idCid, listOf(), myCipher)
+
+        /***
+         * Create a subscriber's account
+         */
+        val otherPeerId = "abc123"
+        val otherRsaKey = KeyPairGenerator.getInstance("RSA").genKeyPair()
+        val otherId = bw.store(Identity("Starbuck", ""), NoopEncryptor())
+
+        /***
+         * Handle the subscribe request from Starbuck
+         */
+        bw.addSubscriber(otherPeerId, otherId, otherRsaKey.public, listOf("everyone"))
+
+        assertEquals(bw.subscriptions.circles["everyone"]!!.first().identity, otherId)
+        assertEquals(bw.subscriptions.circles["everyone"]!!.first().publicKey, Base64.getEncoder().encodeToString(otherRsaKey.public.encoded))
+        assertTrue(bw.subscriptions.peers.contains(otherPeerId))
+    }
+
+    @Test
+    fun creatingSubscribeRequestWorks() {
+        /***
+         * Create my account
+         */
+        val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
+        val idCid = bw.store(Identity("another identity", ""), myCipher)
+        bw.manifest = manifest(idCid, listOf(), myCipher)
+
+        /***
+         * Create a subscribe request to send
+         */
+        val publicIdCid = bw.ipfs.resolveNode("/ipfs/${bw.peerId}/identity.json", 10)!!
+        val password = "password"
+
+        // Generated request is encrypted with the password
+        val encRequest = bw.createSubscribeRequest(publicIdCid, password)
+
+        // Use the password to generate a key
+        val aesKey = SecretKeySpec(Md5Signature().sign(password.toByteArray()), "AES")
+        val aes = AESEncryptor(aesKey)
+
+        // Decrypt the request
+        val request = Gson().fromJson(String(aes.decrypt(encRequest)), SubscriptionRequest::class.java)
+
+        assertEquals(request.peerId, bw.peerId)
+        assertEquals(request.identityCid, publicIdCid)
+        assertEquals(request.publicKey, Base64.getEncoder().encodeToString(bw.keyPair.public.encoded))
     }
 
     private fun post(): Post {
@@ -104,24 +188,16 @@ class BailiwickImplTest {
         return Post(p.timestamp, p.parentCid, p.text, p.files, signature)
     }
 
-    @Test
-    fun creatingAndRetrievingManifestWorks() {
-        val key = Base64.getDecoder().decode(keyFile.keys["everyone"]?.lastOrNull()!!)
-        val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
-
-        val ogPost = postWithPicture()
-        val postCid = bw.store(ogPost, cipher)
-
-        val idCid = bw.store(Identity("another identity", ""), cipher)
-        val feedCid = bw.store(Feed(Calendar.getInstance().timeInMillis, listOf(postCid), emptyList(), emptyList(), idCid), cipher)
-        bw.manifest = Manifest(listOf(feedCid))
-
-        val manifest = bw.manifest
-        val feed = bw.retrieve(manifest.feeds[0], cipher, Feed::class.java)!!
-        val post = bw.retrieve(feed.posts[0], cipher, Post::class.java)!!
-
-        Log.i(javaClass.simpleName, "Post: $post vs $ogPost")
-
-        assertNotNull(post)
+    private fun manifest(identity: ContentId, posts: List<ContentId>, cipher: Encryptor): Manifest {
+        val feedCid = bw.store(
+            Feed(
+                Calendar.getInstance().timeInMillis,
+                posts,
+                emptyList(),
+                emptyList(),
+                identity
+            ), cipher
+        )
+        return Manifest(listOf(feedCid))
     }
 }
