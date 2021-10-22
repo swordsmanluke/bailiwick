@@ -11,7 +11,7 @@ import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
-import com.perfectlunacy.bailiwick.models.SubscriptionRequest
+import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
@@ -104,7 +104,7 @@ class BailiwickImplTest {
         /***
          * Handle the subscribe request from Starbuck
          */
-        bw.addSubscriber(otherPeerId, otherId, otherRsaKey.public, listOf("everyone"))
+        bw.addSubscription(otherPeerId, otherId, otherRsaKey.public, listOf("everyone"))
 
         assertEquals(bw.subscriptions.circles["everyone"]!!.first().identity, otherId)
         assertEquals(bw.subscriptions.circles["everyone"]!!.first().publicKey, Base64.getEncoder().encodeToString(otherRsaKey.public.encoded))
@@ -112,7 +112,7 @@ class BailiwickImplTest {
     }
 
     @Test
-    fun creatingSubscribeRequestWorks() {
+    fun creatingIntroductionWorks() {
         /***
          * Create my account
          */
@@ -127,17 +127,16 @@ class BailiwickImplTest {
         val password = "password"
 
         // Generated request is encrypted with the password
-        val encRequest = bw.createSubscribeRequest(publicIdCid, password)
+        val encRequest = bw.createIntroductionMessage(publicIdCid, password)
 
         // Use the password to generate a key
         val aesKey = SecretKeySpec(Md5Signature().sign(password.toByteArray()), "AES")
         val aes = AESEncryptor(aesKey)
 
         // Decrypt the request
-        val request = Gson().fromJson(String(aes.decrypt(encRequest)), SubscriptionRequest::class.java)
+        val request = Gson().fromJson(String(aes.decrypt(encRequest)), Introduction::class.java)
 
         assertEquals(request.peerId, bw.peerId)
-        assertEquals(request.identityCid, publicIdCid)
         assertEquals(request.publicKey, Base64.getEncoder().encodeToString(bw.keyPair.public.encoded))
     }
 

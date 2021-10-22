@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".ConnectFragment"
+    android:orientation="vertical"
+    android:layout_gravity="center"
+    android:gravity="center_vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent">
+    <Button
+        android:id="@+id/btn_conn_request"
+        android:text="@string/request_connect"
+        android:layout_gravity="center"
+        android:textColor="@color/cardview_light_background"
+        android:background="@color/colorPrimaryDark"
+        android:paddingHorizontal="10dp"
+        android:layout_marginBottom="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btn_conn_accept"
+        android:text="@string/accept_connection"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@color/cardview_light_background"
+        android:paddingHorizontal="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</LinearLayout>

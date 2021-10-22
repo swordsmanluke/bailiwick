@@ -41,16 +41,37 @@
         android:label="fragment_content"
         tools:layout="@layout/fragment_content" >
         <action
-            android:id="@+id/action_contentFragment_to_subscribeFragment"
-            app:destination="@id/subscribeFragment" />
+            android:id="@+id/action_contentFragment_to_connectFragment"
+            app:destination="@id/connectFragment" />
     </fragment>
     <fragment
         android:id="@+id/subscribeFragment"
-        android:name="com.perfectlunacy.bailiwick.SubscribeFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.SubscribeFragment"
         android:label="fragment_subscribe"
         tools:layout="@layout/fragment_subscribe" >
         <action
             android:id="@+id/action_subscribeFragment_to_contentFragment"
+            app:destination="@id/contentFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/connectFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.ConnectFragment"
+        android:label="fragment_connect"
+        tools:layout="@layout/fragment_connect" >
+        <action
+            android:id="@+id/action_connectFragment_to_subscribeFragment"
+            app:destination="@id/subscribeFragment" />
+        <action
+            android:id="@+id/action_connectFragment_to_acceptSubscriptionFragment"
+            app:destination="@id/acceptSubscriptionFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/acceptSubscriptionFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.AcceptSubscriptionFragment"
+        android:label="fragment_accept_subscription"
+        tools:layout="@layout/fragment_accept_subscription" >
+        <action
+            android:id="@+id/action_acceptSubscriptionFragment_to_contentFragment"
             app:destination="@id/contentFragment" />
     </fragment>
 </navigation>

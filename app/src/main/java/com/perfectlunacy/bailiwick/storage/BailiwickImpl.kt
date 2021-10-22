@@ -3,8 +3,9 @@ package com.perfectlunacy.bailiwick.storage
 import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.*
-import com.perfectlunacy.bailiwick.models.SubscriptionRequest
-import com.perfectlunacy.bailiwick.models.User
+import com.perfectlunacy.bailiwick.models.BailiwickAccount
+import com.perfectlunacy.bailiwick.models.Introduction
+import com.perfectlunacy.bailiwick.models.Users
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
@@ -47,8 +48,10 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             val rsa = encryptorForKey(USER_PRIVATE)
             val newSubsCid = store(value, rsa)
 
-            bailiwickAccount = BailiwickAccount(bailiwickAccount.peerId, bailiwickAccount.keyFileCid, newSubsCid)
+            bailiwickAccount.subscriptionsCid = newSubsCid
         }
+
+    override val users = Users(this)
 
     private var _manifest: Manifest? = null
     override var ipfsManifest: Manifest
@@ -120,36 +123,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             val keyFileCid = store(value, rsa)
 
             // Update our account file
-            bailiwickAccount = BailiwickAccount(peerId, keyFileCid, bailiwickAccount.subscriptionsCid)
+            bailiwickAccount.keyFileCid = keyFileCid
         }
 
     private val sequence: Int
         get() = account?.sequence ?: 1
 
-    private var _bwAcct: BailiwickAccount? = null
-    private var bailiwickAccount: BailiwickAccount
-        get() {
-            if(_bwAcct == null) {
-                val rsa = encryptorForKey(USER_PRIVATE)
-                val acctCid = ipfs.resolveNode(account!!.rootCid, mutableListOf("bw", VERSION, "account.json"), 10)
+    override val bailiwickAccount = BailiwickAccount(this)
 
-                _bwAcct = retrieve(acctCid!!, rsa, BailiwickAccount::class.java)
-            }
-            return _bwAcct!!
-        }
-        set(value) {
-            val rsa = encryptorForKey(USER_PRIVATE)
-            val cid = store(value, rsa)
-
-            val newRoot = addFileToDir("bw/$VERSION", "account.json", cid)
-            publishRoot(newRoot)
-            val acct = account!!
-            acct.rootCid = newRoot
-            acct.sequence += 1
-            db.accountDao().update(acct)
-
-            _bwAcct = value
-        }
 
     override fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account {
         val hash = Sha1Signature().sign(password.toByteArray()) // TODO: Salt
@@ -207,6 +188,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return finalCipher
     }
 
+    override fun cidForPath(path: String): ContentId? {
+        return cidForPath(peerId, path, sequence)
+    }
+
+    override fun cidForPath(peerId: PeerId, path: String): ContentId? {
+        return cidForPath(peerId, path, 0)
+    }
+
     override fun store(data: ByteArray): ContentId {
         val cid = ipfs.storeData(data)
         cache.cache(cid, data)
@@ -232,8 +221,8 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return Gson().fromJson(rawJson, clazz)
     }
 
-    override fun addToDir(dir: ContentId, filename: String, cid: ContentId): ContentId {
-        TODO("Not yet implemented")
+    override fun addBailiwickFile(filename: String, cid: ContentId) {
+        publishRoot(addFileToDir("bw/$VERSION", filename, cid))
     }
 
     override fun publishRoot(newRoot: ContentId) {
@@ -254,7 +243,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return Post(post.timestamp, post.parentCid, post.text, post.files, signature)
     }
 
-    override fun addSubscriber(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>) {
+    override fun addSubscription(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>) {
         val newSub = Subscriber(peerId, identityCid, Base64.getEncoder().encodeToString(publicKey.encoded))
         circles.forEach { circle ->
             subscriptions.circles.getOrPut(circle, { mutableListOf() }).add(newSub)
@@ -266,8 +255,21 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         subscriptions = subscriptions
     }
 
-    override fun createSubscribeRequest(identityCid: ContentId, password: String): ByteArray {
-        val request = Gson().toJson(SubscriptionRequest(
+    override fun createIntroductionMessage(identityCid: ContentId, password: String): ByteArray {
+        val request = Gson().toJson(Introduction(
+            UUID.randomUUID(),
+            peerId,
+            identityCid,
+            Base64.getEncoder().encodeToString(keyPair.public.encoded)))
+
+        val aesKey = SecretKeySpec(Md5Signature().sign(password.toByteArray()), "AES")
+        val aes = AESEncryptor(aesKey)
+        return aes.encrypt(request.toByteArray())
+    }
+
+    override fun createIntroductionMessage(uuid: UUID, identityCid: ContentId, password: String): ByteArray {
+        val request = Gson().toJson(Introduction(
+            uuid,
             peerId,
             identityCid,
             Base64.getEncoder().encodeToString(keyPair.public.encoded)))
@@ -304,9 +306,11 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         val subsFileCid = store(subscriptions, rsa)
         Log.i(TAG, "Created subs file @ ${subsFileCid}")
 
-        val acctFileCid = store(BailiwickAccount(myPeerId,
-                                                keyFileCid,
-                                                subsFileCid), rsa)
+        val acctFileCid = BailiwickAccount.create(this,
+            myPeerId,
+            keyFileCid,
+            subsFileCid,
+            Users.create(this))
 
         Log.i(TAG, "Created acct file @ $acctFileCid")
         verCid = ipfs.addLinkToDir(verCid, "account.json", acctFileCid)!!

@@ -59,7 +59,7 @@ class ContentFragment : BailiwickFragment() {
 
         binding.btnAddSubscription.setOnClickListener {
             val nav = requireView().findNavController()
-            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_subscribeFragment) }
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_connectFragment) }
         }
 
         binding.btnPost.setOnClickListener {

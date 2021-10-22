@@ -9,10 +9,6 @@ import com.perfectlunacy.bailiwick.storage.PeerId
  * They're all POJO structs intended to be able to serialize to/from JSON easily
  */
 
-data class BailiwickAccount(val peerId: String,
-                            val keyFileCid: String,
-                            val subscriptionsCid: String)
-
 data class User(val name: String, val peerId: String, val profilePicCid: String)
 data class Identity(val name: String, val profilePicCid: String)
 

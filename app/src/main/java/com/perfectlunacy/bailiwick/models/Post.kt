@@ -5,11 +5,11 @@ import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.models.ipfs.Post as IpfsPost
 
-class Post(val author: User, val timestamp: Long, val parent: ContentId?, val cid: ContentId, val text: String, val files: List<FileDef>, val signature: String, val responses: MutableList<Post>) {
+class Post(val author: UserIdentity, val timestamp: Long, val parent: ContentId?, val cid: ContentId, val text: String, val files: List<FileDef>, val signature: String, val responses: MutableList<Post>) {
 
     companion object {
         @JvmStatic
-        fun fromIPFS(bw: Bailiwick, author: User, cid: ContentId, post: IpfsPost): Post {
+        fun fromIPFS(bw: Bailiwick, author: UserIdentity, cid: ContentId, post: IpfsPost): Post {
             post.files.map {
                 bw.download(it.cid) // Ensure it's in the local cache
             }

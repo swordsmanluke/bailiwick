@@ -2,26 +2,36 @@ package com.perfectlunacy.bailiwick.viewmodels
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.perfectlunacy.bailiwick.fragments.AcceptSubscriptionFragment
 import com.perfectlunacy.bailiwick.models.Post
-import com.perfectlunacy.bailiwick.models.User
+import com.perfectlunacy.bailiwick.models.UserIdentity
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.models.ipfs.Feed
 import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.models.ipfs.Manifest
 import com.perfectlunacy.bailiwick.storage.ContentId
+import com.perfectlunacy.bailiwick.storage.PeerId
+import kotlinx.coroutines.Dispatchers
 import com.perfectlunacy.bailiwick.models.ipfs.Post as IpfsPost
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.HashMap
 
 class BailiwickViewModel(val network: Bailiwick): ViewModel() {
+
     // Currently visible content from the network
     // TODO: LiveData?
     val content = HashMap<String, MutableSet<Post>>()
     private var _uid = 0
+
+    val acceptViewModel = AcceptSubscriptionFragment.AcceptViewModel(MutableLiveData(AcceptSubscriptionFragment.AcceptMode.CaptureUser), null, null)
 
     val selectedUser: Identity?
         get() {
@@ -47,10 +57,10 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
     }
 
     init {
-        GlobalScope.launch { refreshContent() }
+        viewModelScope.launch { withContext(Dispatchers.Default) { refreshContent() } }
     }
 
-    fun refreshContent() {
+    suspend fun refreshContent() {
         if (network.account != null) {
             // Pull content from ourselves first
             val enc = network.encryptorForKey("${network.peerId}:everyone")
@@ -63,7 +73,7 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
             val feeds = manifest.feeds.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }
             feeds.forEach { feed ->
 
-                val user = User.fromIPFS(network, enc, feed.identity)
+                val user = UserIdentity.fromIPFS(network, enc, feed.identity)
 
                 val posts = feed.posts.mapNotNull { cid ->
                     val ipfsPost = network.retrieve(cid, enc, IpfsPost::class.java)

@@ -12,7 +12,7 @@ class Manifest(val feeds: List<Feed>) {
             val cipher = bw.encryptorForPeer(peerId)
             val feeds = manifest.feeds.map { feedCid ->
                 val feed = bw.retrieve(feedCid, cipher, IpfsFeed::class.java)!!
-                val author = User.fromIPFS(bw, cipher, feed.identity)
+                val author = UserIdentity.fromIPFS(bw, cipher, feed.identity)
                 // TODO: Retrieve feed names from Bailiwick account
                 Feed.fromIPFS(bw, peerId, author, feed)
             }

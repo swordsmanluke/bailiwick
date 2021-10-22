@@ -23,4 +23,10 @@
     <string name="public_name">Public Name</string>
     <string name="blank_for_anonymous">Blank = Anonymous</string>
     <string name="send_request">Send Request</string>
+    <string name="request_connect">Request Connection</string>
+    <string name="accept_connection">Accept Connection</string>
+    <string name="make_a_connection">Make a Connection</string>
+    <string name="scan">Scan</string>
+    <string name="from_images">From Images</string>
+    <string name="send_response">Send Response</string>
 </resources>

@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "com.perfectlunacy.bailiwick"
-        minSdk 28
+        minSdk 26
         targetSdk 31
         versionCode 1
         versionName "1.0"
@@ -94,6 +94,9 @@ dependencies {
     // QR image generation
     implementation 'com.google.zxing:core:3.4.0'
 
+    // QR image scanning
+    implementation 'com.journeyapps:zxing-android-embedded:4.2.0'
+
     // fake data
     implementation 'com.github.blocoio:faker:1.2.8'
 
@@ -116,7 +119,7 @@ dependencies {
     implementation 'com.squareup.picasso:picasso:2.8'
 
     // Database (Room)
-    def room_version = "2.4.0-alpha05"
+    def room_version = "2.4.0-beta01"
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
 

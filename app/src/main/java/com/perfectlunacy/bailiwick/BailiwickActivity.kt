@@ -15,6 +15,7 @@ import com.perfectlunacy.bailiwick.storage.MockIPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
+import kotlinx.coroutines.*
 import threads.lite.IPFS
 import java.security.KeyFactory
 import java.security.KeyPair
@@ -29,21 +30,23 @@ class BailiwickActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requirePerms()
-        initBailiwick()
+        runBlocking { initBailiwick() }
         showDisplay()
     }
 
-    private fun initBailiwick() {
+    private suspend fun initBailiwick() {
         /*
         val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext)) // MockIPFS(applicationContext.filesDir.path)
         val cache = IpfsFileCache(applicationContext.filesDir.path)
         */
-        val ipfs =  MockIPFS(applicationContext.filesDir.path)
-        val cache = MockFileCache()
+        withContext(Dispatchers.Default) {
+            val ipfs = MockIPFS(applicationContext.filesDir.path)
+            val cache = MockFileCache()
 
-        val bwDb = getBailiwickDb(applicationContext)
-        val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb, cache)
-        bwModel = (viewModels<BailiwickViewModel>{ BailwickViewModelFactory(bwNetwork) }).value
+            val bwDb = getBailiwickDb(applicationContext)
+            val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb, cache)
+            bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(bwNetwork) }).value
+        }
     }
 
     private fun showDisplay() {

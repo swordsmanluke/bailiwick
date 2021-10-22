@@ -1,9 +1,8 @@
-package com.perfectlunacy.bailiwick
+package com.perfectlunacy.bailiwick.fragments
 
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.StrictMode
@@ -18,12 +17,11 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.google.gson.Gson
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import com.perfectlunacy.bailiwick.QRCode
+import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
-import com.perfectlunacy.bailiwick.fragments.BailiwickFragment
-import com.perfectlunacy.bailiwick.models.SubscriptionRequest
+import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -93,7 +91,7 @@ class SubscribeFragment : BailiwickFragment() {
                     val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
                     val ciphertext = cipher.encrypt(Gson().toJson(buildRequest(binding)).toByteArray())
 
-                    binding.imgQrCode.setImageBitmap(buildQrCode(ciphertext))
+                    binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
                 }
             }
 
@@ -127,34 +125,12 @@ class SubscribeFragment : BailiwickFragment() {
         return binding.root
     }
 
-    fun buildRequest(binding: FragmentSubscribeBinding): SubscriptionRequest {
+    fun buildRequest(binding: FragmentSubscribeBinding): Introduction {
         val map = mutableMapOf<String, String>()
         map["name"] = binding.txtName.text.toString()
         map["peer"] = bwModel.network.peerId
         val idCid = bwModel.network.manifest.feeds.getOrNull(binding.spnIdentities.selectedItemPosition - 1)?.identity?.cid!!
-        return SubscriptionRequest(bwModel.network.peerId, idCid, Base64.getEncoder().encodeToString(bwModel.network.keyPair.public.encoded))
-    }
-
-    fun buildQrCode(data: ByteArray): Bitmap {
-        val writer = QRCodeWriter()
-        val content = Base64.getEncoder().encodeToString(data)
-        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512)
-        val width = bitMatrix.getWidth ()
-        val height = bitMatrix.getHeight ();
-        val bmp = Bitmap.createBitmap (width, height, Bitmap.Config.RGB_565);
-
-        for (x in (0 until width)) {
-            for (y in (0 until height)) {
-                val color = if (bitMatrix.get(x, y)) {
-                    Color.BLACK
-                } else {
-                    Color.WHITE
-                }
-                bmp.setPixel(x, y, color);
-            }
-        }
-
-        return bmp
+        return Introduction(UUID.randomUUID(), bwModel.network.peerId, idCid, Base64.getEncoder().encodeToString(bwModel.network.keyPair.public.encoded))
     }
 
     companion object {
