@@ -2,11 +2,10 @@ package com.perfectlunacy.bailiwick.viewmodels
 
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.perfectlunacy.bailiwick.fragments.AcceptSubscriptionFragment
+import com.perfectlunacy.bailiwick.fragments.AcceptIntroductionFragment
 import com.perfectlunacy.bailiwick.models.Post
 import com.perfectlunacy.bailiwick.models.UserIdentity
 import com.perfectlunacy.bailiwick.models.db.Account
@@ -15,10 +14,8 @@ import com.perfectlunacy.bailiwick.models.ipfs.Feed
 import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.models.ipfs.Manifest
 import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.PeerId
 import kotlinx.coroutines.Dispatchers
 import com.perfectlunacy.bailiwick.models.ipfs.Post as IpfsPost
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -31,7 +28,9 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
     val content = HashMap<String, MutableSet<Post>>()
     private var _uid = 0
 
-    val acceptViewModel = AcceptSubscriptionFragment.AcceptViewModel(MutableLiveData(AcceptSubscriptionFragment.AcceptMode.CaptureUser), null, null)
+    val acceptViewModel = AcceptIntroductionFragment.AcceptViewModel(
+        MutableLiveData(AcceptIntroductionFragment.AcceptMode.CaptureUser),
+        null)
 
     val selectedUser: Identity?
         get() {

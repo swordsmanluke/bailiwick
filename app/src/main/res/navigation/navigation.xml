@@ -46,7 +46,7 @@
     </fragment>
     <fragment
         android:id="@+id/subscribeFragment"
-        android:name="com.perfectlunacy.bailiwick.fragments.SubscribeFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.IntroduceSelfFragment"
         android:label="fragment_subscribe"
         tools:layout="@layout/fragment_subscribe" >
         <action
@@ -67,7 +67,7 @@
     </fragment>
     <fragment
         android:id="@+id/acceptSubscriptionFragment"
-        android:name="com.perfectlunacy.bailiwick.fragments.AcceptSubscriptionFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.AcceptIntroductionFragment"
         android:label="fragment_accept_subscription"
         tools:layout="@layout/fragment_accept_subscription" >
         <action

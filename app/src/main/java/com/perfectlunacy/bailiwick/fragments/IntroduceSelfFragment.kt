@@ -15,7 +15,7 @@ import android.widget.ArrayAdapter
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.Fragment
+import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
@@ -23,7 +23,7 @@ import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import kotlinx.coroutines.GlobalScope
+import com.perfectlunacy.bailiwick.storage.PeerId
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -31,17 +31,7 @@ import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [SubscribeFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class SubscribeFragment : BailiwickFragment() {
+class IntroduceSelfFragment : BailiwickFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +53,7 @@ class SubscribeFragment : BailiwickFragment() {
 
         // TODO: Manage multiple feeds with names etc. Manifest needs a facade
         //  Also, these files need their CIDs readily available.
-        GlobalScope.launch {
+        bwModel.viewModelScope.launch {
             Handler(requireContext().mainLooper).post {
                 binding.spnIdentities.adapter = ArrayAdapter(
                     requireContext(),
@@ -74,13 +64,7 @@ class SubscribeFragment : BailiwickFragment() {
         }
 
         binding.spnIdentities.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-
+            override fun onItemSelected(parent: AdapterView<*>?,view: View?,position: Int,id: Long) {
                 val identity = bwModel.network.manifest.feeds.getOrNull(position - 1)?.identity
                 binding.txtName.text = identity?.name ?: ""
                 binding.avatar.setImageBitmap(identity?.avatar ?:
@@ -89,7 +73,8 @@ class SubscribeFragment : BailiwickFragment() {
                 if(identity != null) {
                     val key = Md5Signature().sign(binding.txtPassword.text.toString().toByteArray())
                     val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
-                    val ciphertext = cipher.encrypt(Gson().toJson(buildRequest(binding)).toByteArray())
+                    val request = buildRequest(binding.txtName.text.toString(), bwModel.network.peerId)
+                    val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
 
                     binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
                 }
@@ -103,7 +88,7 @@ class SubscribeFragment : BailiwickFragment() {
         }
 
         binding.btnRequest.setOnClickListener {
-            val imagefolder: File = File(requireContext().cacheDir, "images")
+            val imagefolder = File(requireContext().cacheDir, "images")
             imagefolder.mkdirs()
             val f = File(imagefolder, "connect_request.png")
             val out = FileOutputStream(f)
@@ -125,32 +110,14 @@ class SubscribeFragment : BailiwickFragment() {
         return binding.root
     }
 
-    fun buildRequest(binding: FragmentSubscribeBinding): Introduction {
-        val map = mutableMapOf<String, String>()
-        map["name"] = binding.txtName.text.toString()
-        map["peer"] = bwModel.network.peerId
-        val idCid = bwModel.network.manifest.feeds.getOrNull(binding.spnIdentities.selectedItemPosition - 1)?.identity?.cid!!
-        return Introduction(UUID.randomUUID(), bwModel.network.peerId, idCid, Base64.getEncoder().encodeToString(bwModel.network.keyPair.public.encoded))
+    fun buildRequest(name: String, peerId: PeerId): Introduction {
+        return Introduction(false,
+            peerId,
+            name,
+            Base64.getEncoder().encodeToString(bwModel.network.keyPair.public.encoded))
     }
 
     companion object {
         const val TAG = "SubscribeFragment"
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment SubscribeFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            SubscribeFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
     }
 }

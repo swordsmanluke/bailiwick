@@ -2,6 +2,8 @@ package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.BailiwickAccount
+import com.perfectlunacy.bailiwick.models.Circle
+import com.perfectlunacy.bailiwick.models.Circles
 import com.perfectlunacy.bailiwick.models.Users
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
@@ -19,7 +21,7 @@ interface Bailiwick {
     val bailiwickAccount: BailiwickAccount
     val users: Users
     val account: Account?
-    var subscriptions: Subscriptions
+    val circles: Circles
     var ipfsManifest: com.perfectlunacy.bailiwick.models.ipfs.Manifest
     val manifest: com.perfectlunacy.bailiwick.models.Manifest
     var identity: Identity
@@ -40,9 +42,8 @@ interface Bailiwick {
     fun addBailiwickFile(filename: String, cid: ContentId)
     fun publishRoot(newRoot: ContentId)
     fun sign(post: Post): Post
-    fun addSubscription(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>)
-    fun createIntroductionMessage(identityCid: ContentId, password: String): ByteArray
-    fun createIntroductionMessage(uuid: UUID, identityCid: ContentId, password: String): ByteArray
+    fun createIntroduction(identityCid: ContentId, password: String): ByteArray
+    fun createIntroductionResponse(identityCid: ContentId, password: String): ByteArray
 
     /***
      * TODO later:

@@ -37,7 +37,6 @@ class BailiwickImplTest {
     private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
     private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db, MockFileCache())
 
-    @Before
     fun deleteCachedFiles() {
         val bwDir = File(context.filesDir.path + "/bw")
         if(bwDir.exists()) {
@@ -47,6 +46,7 @@ class BailiwickImplTest {
 
     @Before
     fun initializeBailiwick() {
+        deleteCachedFiles()
         bw.newAccount("Lucas", "swordsmanluke", "notmypass", "")
     }
 
@@ -86,32 +86,6 @@ class BailiwickImplTest {
     }
 
     @Test
-    fun addingSubscriberWorks() {
-        /***
-         * Create my account
-         */
-        val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
-        val idCid = bw.store(Identity("another identity", ""), myCipher)
-        bw.ipfsManifest = manifest(idCid, listOf(), myCipher)
-
-        /***
-         * Create a subscriber's account
-         */
-        val otherPeerId = "abc123"
-        val otherRsaKey = KeyPairGenerator.getInstance("RSA").genKeyPair()
-        val otherId = bw.store(Identity("Starbuck", ""), NoopEncryptor())
-
-        /***
-         * Handle the subscribe request from Starbuck
-         */
-        bw.addSubscription(otherPeerId, otherId, otherRsaKey.public, listOf("everyone"))
-
-        assertEquals(bw.subscriptions.circles["everyone"]!!.first().identity, otherId)
-        assertEquals(bw.subscriptions.circles["everyone"]!!.first().publicKey, Base64.getEncoder().encodeToString(otherRsaKey.public.encoded))
-        assertTrue(bw.subscriptions.peers.contains(otherPeerId))
-    }
-
-    @Test
     fun creatingIntroductionWorks() {
         /***
          * Create my account
@@ -127,7 +101,7 @@ class BailiwickImplTest {
         val password = "password"
 
         // Generated request is encrypted with the password
-        val encRequest = bw.createIntroductionMessage(publicIdCid, password)
+        val encRequest = bw.createIntroduction(publicIdCid, password)
 
         // Use the password to generate a key
         val aesKey = SecretKeySpec(Md5Signature().sign(password.toByteArray()), "AES")
@@ -136,6 +110,7 @@ class BailiwickImplTest {
         // Decrypt the request
         val request = Gson().fromJson(String(aes.decrypt(encRequest)), Introduction::class.java)
 
+        assertEquals(false, request.isResponse)
         assertEquals(request.peerId, bw.peerId)
         assertEquals(request.publicKey, Base64.getEncoder().encodeToString(bw.keyPair.public.encoded))
     }

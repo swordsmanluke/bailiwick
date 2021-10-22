@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.*
 import com.perfectlunacy.bailiwick.models.BailiwickAccount
+import com.perfectlunacy.bailiwick.models.Circles
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.models.Users
 import com.perfectlunacy.bailiwick.models.db.Account
@@ -34,21 +35,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override val account: Account?
         get() = db.accountDao().activeAccount()
 
-    private var _subscriptionFile: Subscriptions? = null
-    override var subscriptions: Subscriptions
+    private var _circles: Circles? = null
+    override val circles: Circles
         get() {
-            if(_subscriptionFile == null) {
-                val rsa = encryptorForKey(USER_PRIVATE)
-                _subscriptionFile = retrieve(bailiwickAccount.subscriptionsCid, rsa, Subscriptions::class.java)
+            if(_circles == null) {
+                _circles = Circles(this)
             }
 
-            return _subscriptionFile!!
-        }
-        set(value) {
-            val rsa = encryptorForKey(USER_PRIVATE)
-            val newSubsCid = store(value, rsa)
-
-            bailiwickAccount.subscriptionsCid = newSubsCid
+            return _circles!!
         }
 
     override val users = Users(this)
@@ -129,7 +123,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     private val sequence: Int
         get() = account?.sequence ?: 1
 
-    override val bailiwickAccount = BailiwickAccount(this)
+    var _bwAcct: BailiwickAccount? = null
+    override val bailiwickAccount: BailiwickAccount
+        get() {
+            if(_bwAcct == null) {
+                _bwAcct = BailiwickAccount(this)
+            }
+            return _bwAcct!!
+        }
 
 
     override fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account {
@@ -243,21 +244,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return Post(post.timestamp, post.parentCid, post.text, post.files, signature)
     }
 
-    override fun addSubscription(peerId: PeerId, identityCid: ContentId, publicKey: PublicKey, circles: List<String>) {
-        val newSub = Subscriber(peerId, identityCid, Base64.getEncoder().encodeToString(publicKey.encoded))
-        circles.forEach { circle ->
-            subscriptions.circles.getOrPut(circle, { mutableListOf() }).add(newSub)
-        }
-
-        subscriptions.peers.add(peerId)
-
-        // TODO: This self assignment triggers the "updated subscriptions" code. This needs a function instead
-        subscriptions = subscriptions
-    }
-
-    override fun createIntroductionMessage(identityCid: ContentId, password: String): ByteArray {
+    override fun createIntroduction(identityCid: ContentId, password: String): ByteArray {
         val request = Gson().toJson(Introduction(
-            UUID.randomUUID(),
+            false,
             peerId,
             identityCid,
             Base64.getEncoder().encodeToString(keyPair.public.encoded)))
@@ -267,9 +256,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return aes.encrypt(request.toByteArray())
     }
 
-    override fun createIntroductionMessage(uuid: UUID, identityCid: ContentId, password: String): ByteArray {
+    override fun createIntroductionResponse(identityCid: ContentId, password: String): ByteArray {
         val request = Gson().toJson(Introduction(
-            uuid,
+            true,
             peerId,
             identityCid,
             Base64.getEncoder().encodeToString(keyPair.public.encoded)))

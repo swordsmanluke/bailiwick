@@ -29,4 +29,5 @@
     <string name="scan">Scan</string>
     <string name="from_images">From Images</string>
     <string name="send_response">Send Response</string>
+    <string name="ok">Ok</string>
 </resources>

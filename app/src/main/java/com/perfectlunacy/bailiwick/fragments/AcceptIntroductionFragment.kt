@@ -1,10 +1,11 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,9 +13,10 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.google.zxing.integration.android.IntentIntegrator
 import com.perfectlunacy.bailiwick.QRCode
@@ -34,28 +36,17 @@ import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
-
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [AcceptSubscriptionFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class AcceptSubscriptionFragment : BailiwickFragment() {
+class AcceptIntroductionFragment : BailiwickFragment() {
 
     enum class AcceptMode {
         CaptureUser,
-        SendResponse
+        SendResponse,
+        NoResponseReqd
     }
 
     data class AcceptViewModel(
         val mode: MutableLiveData<AcceptMode>,
         var request: Introduction?,
-        var response: ByteArray?
     )
 
     override fun onCreateView(
@@ -92,14 +83,21 @@ class AcceptSubscriptionFragment : BailiwickFragment() {
             imagefolder.mkdirs()
             val f = File(imagefolder, "connect_response.png")
             val out = FileOutputStream(f)
-            binding.imgResponseQr.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100,out)
+            binding.imgResponseQr.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100, out)
             out.flush()
             out.close()
-            val uri = FileProvider.getUriForFile(requireContext(), "com.perfectlunacy.shareimage.fileprovider", f)
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "com.perfectlunacy.shareimage.fileprovider",
+                f
+            )
 
             val sendIntent = Intent()
             sendIntent.action = Intent.ACTION_SEND
-            sendIntent.putExtra(Intent.EXTRA_TEXT,"Thanks for reaching out! Here's my connect code.")
+            sendIntent.putExtra(
+                Intent.EXTRA_TEXT,
+                "Thanks for reaching out! Here's my connect code."
+            )
             sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
             sendIntent.type = "image/png"
             startActivity(sendIntent)
@@ -120,16 +118,34 @@ class AcceptSubscriptionFragment : BailiwickFragment() {
                     // Populate QR Response
                     bwModel.viewModelScope.launch {
                         withContext(Dispatchers.Default) {
-                            val requestUUID = bwModel.acceptViewModel.request?.uuid!!
-                            val req = bwModel.network.createIntroductionMessage(
-                                requestUUID,
+                            val req = bwModel.network.createIntroductionResponse(
                                 bwModel.network.cidForPath("bw/${BailiwickImpl.VERSION}/identity.json")!!,
                                 password
                             )
-                            bwModel.acceptViewModel.response = req
-                            Handler(requireContext().mainLooper).post { binding.imgResponseQr.setImageBitmap(QRCode.create(req)) }
+                            Handler(requireContext().mainLooper).post {
+                                binding.imgResponseQr.setImageBitmap(
+                                    QRCode.create(req)
+                                )
+                            }
                         }
                     }
+                }
+                AcceptMode.NoResponseReqd -> {
+                    binding.layoutButtons.visibility = View.GONE
+                    binding.layoutSendResponse.visibility = View.GONE
+                    val builder = AlertDialog.Builder(requireContext())
+                    // TODO: String resource-ify these
+                    builder.setMessage("Your introduction to ${bwModel.acceptViewModel.request?.name ?: "Unknown"} is complete!")
+                    builder.setTitle("Introduction Made")
+
+                    builder.apply {
+                        setPositiveButton(R.string.ok) { dialog, id ->
+                            val nav = requireView().findNavController()
+                            Handler(requireContext().mainLooper).post {
+                                nav.navigate(R.id.action_acceptSubscriptionFragment_to_contentFragment)
+                            }
+                        }
+                    }.create().show()
                 }
             }
         }
@@ -161,32 +177,16 @@ class AcceptSubscriptionFragment : BailiwickFragment() {
                     withContext(Dispatchers.Default) {
                         bwModel.network.users.add(subReq.peerId, pubkey)
                         bwModel.acceptViewModel.request = subReq
-                        bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
+                        if(subReq.isResponse){
+                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
+                        } else {
+                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
+                        }
                     }
                 }
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data)
         }
-    }
-
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment AcceptSubscriptionFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            AcceptSubscriptionFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
     }
 }
