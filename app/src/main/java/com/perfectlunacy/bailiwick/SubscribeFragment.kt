@@ -1,31 +1,37 @@
 package com.perfectlunacy.bailiwick
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.StrictMode
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.google.gson.Gson
 import com.google.zxing.BarcodeFormat
-import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
 import com.perfectlunacy.bailiwick.fragments.BailiwickFragment
 import com.perfectlunacy.bailiwick.models.SubscriptionRequest
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
+
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -38,6 +44,12 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  */
 class SubscribeFragment : BailiwickFragment() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val builder = StrictMode.VmPolicy.Builder()
+        StrictMode.setVmPolicy(builder.build())
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -54,12 +66,13 @@ class SubscribeFragment : BailiwickFragment() {
         // TODO: Manage multiple feeds with names etc. Manifest needs a facade
         //  Also, these files need their CIDs readily available.
         GlobalScope.launch {
-            binding.spnIdentities.adapter = ArrayAdapter(
-                requireContext(),
-                android.R.layout.simple_spinner_dropdown_item,
-                listOf("Identity") + bwModel.network.manifest.feeds.map{it.identity.name}
-            )
-
+            Handler(requireContext().mainLooper).post {
+                binding.spnIdentities.adapter = ArrayAdapter(
+                    requireContext(),
+                    android.R.layout.simple_spinner_dropdown_item,
+                    listOf("Identity") + bwModel.network.manifest.feeds.map { it.identity.name }
+                )
+            }
         }
 
         binding.spnIdentities.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -89,7 +102,26 @@ class SubscribeFragment : BailiwickFragment() {
                 binding.avatar.setImageBitmap(BitmapFactory.decodeStream(requireContext().assets.open("avatar.png")))
                 binding.imgQrCode.setImageBitmap(Bitmap.createBitmap(300, 300, Bitmap.Config.ALPHA_8))
             }
+        }
 
+        binding.btnRequest.setOnClickListener {
+            val imagefolder: File = File(requireContext().cacheDir, "images")
+            imagefolder.mkdirs()
+            val f = File(imagefolder, "connect_request.png")
+            val out = FileOutputStream(f)
+            binding.imgQrCode.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100,out)
+            out.flush()
+            out.close()
+            val uri = FileProvider.getUriForFile(requireContext(), "com.perfectlunacy.shareimage.fileprovider", f)
+
+            val sendIntent = Intent()
+            sendIntent.action = Intent.ACTION_SEND
+            sendIntent.putExtra(Intent.EXTRA_TEXT,
+                "Hi! I'd like to connect on Bailiwick: the pro-social network! You can find out more here: https://bailiwick.space")
+            Log.i(TAG, "Attaching ${f.path}")
+            sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
+            sendIntent.type = "image/png"
+            startActivity(sendIntent)
         }
 
         return binding.root
@@ -126,6 +158,7 @@ class SubscribeFragment : BailiwickFragment() {
     }
 
     companion object {
+        const val TAG = "SubscribeFragment"
         /**
          * Use this factory method to create a new instance of
          * this fragment using the provided parameters.

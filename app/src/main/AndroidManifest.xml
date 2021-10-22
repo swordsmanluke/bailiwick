@@ -18,6 +18,20 @@
         android:icon="@drawable/img_bailiwick_icon"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.perfectlunacy.shareimage.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+        <!-- we intend to request content
+              URIs for the images/subdirectory
+              of your private file area -->
+        <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/paths" />
+        </provider>
+
         <activity android:name=".BailiwickActivity"
             android:exported="true">
             <intent-filter>

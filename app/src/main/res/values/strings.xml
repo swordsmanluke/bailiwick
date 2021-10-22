@@ -22,4 +22,5 @@
     <string name="desc_user_avatar">User Avatar</string>
     <string name="public_name">Public Name</string>
     <string name="blank_for_anonymous">Blank = Anonymous</string>
+    <string name="send_request">Send Request</string>
 </resources>
