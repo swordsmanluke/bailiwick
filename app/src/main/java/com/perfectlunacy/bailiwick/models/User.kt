@@ -12,7 +12,7 @@ import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import java.io.*
 
-class User(val avatar: Bitmap?, val name: String) {
+class User(val avatar: Bitmap?, val name: String, val cid: ContentId) {
     companion object {
         @JvmStatic
         fun fromIPFS(bw: Bailiwick, cipher: Encryptor, identityCid: ContentId): User {
@@ -34,12 +34,12 @@ class User(val avatar: Bitmap?, val name: String) {
             val profilePicBytes = bw.download(identity.profilePicCid)
 
             return if (profilePicBytes == null) {
-                User(null, identity.name)
+                User(null, identity.name, identityCid)
             } else {
                 val picBytes = picCiphers.decrypt(profilePicBytes)
                 val avatar = BitmapFactory.decodeByteArray(picBytes, 0, picBytes.size)
 
-                User(avatar, identity.name)
+                User(avatar, identity.name, identityCid)
             }
         }
     }

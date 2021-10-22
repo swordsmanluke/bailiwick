@@ -16,7 +16,8 @@ interface Bailiwick {
     val peerId: PeerId
     val account: Account?
     var subscriptions: Subscriptions
-    var manifest: Manifest
+    var ipfsManifest: com.perfectlunacy.bailiwick.models.ipfs.Manifest
+    val manifest: com.perfectlunacy.bailiwick.models.Manifest
     var identity: Identity
     var keyFile: KeyFile
     val keyPair: KeyPair
@@ -24,6 +25,7 @@ interface Bailiwick {
     fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account
     fun manifestFor(peerId: PeerId, encryptor: Encryptor): Manifest?
     fun encryptorForKey(keyId: String): Encryptor
+    fun encryptorForPeer(peerId: PeerId): Encryptor
 
     fun store(data: ByteArray): ContentId
     fun <T>store(thing :T, cipher: Encryptor): ContentId

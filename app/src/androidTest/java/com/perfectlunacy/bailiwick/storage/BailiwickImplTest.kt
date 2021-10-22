@@ -20,7 +20,6 @@ import io.bloco.faker.Faker
 import junit.framework.Assert.*
 import org.junit.Assert
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -29,7 +28,6 @@ import java.io.FileOutputStream
 import java.net.URL
 import java.security.KeyPairGenerator
 import java.util.*
-import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 
 @RunWith(AndroidJUnit4::class)
@@ -76,9 +74,9 @@ class BailiwickImplTest {
         val postCid = bw.store(ogPost, cipher)
         val idCid = bw.store(Identity("my identity", ""), bw.encryptorForKey("public"))
 
-        bw.manifest = manifest(idCid, listOf(postCid), cipher)
+        bw.ipfsManifest = manifest(idCid, listOf(postCid), cipher)
 
-        val manifest = bw.manifest
+        val manifest = bw.ipfsManifest
         val feed = bw.retrieve(manifest.feeds[0], cipher, Feed::class.java)!!
         val post = bw.retrieve(feed.posts[0], cipher, Post::class.java)!!
 
@@ -94,7 +92,7 @@ class BailiwickImplTest {
          */
         val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
         val idCid = bw.store(Identity("another identity", ""), myCipher)
-        bw.manifest = manifest(idCid, listOf(), myCipher)
+        bw.ipfsManifest = manifest(idCid, listOf(), myCipher)
 
         /***
          * Create a subscriber's account
@@ -120,7 +118,7 @@ class BailiwickImplTest {
          */
         val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
         val idCid = bw.store(Identity("another identity", ""), myCipher)
-        bw.manifest = manifest(idCid, listOf(), myCipher)
+        bw.ipfsManifest = manifest(idCid, listOf(), myCipher)
 
         /***
          * Create a subscribe request to send

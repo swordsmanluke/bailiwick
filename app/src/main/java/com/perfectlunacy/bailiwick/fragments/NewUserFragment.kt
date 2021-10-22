@@ -88,7 +88,7 @@ class NewUserFragment : BailiwickFragment() {
             GlobalScope.launch {
                 val out = ByteArrayOutputStream()
                 avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-                val avatarCid = bwModel.bwNetwork.store(out.toByteArray())
+                val avatarCid = bwModel.network.store(out.toByteArray())
                 bwModel.createAccount(binding.newPublicName.text.toString(),
                     binding.newUserName.text.toString(),
                     binding.newPassword.text.toString(),
@@ -105,7 +105,7 @@ class NewUserFragment : BailiwickFragment() {
             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-            val avatarCid = bwModel.bwNetwork.store(out.toByteArray())
+            val avatarCid = bwModel.network.store(out.toByteArray())
 
             GlobalScope.launch {
                 bwModel.createAccount("Lucas Taylor", "swordsmanluke", "fake1@3pass", avatarCid)

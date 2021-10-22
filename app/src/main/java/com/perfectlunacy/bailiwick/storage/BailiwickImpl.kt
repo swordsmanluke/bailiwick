@@ -2,11 +2,9 @@ package com.perfectlunacy.bailiwick.storage
 
 import android.util.Log
 import com.google.gson.Gson
-import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
-import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
-import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
+import com.perfectlunacy.bailiwick.ciphers.*
 import com.perfectlunacy.bailiwick.models.SubscriptionRequest
+import com.perfectlunacy.bailiwick.models.User
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
@@ -53,7 +51,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         }
 
     private var _manifest: Manifest? = null
-    override var manifest: Manifest
+    override var ipfsManifest: Manifest
         get() {
             if (_manifest == null) {
                 val aes = encryptorForKey("$peerId:everyone")
@@ -72,6 +70,19 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             acct.sequence += 1
             db.accountDao().update(acct)
             _manifest = value
+        }
+
+    private var _realManifest: com.perfectlunacy.bailiwick.models.Manifest? = null
+    override var manifest: com.perfectlunacy.bailiwick.models.Manifest
+        get() {
+            if (_realManifest == null) {
+                _realManifest = com.perfectlunacy.bailiwick.models.Manifest.fromIPFS(this, peerId, ipfsManifest)
+            }
+            return _realManifest!!
+        }
+
+        set(value) {
+            TODO("Cannot be set yet")
         }
 
 
@@ -182,6 +193,20 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key), "AES"))
     }
 
+    override fun encryptorForPeer(peerId: PeerId): Encryptor {
+        val ciphers = keyFile.keys.getOrDefault(peerId, emptyList()).map { key ->
+            AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key), "AES"))
+        }.reversed()
+
+        // Try all the keys we have for this Peer, including "no key at all"
+        val finalCipher = MultiCipher(ciphers + NoopEncryptor()) {
+            try { Gson().newJsonReader(String(it).reader()).hasNext(); true }
+            catch(e: Exception) { false }
+        }
+
+        return finalCipher
+    }
+
     override fun store(data: ByteArray): ContentId {
         val cid = ipfs.storeData(data)
         cache.cache(cid, data)
@@ -268,7 +293,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         SecureRandom().nextBytes(keyBytes)
 
         val publicEncKey = b64Enc.encodeToString(keyBytes)
-        val keys = mapOf(Pair("$myPeerId:everyone", listOf(publicEncKey)))
+        val keys = mapOf(Pair("$myPeerId:everyone", listOf(publicEncKey)), Pair(myPeerId, listOf(publicEncKey)))
         Log.d(TAG, "Public key: $publicEncKey")
 
         keyFile = KeyFile(keys)

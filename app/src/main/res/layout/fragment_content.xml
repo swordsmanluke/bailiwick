@@ -26,18 +26,29 @@
                 android:src="@drawable/img_bailiwick_icon"
                 android:contentDescription="@string/profile_picture" />
         </LinearLayout>
-        <HorizontalScrollView
-            android:id="@+id/user_scroll"
+        <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <LinearLayout
-                android:id="@+id/userlist"
-                android:background="@color/cardview_light_background"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:orientation="horizontal"/>
-        </HorizontalScrollView>
-
+            <HorizontalScrollView
+                android:id="@+id/user_scroll"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+                <LinearLayout
+                    android:id="@+id/userlist"
+                    android:background="@color/cardview_light_background"
+                    android:layout_width="wrap_content"
+                    android:layout_height="50dp"
+                    android:orientation="horizontal"/>
+            </HorizontalScrollView>
+            <ImageButton
+                android:id="@+id/btn_add_subscription"
+                android:src="@drawable/ic_plus_circle_outline"
+                android:background="@color/colorPrimaryDark"
+                android:layout_width="50dp"
+                android:layout_height="50dp"/>
+        </LinearLayout>
         <LinearLayout
             android:id="@+id/mock_controls"
             android:layout_width="match_parent"

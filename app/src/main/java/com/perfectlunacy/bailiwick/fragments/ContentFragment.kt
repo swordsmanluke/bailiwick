@@ -10,14 +10,12 @@ import android.view.ViewGroup
 import android.widget.ListView
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
-import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
-import com.perfectlunacy.bailiwick.models.User
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.models.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -41,13 +39,13 @@ class ContentFragment : BailiwickFragment() {
         )
 
         GlobalScope.launch {
-            val cipher = bwModel.bwNetwork.encryptorForKey("${bwModel.bwNetwork.peerId}:everyone")
+            val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
             val picCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
                 BitmapFactory.decodeByteArray(data, 0, data.size) != null
             }
 
             val profilePicBytes =
-                bwModel.bwNetwork.download(bwModel.bwNetwork.identity.profilePicCid)
+                bwModel.network.download(bwModel.network.identity.profilePicCid)
 
             val avatar = if (profilePicBytes == null) {
                 BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
@@ -57,6 +55,11 @@ class ContentFragment : BailiwickFragment() {
             }
 
             Handler(requireContext().mainLooper).post { binding.imgMyAvatar.setImageBitmap(avatar) }
+        }
+
+        binding.btnAddSubscription.setOnClickListener {
+            val nav = requireView().findNavController()
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_subscribeFragment) }
         }
 
         binding.btnPost.setOnClickListener {
@@ -71,7 +74,7 @@ class ContentFragment : BailiwickFragment() {
                     emptyList(),
                     ""
                 )
-                bwModel.savePost(newPost, "${bwModel.bwNetwork.peerId}:everyone")
+                bwModel.savePost(newPost, "${bwModel.network.peerId}:everyone")
                 Log.i(TAG, "Saved new post. Refreshing...")
                 refreshContent()
             }
