@@ -12,11 +12,11 @@ class RsaSignature(val pubKey: PublicKey?, val privKey: PrivateKey?) {
         return signer.sign()
     }
 
-    fun verify(data: ByteArray, signature: ByteArray) {
+    fun verify(data: ByteArray, signature: ByteArray): Boolean {
         val verifier = Signature.getInstance("SHA1withRSA")
         verifier.initVerify(pubKey!!)
         verifier.update(data)
-        val result: Boolean = verifier.verify(signature)
+        return verifier.verify(signature)
     }
 
 }

@@ -5,17 +5,12 @@ import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.*
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
-import com.perfectlunacy.bailiwick.models.ipfs.*
-import com.perfectlunacy.bailiwick.models.ipfs.Feed
-import com.perfectlunacy.bailiwick.models.ipfs.Manifest
-import com.perfectlunacy.bailiwick.models.ipfs.Post
+import com.perfectlunacy.bailiwick.models.ipfs.Identity
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
-import java.security.SecureRandom
 import java.util.*
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
@@ -48,31 +43,12 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override val users = Users(this)
 
     private var _manifest: Manifest? = null
-    override var ipfsManifest: Manifest
+    override var manifest: Manifest
         get() {
             if (_manifest == null) {
-                val aes = encryptorForKey("$peerId:everyone")
-                val manCid = cidForPath(peerId, "bw/$VERSION/manifest.json", sequence)!!
-                _manifest = retrieve(manCid, aes, Manifest::class.java)
+                _manifest = Manifest(this, peerId)
             }
             return _manifest!!
-        }
-
-        set(value) {
-            val aes = encryptorForKey("$peerId:everyone")
-            val newRoot = addFileToDir("bw/$VERSION", "manifest.json", store(value, aes))
-            publishRoot(newRoot)
-
-            _manifest = value
-        }
-
-    private var _realManifest: com.perfectlunacy.bailiwick.models.Manifest? = null
-    override var manifest: com.perfectlunacy.bailiwick.models.Manifest
-        get() {
-            if (_realManifest == null) {
-                _realManifest = com.perfectlunacy.bailiwick.models.Manifest.fromIPFS(this, peerId, ipfsManifest)
-            }
-            return _realManifest!!
         }
 
         set(value) {
@@ -140,9 +116,8 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return account
     }
 
-    override fun manifestFor(peerId: PeerId, encryptor: Encryptor, minSequence: Int): Manifest? {
-        val manCid = cidForPath(peerId, "bw/$VERSION/manifest.json", minSequence) ?: return null
-        return retrieve(manCid, encryptor, Manifest::class.java)
+    override fun manifestFor(peerId: PeerId): Manifest? {
+        return Manifest(this, peerId)
     }
 
     override fun encryptorForKey(keyId: String): Encryptor {
@@ -179,7 +154,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun cidForPath(peerId: PeerId, path: String): ContentId? {
-        return cidForPath(peerId, path, 0)
+        // TODO: track largest last-seen minSeq for all peerIds
+        val minSeq = if(peerId == this.peerId) { account?.sequence ?: 0 } else { 0 }
+        return cidForPath(peerId, path, minSeq)
     }
 
     override fun store(data: ByteArray): ContentId {
@@ -220,18 +197,6 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             it.sequence = seq
             db.accountDao().update(it)
         }
-    }
-
-    override fun sign(post: Post): Post {
-        val unsigned = Gson().toJson(post)
-        val signature = Base64.getEncoder()
-            .encodeToString(
-                RsaSignature(
-                    keyPair.public,
-                    keyPair.private
-                ).sign(unsigned.toByteArray())
-            )
-        return Post(post.timestamp, post.parentCid, post.text, post.files, signature)
     }
 
     override fun createIntroduction(identityCid: ContentId, password: String): ByteArray {
@@ -286,9 +251,8 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         verCid= ipfs.addLinkToDir(verCid, "identity.json", publicIdCid)!!
 
         val aes = AESEncryptor(everyoneCircleKey)
-        val everyoneFeed = Feed(Calendar.getInstance().timeInMillis, emptyList(), emptyList(), emptyList(), publicIdCid)
-        val feedCid = store(everyoneFeed, aes)
-        val manifestCid = store(Manifest(listOf(feedCid)), aes)
+        val everyoneFeed = Feed.create(this, publicIdCid, aes)
+        val manifestCid = Manifest.create(this, everyoneFeed, aes)
         Log.i(TAG, "Stored encrypted manifest @ ${manifestCid}")
 
         verCid = ipfs.addLinkToDir(verCid, "manifest.json", manifestCid)!!

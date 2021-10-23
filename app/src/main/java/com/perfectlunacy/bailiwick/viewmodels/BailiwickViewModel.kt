@@ -10,12 +10,9 @@ import com.perfectlunacy.bailiwick.models.Post
 import com.perfectlunacy.bailiwick.models.UserIdentity
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.Bailiwick
-import com.perfectlunacy.bailiwick.models.ipfs.Feed
 import com.perfectlunacy.bailiwick.models.ipfs.Identity
-import com.perfectlunacy.bailiwick.models.ipfs.Manifest
 import com.perfectlunacy.bailiwick.storage.ContentId
 import kotlinx.coroutines.Dispatchers
-import com.perfectlunacy.bailiwick.models.ipfs.Post as IpfsPost
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -74,45 +71,13 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
             Log.i(TAG, "Peers: ${allPeers.count()}: ${allPeers.joinToString(",")}")
 
             allPeers.forEach { peerId ->
-                val enc = network.encryptorForPeer(peerId)
-                val minSeq = if(peerId == network.peerId) { activeAccount?.sequence ?: 0 } else { 0 }
-                val feeds = network.manifestFor(peerId, enc, minSeq)?.feeds?.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }?: emptyList()
+                val feeds = network.manifestFor(peerId)?.feeds ?: emptyList()
                 feeds.forEach { feed ->
-                    val user = UserIdentity.fromIPFS(network, enc, feed.identity)
-                    _users.add(user)
-                    val posts = feed.posts.mapNotNull { cid ->
-                        val ipfsPost = network.retrieve(cid, enc, IpfsPost::class.java)
-                        if (ipfsPost != null) {
-                            Post.fromIPFS(network, user, cid, ipfsPost)
-                        } else {
-                            null
-                        }
-                    }
-
-                    content.getOrPut("everyone", { mutableSetOf() }).addAll(posts)
+                    _users.add(feed.identity)
+                    content.getOrPut("everyone", { mutableSetOf() }).addAll(feed.posts)
                 }
             }
         }
-    }
-
-    fun savePost(newPost: IpfsPost, keyName: String) {
-        // Store the Post
-        val signed = network.sign(newPost)
-        val aes = network.encryptorForKey(keyName)
-        val post = network.store(signed, aes)
-
-        // Update the feed and manifest
-        val manifest = network.ipfsManifest
-        // TODO: Pick feed based on user selection
-        val feed = network.retrieve(manifest.feeds[0], aes, Feed::class.java)!!
-        val newFeed = Feed(Calendar.getInstance().timeInMillis, feed.posts + post, feed.interactions, feed.actions, feed.identity)
-        Log.i(TAG, "Adding post $post to feed: ${newFeed.posts} old posts: ${feed.posts}")
-
-        val newFeedCid = network.store(newFeed, aes)
-        val feedList = manifest.feeds.toMutableList()
-        feedList.removeAt(0)
-        feedList.add(0, newFeedCid)
-        network.ipfsManifest = Manifest(feedList)
     }
 
     companion object {
