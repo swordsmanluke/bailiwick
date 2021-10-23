@@ -14,9 +14,6 @@ data class Identity(val name: String, val profilePicCid: String)
 
 data class KeyFile(val keys: Map<String, List<String>>)
 
-data class Subscriber(val peerId: PeerId, val identity: ContentId, val publicKey: String)
-data class Subscriptions(val peers: MutableList<String>, val circles: MutableMap<String, MutableList<Subscriber>>)
-
 enum class InteractionType { Reaction, Tag }
 
 data class Interaction(val type: InteractionType,

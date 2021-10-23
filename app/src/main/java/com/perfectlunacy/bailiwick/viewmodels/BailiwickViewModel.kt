@@ -59,34 +59,34 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
         viewModelScope.launch { withContext(Dispatchers.Default) { refreshContent() } }
     }
 
+    private var _users = mutableSetOf<UserIdentity>()
+    val users: List<UserIdentity>
+        get() = _users.toList()
+
     suspend fun refreshContent() {
+
         if (network.account != null) {
-            // Pull content from ourselves first
-            val enc = network.encryptorForKey("${network.peerId}:everyone")
-            val manifest = network.ipfsManifest
+            val allPeers = network.circles.all().flatMap { c ->
+                c.peers
+            }.toSet() // kill duplicates
 
-            // TODO: 'enc' needs to be replaced with per-feed encryption keys
-            //       also, will need to try multiple keys until we find a valid one.
-            //       it is expected that most peers will have feeds that we cannot
-            //       decrypt as we are not part of that circle.
-            val feeds = manifest.feeds.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }
-            feeds.forEach { feed ->
-
-                val user = UserIdentity.fromIPFS(network, enc, feed.identity)
-
-                val posts = feed.posts.mapNotNull { cid ->
-                    val ipfsPost = network.retrieve(cid, enc, IpfsPost::class.java)
-                    if (ipfsPost != null) {
-                        Post.fromIPFS(network, user, cid, ipfsPost)
-                    } else {
-                        null
+            allPeers.forEach { peerId ->
+                val enc = network.encryptorForPeer(peerId)
+                val feeds = network.manifestFor(peerId, enc)?.feeds?.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }?: emptyList()
+                feeds.forEach { feed ->
+                    val user = UserIdentity.fromIPFS(network, enc, feed.identity)
+                    _users.add(user)
+                    val posts = feed.posts.mapNotNull { cid ->
+                        val ipfsPost = network.retrieve(cid, enc, IpfsPost::class.java)
+                        if (ipfsPost != null) {
+                            Post.fromIPFS(network, user, cid, ipfsPost)
+                        } else {
+                            null
+                        }
                     }
-                }
 
-                if(content["everyone"] == null) {
-                    content["everyone"] = mutableSetOf()
+                    content.getOrPut("everyone", { mutableSetOf() }).addAll(posts)
                 }
-                content["everyone"]!!.addAll(posts)
             }
         }
     }

@@ -91,6 +91,12 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:text="swordsmanluke"/>
+            <Button
+                android:id="@+id/btn_rando"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="some rando"/>
         </LinearLayout>
 
         <ImageButton

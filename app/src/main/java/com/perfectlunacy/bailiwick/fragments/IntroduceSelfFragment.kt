@@ -24,7 +24,9 @@ import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.PeerId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
@@ -54,12 +56,16 @@ class IntroduceSelfFragment : BailiwickFragment() {
         // TODO: Manage multiple feeds with names etc. Manifest needs a facade
         //  Also, these files need their CIDs readily available.
         bwModel.viewModelScope.launch {
-            Handler(requireContext().mainLooper).post {
-                binding.spnIdentities.adapter = ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_spinner_dropdown_item,
-                    listOf("Identity") + bwModel.network.manifest.feeds.map { it.identity.name }
-                )
+            withContext(Dispatchers.Default) {
+                val identities = bwModel.network.manifest.feeds.map { it.identity.name }
+
+                Handler(requireContext().mainLooper).post {
+                    binding.spnIdentities.adapter = ArrayAdapter(
+                        requireContext(),
+                        android.R.layout.simple_spinner_dropdown_item,
+                        listOf("Identity") + identities
+                    )
+                }
             }
         }
 

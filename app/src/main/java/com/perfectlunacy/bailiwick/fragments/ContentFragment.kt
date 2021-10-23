@@ -11,7 +11,6 @@ import android.widget.ListView
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.navigation.findNavController
-import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
@@ -21,6 +20,11 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.ArrayList
+
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.perfectlunacy.bailiwick.R
+import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
+
 
 /**
  * The main [Fragment] of Bailiwick. This class manages the doomscrollable view of downloaded Content
@@ -38,14 +42,17 @@ class ContentFragment : BailiwickFragment() {
             false
         )
 
+        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+//        binding.listUsers.setLayoutManager(layoutManager)
+        binding.listUsers.adapter = UserButtonAdapter(requireContext(), bwModel.users)
+
         GlobalScope.launch {
             val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
             val picCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
                 BitmapFactory.decodeByteArray(data, 0, data.size) != null
             }
 
-            val profilePicBytes =
-                bwModel.network.download(bwModel.network.identity.profilePicCid)
+            val profilePicBytes = bwModel.network.download(bwModel.network.identity.profilePicCid)
 
             val avatar = if (profilePicBytes == null) {
                 BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))

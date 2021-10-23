@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:corners="http://schemas.android.com/apk/res-auto"
+    tools:context=".fragments.ContentFragment">
+
+    <data>
+        <variable name="user" type="com.perfectlunacy.bailiwick.models.UserIdentity"/>
+    </data>
+    <!--  todo: Make the buttons more button-y       -->
+    <ImageButton
+        android:id="@+id/btn_avatar"
+        android:src="@drawable/avatar"
+        android:background="@color/cardview_light_background"
+        android:scaleType="centerCrop"
+        android:layout_marginHorizontal="2dp"
+        android:layout_width="50dp"
+        android:layout_height="50dp"/>
+
+</layout>

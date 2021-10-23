@@ -35,13 +35,11 @@ class BailiwickActivity : AppCompatActivity() {
     }
 
     private suspend fun initBailiwick() {
-        /*
-        val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext)) // MockIPFS(applicationContext.filesDir.path)
-        val cache = IpfsFileCache(applicationContext.filesDir.path)
-        */
         withContext(Dispatchers.Default) {
-            val ipfs = MockIPFS(applicationContext.filesDir.path)
-            val cache = MockFileCache()
+            val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext)) // MockIPFS(applicationContext.filesDir.path)
+            val cache = IpfsFileCache(applicationContext.filesDir.path)
+//            val ipfs = MockIPFS(applicationContext.filesDir.path)
+//            val cache = MockFileCache()
 
             val bwDb = getBailiwickDb(applicationContext)
             val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb, cache)

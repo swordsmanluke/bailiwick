@@ -15,7 +15,6 @@ import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
-import java.security.PublicKey
 import java.security.SecureRandom
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
@@ -218,7 +217,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
         val data = download(cid) ?: return null
         val rawJson = String(cipher.decrypt(data))
-        Log.d(TAG, "Parsing ${clazz.simpleName} from '${rawJson}")
+        Log.d(TAG, "Parsing ${clazz.simpleName} from '${rawJson}'")
         return Gson().fromJson(rawJson, clazz)
     }
 
@@ -291,14 +290,13 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         val keyFileCid = store(keyFile, rsa)
         Log.i(TAG, "Created key file @ ${keyFileCid}")
 
-        val subscriptions = Subscriptions(mutableListOf(), mutableMapOf())
-        val subsFileCid = store(subscriptions, rsa)
-        Log.i(TAG, "Created subs file @ ${subsFileCid}")
+        val circlesCid = Circles.create(this)
+        Log.i(TAG, "Created Circles file @ ${circlesCid}")
 
         val acctFileCid = BailiwickAccount.create(this,
             myPeerId,
             keyFileCid,
-            subsFileCid,
+            circlesCid,
             Users.create(this))
 
         Log.i(TAG, "Created acct file @ $acctFileCid")
@@ -388,7 +386,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         // TODO: This only works if I already know the expected sequence number.
         var tries = 0
         while (ipnsRecord!!.sequence < minSequence && tries < 10) {
-            ipnsRecord = ipfs.resolveName(pid, minSequence.toLong(), LONG_TIMEOUT)!!
+            ipnsRecord = ipfs.resolveName(pid, minSequence.toLong(), LONG_TIMEOUT) ?: ipnsRecord
             Log.i(TAG, "Checking ${path} again... hash: ${ipnsRecord.hash}  seq: ${ipnsRecord.sequence}")
             tries += 1
         }

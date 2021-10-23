@@ -30,18 +30,14 @@
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <HorizontalScrollView
-                android:id="@+id/user_scroll"
-                android:layout_weight="1"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content">
-                <LinearLayout
-                    android:id="@+id/userlist"
+                <ListView
+                    android:id="@+id/list_users"
                     android:background="@color/cardview_light_background"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    tools:listitem="@layout/user_button"
                     android:layout_height="50dp"
                     android:orientation="horizontal"/>
-            </HorizontalScrollView>
             <ImageButton
                 android:id="@+id/btn_add_subscription"
                 android:src="@drawable/ic_plus_circle_outline"

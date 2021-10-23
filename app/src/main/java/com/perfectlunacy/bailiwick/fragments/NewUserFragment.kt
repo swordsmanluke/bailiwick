@@ -115,6 +115,20 @@ class NewUserFragment : BailiwickFragment() {
             }
         }
 
+        binding.btnRando.setOnClickListener {
+            Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+            val out = ByteArrayOutputStream()
+            avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
+            val avatarCid = bwModel.network.store(out.toByteArray())
+
+            GlobalScope.launch {
+                bwModel.createAccount(Faker().name.name(), Faker().internet.userName(), "fake1@3pass", avatarCid)
+                // TODO: After create account returns an AccountSuccess event (or something) transition
+                val nav = requireView().findNavController()
+                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
+            }
+        }
+
         return binding.root
     }
 
