@@ -12,8 +12,6 @@ import com.perfectlunacy.bailiwick.storage.PeerId
 data class User(val name: String, val peerId: String, val profilePicCid: String)
 data class Identity(val name: String, val profilePicCid: String)
 
-data class KeyFile(val keys: Map<String, List<String>>)
-
 enum class InteractionType { Reaction, Tag }
 
 data class Interaction(val type: InteractionType,

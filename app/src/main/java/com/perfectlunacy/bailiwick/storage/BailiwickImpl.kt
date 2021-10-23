@@ -3,12 +3,12 @@ package com.perfectlunacy.bailiwick.storage
 import android.util.Log
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.*
-import com.perfectlunacy.bailiwick.models.BailiwickAccount
-import com.perfectlunacy.bailiwick.models.Circles
-import com.perfectlunacy.bailiwick.models.Introduction
-import com.perfectlunacy.bailiwick.models.Users
+import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
+import com.perfectlunacy.bailiwick.models.ipfs.Feed
+import com.perfectlunacy.bailiwick.models.ipfs.Manifest
+import com.perfectlunacy.bailiwick.models.ipfs.Post
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
@@ -17,6 +17,7 @@ import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
 import java.security.SecureRandom
 import java.util.*
+import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 
 class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, private val db: BailiwickDatabase, private val cache: IpfsCache):
@@ -94,22 +95,13 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             _identity = value
         }
 
-    private var _keyFile: KeyFile? = null
-    override var keyFile: KeyFile
+    private var _keyring: Keyring? = null
+    override val keyring: Keyring
         get() {
-            if(_keyFile == null) {
-                val rsa = encryptorForKey(USER_PRIVATE)
-                _keyFile = retrieve(bailiwickAccount.keyFileCid, rsa, KeyFile::class.java)
+            if( _keyring == null) {
+                _keyring = Keyring(this)
             }
-
-            return _keyFile!!
-        }
-        set(value) {
-            val rsa = encryptorForKey(USER_PRIVATE)
-            val keyFileCid = store(value, rsa)
-
-            // Update our account file
-            bailiwickAccount.keyFileCid = keyFileCid
+            return _keyring!!
         }
 
     private val sequence: Int
@@ -163,12 +155,13 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             return NoopEncryptor()
         }
 
-        val key = keyFile.keys[keyId]?.lastOrNull()!!
-        return AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key), "AES"))
+        val key = keyring.secretKeys(keyId)?.lastOrNull()
+        Log.i(TAG, "Looking for key $keyId ${ if(key == null) { "failed" } else {"succeeded"}}")
+        return AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key!!), "AES"))
     }
 
     override fun encryptorForPeer(peerId: PeerId): Encryptor {
-        val ciphers = keyFile.keys.getOrDefault(peerId, emptyList()).map { key ->
+        val ciphers = (keyring.secretKeys(peerId)?: emptyList()).map { key ->
             AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key), "AES"))
         }.reversed()
 
@@ -270,22 +263,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         Log.i(TAG, "Created version dir. Adding files...")
 
         // Now create and add our basic files
-        val rsa = encryptorForKey(USER_PRIVATE)
-        val b64Enc = Base64.getEncoder()
-        val b64Dec = Base64.getDecoder()
-        var keyFile: KeyFile? = null
-
         // Create encrypted account file
-        // TODO: val key = newAesKey()
-        val keyBytes = ByteArray(16)
-        SecureRandom().nextBytes(keyBytes)
-
-        val publicEncKey = b64Enc.encodeToString(keyBytes)
-        val keys = mapOf(Pair("$myPeerId:everyone", listOf(publicEncKey)), Pair(myPeerId, listOf(publicEncKey)))
-        Log.d(TAG, "Public key: $publicEncKey")
-
-        keyFile = KeyFile(keys)
-        val keyFileCid = store(keyFile, rsa)
+        val everyoneCircleKey = KeyGenerator.getInstance("AES").generateKey()
+        val keyFileCid = Keyring.create(this, ipfs.peerID, Base64.getEncoder().encodeToString(everyoneCircleKey.encoded))
         Log.i(TAG, "Created key file @ ${keyFileCid}")
 
         val circlesCid = Circles.create(this)
@@ -301,22 +281,12 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         verCid = ipfs.addLinkToDir(verCid, "account.json", acctFileCid)!!
 
         // Create the subscriber-facing manifest
-        val publicSubsKey = keyFile.keys.get("$myPeerId:everyone")?.lastOrNull()!!
-        Log.i(TAG, "Public subs key: $publicSubsKey")
-        val encKey = b64Dec.decode(publicSubsKey)
-        Log.i(TAG, "Found public subscriber encryption key")
-        val aes = AESEncryptor(SecretKeySpec(encKey, "AES"))
-
         val identity = Identity(name, profilePicCid)
         val publicIdCid = store(identity, NoopEncryptor())
         verCid= ipfs.addLinkToDir(verCid, "identity.json", publicIdCid)!!
 
-        // The <everyone> Feed which is created by default inherits the public Identity,
-        // but this can be later changed. So, store an encrypted copy and we'll overwrite
-        // it later if needed.
-        val feedIdCid = store(identity, aes)
-        val everyoneFeed = Feed(Calendar.getInstance().timeInMillis, emptyList(), emptyList(), emptyList(), feedIdCid)
-
+        val aes = AESEncryptor(everyoneCircleKey)
+        val everyoneFeed = Feed(Calendar.getInstance().timeInMillis, emptyList(), emptyList(), emptyList(), publicIdCid)
         val feedCid = store(everyoneFeed, aes)
         val manifestCid = store(Manifest(listOf(feedCid)), aes)
         Log.i(TAG, "Stored encrypted manifest @ ${manifestCid}")

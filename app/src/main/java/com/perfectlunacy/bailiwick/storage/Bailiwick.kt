@@ -1,12 +1,11 @@
 package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.models.BailiwickAccount
-import com.perfectlunacy.bailiwick.models.Circle
-import com.perfectlunacy.bailiwick.models.Circles
-import com.perfectlunacy.bailiwick.models.Users
+import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.ipfs.*
+import com.perfectlunacy.bailiwick.models.ipfs.Manifest
+import com.perfectlunacy.bailiwick.models.ipfs.Post
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 import java.security.KeyPair
 import java.security.PublicKey
@@ -22,10 +21,12 @@ interface Bailiwick {
     val users: Users
     val account: Account?
     val circles: Circles
+    val keyring: Keyring
+
     var ipfsManifest: com.perfectlunacy.bailiwick.models.ipfs.Manifest
     val manifest: com.perfectlunacy.bailiwick.models.Manifest
     var identity: Identity
-    var keyFile: KeyFile
+
     val keyPair: KeyPair
 
     fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account
