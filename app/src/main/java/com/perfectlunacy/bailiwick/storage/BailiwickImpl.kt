@@ -61,10 +61,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
             val aes = encryptorForKey("$peerId:everyone")
             val newRoot = addFileToDir("bw/$VERSION", "manifest.json", store(value, aes))
             publishRoot(newRoot)
-            val acct = account!!
-            acct.rootCid = newRoot
-            acct.sequence += 1
-            db.accountDao().update(acct)
+
             _manifest = value
         }
 
@@ -94,10 +91,6 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         set(value) {
             val newRoot = addFileToDir("bw/$VERSION", "identity.json", store(value, NoopEncryptor()))
             publishRoot(newRoot)
-            val acct = account!!
-            acct.rootCid = newRoot
-            acct.sequence += 1
-            db.accountDao().update(acct)
             _identity = value
         }
 
@@ -155,8 +148,8 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return account
     }
 
-    override fun manifestFor(peerId: PeerId, encryptor: Encryptor): Manifest? {
-        val manCid = cidForPath(peerId, "bw/$VERSION/manifest.json", 0) ?: return null
+    override fun manifestFor(peerId: PeerId, encryptor: Encryptor, minSequence: Int): Manifest? {
+        val manCid = cidForPath(peerId, "bw/$VERSION/manifest.json", minSequence) ?: return null
         return retrieve(manCid, encryptor, Manifest::class.java)
     }
 
@@ -229,6 +222,11 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         val seq = 1 + (account?.sequence ?: 0)
         Log.i(TAG, "publishing new root @$newRoot. Old root: ${account?.rootCid}")
         ipfs.publishName(newRoot, seq, LONG_TIMEOUT)
+        account?.let {
+            it.rootCid = newRoot
+            it.sequence = seq
+            db.accountDao().update(it)
+        }
     }
 
     override fun sign(post: Post): Post {

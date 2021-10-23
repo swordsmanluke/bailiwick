@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.math.min
 
 class BailiwickViewModel(val network: Bailiwick): ViewModel() {
 
@@ -70,9 +71,12 @@ class BailiwickViewModel(val network: Bailiwick): ViewModel() {
                 c.peers
             }.toSet() // kill duplicates
 
+            Log.i(TAG, "Peers: ${allPeers.count()}: ${allPeers.joinToString(",")}")
+
             allPeers.forEach { peerId ->
                 val enc = network.encryptorForPeer(peerId)
-                val feeds = network.manifestFor(peerId, enc)?.feeds?.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }?: emptyList()
+                val minSeq = if(peerId == network.peerId) { activeAccount?.sequence ?: 0 } else { 0 }
+                val feeds = network.manifestFor(peerId, enc, minSeq)?.feeds?.mapNotNull { cid -> network.retrieve(cid, enc, Feed::class.java) }?: emptyList()
                 feeds.forEach { feed ->
                     val user = UserIdentity.fromIPFS(network, enc, feed.identity)
                     _users.add(user)

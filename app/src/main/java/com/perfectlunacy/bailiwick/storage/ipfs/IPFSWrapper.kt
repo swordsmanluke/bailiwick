@@ -70,9 +70,15 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     }
 
     override fun resolveNode(link: String, timeoutSeconds: Long): ContentId? {
-        return ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
-            Log.i(TAG, "resolved path $link to node: $it")
+        try {
+            return ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+                Log.i(TAG, "resolved path $link to node: $it")
+            }
+        } catch(e: Exception) {
+            Log.e(TAG,"Failed to resolve $link: $e")
+            return null
         }
+
     }
 
     override fun resolveNode(root: ContentId, path: MutableList<String>, timeoutSeconds: Long): ContentId? {

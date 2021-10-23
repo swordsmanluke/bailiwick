@@ -176,6 +176,8 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 bwModel.viewModelScope.launch {
                     withContext(Dispatchers.Default) {
                         bwModel.network.users.add(subReq.peerId, pubkey)
+                        bwModel.network.circles.all().first().add(subReq.peerId)
+
                         bwModel.acceptViewModel.request = subReq
                         if(subReq.isResponse){
                             bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)

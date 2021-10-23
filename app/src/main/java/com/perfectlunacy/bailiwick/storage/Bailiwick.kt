@@ -29,7 +29,7 @@ interface Bailiwick {
     val keyPair: KeyPair
 
     fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account
-    fun manifestFor(peerId: PeerId, encryptor: Encryptor): Manifest?
+    fun manifestFor(peerId: PeerId, encryptor: Encryptor, minSequence: Int): Manifest?
     fun encryptorForKey(keyId: String): Encryptor
     fun encryptorForPeer(peerId: PeerId): Encryptor
 
