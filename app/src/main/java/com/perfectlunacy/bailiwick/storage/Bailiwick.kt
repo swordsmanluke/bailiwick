@@ -39,7 +39,7 @@ interface Bailiwick {
     fun store(data: ByteArray): ContentId
     fun <T>store(thing :T, cipher: Encryptor): ContentId
     fun download(cid: ContentId): ByteArray?
-    fun <T> retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T?
+    fun <T> retrieve(cid: ContentId?, cipher: Encryptor, clazz: Class<T>): T?
     fun addBailiwickFile(filename: String, cid: ContentId)
     fun publishRoot(newRoot: ContentId)
     fun sign(post: Post): Post

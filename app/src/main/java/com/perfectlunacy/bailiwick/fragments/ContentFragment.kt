@@ -42,7 +42,7 @@ class ContentFragment : BailiwickFragment() {
             false
         )
 
-        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+//        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 //        binding.listUsers.setLayoutManager(layoutManager)
         binding.listUsers.adapter = UserButtonAdapter(requireContext(), bwModel.users)
 

@@ -26,9 +26,13 @@ class MultiCipher(val ciphers: List<Encryptor>, val validator: (ByteArray)->Bool
                 null
             }
 
-        }.firstOrNull() ?: throw RuntimeException("Could not decrypt data!")
+        }.firstOrNull()
 
-        return plaintext
+        if(plaintext==null) {
+            Log.w(TAG,"Could not decrypt data")
+        }
+
+        return plaintext ?: byteArrayOf()
     }
 
 }

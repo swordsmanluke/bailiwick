@@ -14,7 +14,6 @@ import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import io.bloco.faker.Faker
 import junit.framework.Assert.*

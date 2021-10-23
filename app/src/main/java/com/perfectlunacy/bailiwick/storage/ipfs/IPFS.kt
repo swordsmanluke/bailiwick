@@ -15,8 +15,8 @@ interface IPFS {
     fun addLinkToDir(dirCid: ContentId, name: String, cid: ContentId): ContentId?
     fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord?
     fun resolveNode(link: String, timeoutSeconds: Long): ContentId?
-    fun resolveNode(root: ContentId, path: MutableList<String>, timeoutSeconds: Long): ContentId?
+    fun resolveNode(root: ContentId, path: String, timeoutSeconds: Long): ContentId?
     fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long)
 }
 
-data class IPNSRecord(val hash: String, val sequence: Long)
+data class IPNSRecord(val retrievedAt: Long, val hash: String, val sequence: Long)

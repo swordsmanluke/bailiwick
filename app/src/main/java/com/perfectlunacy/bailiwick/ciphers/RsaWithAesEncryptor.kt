@@ -6,7 +6,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 
-class RsaWithAesEncryptor(private val privateKey: PrivateKey, private val publicKey: PublicKey): Encryptor {
+class RsaWithAesEncryptor(private val privateKey: PrivateKey?, private val publicKey: PublicKey?): Encryptor {
     override fun encrypt(data: ByteArray): ByteArray {
         // RSA doesn't "do" large blocks of plaintext. Instead, encrypt the message with AES
         // and send the RSA-encrypted-key along with it.

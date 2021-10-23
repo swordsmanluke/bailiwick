@@ -26,25 +26,25 @@ class Circles(private val bw: Bailiwick) {
 
     private var _circleFile = bw.retrieve(bw.bailiwickAccount.circlesCid,
         bw.encryptorForKey(BailiwickImpl.USER_PRIVATE),
-        CircleFileRecord::class.java)!!
+        CircleFileRecord::class.java)
 
     fun rm(uuid: UUID) {
-        _circleFile.circles.removeAll { it.uuid == uuid }
+        _circleFile!!.circles.removeAll { it.uuid == uuid }
         store()
     }
 
     fun add(circle: Circle) {
-        _circleFile.circles.add(circle.toRecord())
+        _circleFile!!.circles.add(circle.toRecord())
         store()
     }
 
     fun all(): List<Circle> {
-        return _circleFile.circles.map{ it.toCircle(bw) }
+        return _circleFile?.circles?.map{ it.toCircle(bw) } ?: emptyList()
     }
 
     fun store() {
         bw.bailiwickAccount.circlesCid = bw.store(
-            CircleFileRecord(_circleFile.circles), // Store the updated `circles`
+            CircleFileRecord(_circleFile!!.circles), // Store the updated `circles`
             bw.encryptorForKey(BailiwickImpl.USER_PRIVATE))
     }
 }

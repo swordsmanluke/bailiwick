@@ -5,6 +5,9 @@ import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
+import java.security.KeyFactory
+import java.security.PublicKey
+import java.security.spec.X509EncodedKeySpec
 import java.util.*
 
 class Keyring(private val bw: Bailiwick) {
@@ -25,34 +28,39 @@ class Keyring(private val bw: Bailiwick) {
     }
 
     private var _record: KeyRecord? = null
-    private val record: KeyRecord
+    private val record: KeyRecord?
         get() {
             if(_record == null) {
                 val cipher = bw.encryptorForKey(BailiwickImpl.USER_PRIVATE)
-                _record = bw.retrieve(bw.bailiwickAccount.keyFileCid, cipher, KeyRecord::class.java)
-                _record!!.secretKeys.forEach { circle, keys ->
-                    keys.forEach { k ->
-                        addSecretKey(circle, k)
+                val kfCid = bw.bailiwickAccount.keyFileCid
+                if(kfCid != null) {
+                    _record = bw.retrieve(kfCid, cipher, KeyRecord::class.java)
+                    _record!!.secretKeys.forEach { circle, keys ->
+                        keys.forEach { k ->
+                            addSecretKey(circle, k)
+                        }
                     }
-                }
 
-                _record!!.publicKeys.forEach { peerId, key ->
-                    addPublicKey(peerId, key)
+                    _record!!.publicKeys.forEach { peerId, key ->
+                        addPublicKey(peerId, key)
+                    }
                 }
             }
 
-            return _record!!
+            return _record
         }
 
     private val secretKeys = mutableMapOf<String, MutableList<String>>()
     private val publicKeys = mutableMapOf<String, String>()
 
-    fun publicKeyFor(peerId: PeerId): String? {
-        return publicKeys.get(peerId) ?: record.publicKeys.get(peerId)
+    fun publicKeyFor(peerId: PeerId): PublicKey? {
+        val keyBytes = publicKeys.get(peerId) ?: record?.publicKeys?.get(peerId) ?: return null
+
+        return KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(keyBytes)))
     }
 
     fun secretKeys(id: String): List<String>? {
-        return secretKeys.get(id) ?: record.secretKeys.get(id)
+        return secretKeys.get(id) ?: record?.secretKeys?.get(id)
     }
 
     fun addSecretKey(circle: String, key: String){

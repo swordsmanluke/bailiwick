@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.models
 
+import android.util.Log
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ContentId
@@ -7,6 +8,7 @@ import com.perfectlunacy.bailiwick.storage.PeerId
 
 class BailiwickAccount(val bw: Bailiwick) {
     companion object {
+        const val TAG = "BailiwickAccount"
         @JvmStatic
         fun create(bw: Bailiwick, peerId: PeerId, keyFileCid: ContentId, circlesCid: ContentId, usersCid: ContentId): ContentId {
             val newAcct = AccountRecord(peerId, keyFileCid, circlesCid, usersCid)
@@ -24,8 +26,9 @@ class BailiwickAccount(val bw: Bailiwick) {
 
     val account: AccountRecord?
         get() {
-            val cid = bw.cidForPath("bw/${BailiwickImpl.VERSION}/account.json")
+            val cid = bw.cidForPath(bw.peerId,"bw/${BailiwickImpl.VERSION}/account.json")
             return if (cid == null) {
+                Log.w(TAG, "Failed to find account.json record for peer ${bw.peerId}")
                 null
             } else {
                 bw.retrieve(cid, bw.encryptorForKey(BailiwickImpl.USER_PRIVATE), AccountRecord::class.java)
@@ -35,19 +38,19 @@ class BailiwickAccount(val bw: Bailiwick) {
     val peerId: PeerId? = account?.peerId
 
     var keyFileCid
-        get() = account!!.keyFileCid
+        get() = account?.keyFileCid
         set(value) {
             val acct = account!!
-            val newAcct = AccountRecord(acct.peerId, value, acct.circlesCid, acct.usersCid)
+            val newAcct = AccountRecord(acct.peerId, value!!, acct.circlesCid, acct.usersCid)
             val newAcctCid = bw.store(newAcct, bw.encryptorForKey(BailiwickImpl.USER_PRIVATE))
             bw.addBailiwickFile("account.json", newAcctCid)
         }
 
     var circlesCid
-        get() = account!!.circlesCid
+        get() = account?.circlesCid
         set(value) {
             val acct = account!!
-            val newAcct = AccountRecord(acct.peerId, acct.keyFileCid, value, acct.usersCid)
+            val newAcct = AccountRecord(acct.peerId, acct.keyFileCid, value!!, acct.usersCid)
             val newAcctCid = bw.store(newAcct, bw.encryptorForKey(BailiwickImpl.USER_PRIVATE))
             bw.addBailiwickFile("account.json", newAcctCid)
         }

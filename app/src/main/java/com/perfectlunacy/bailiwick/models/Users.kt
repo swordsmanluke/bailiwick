@@ -4,7 +4,6 @@ import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.PublicKey
 import java.util.*
 

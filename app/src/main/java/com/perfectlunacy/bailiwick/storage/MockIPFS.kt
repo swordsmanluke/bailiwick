@@ -2,7 +2,6 @@ package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
 import android.util.Log
-import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.storage.ipfs.*
 import threads.lite.utils.Link
 import java.io.File
@@ -74,9 +73,9 @@ class MockIPFS(val filesDir: String) : IPFS {
 
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
         return if(peerId == this.peerID) {
-            IPNSRecord(filesDir, _seq.toLong())
+            IPNSRecord(Calendar.getInstance().timeInMillis, filesDir, _seq.toLong())
         } else {
-            IPNSRecord("$filesDir/$peerId", _seq.toLong())
+            IPNSRecord(Calendar.getInstance().timeInMillis, "$filesDir/$peerId", _seq.toLong())
         }
     }
 
@@ -97,8 +96,8 @@ class MockIPFS(val filesDir: String) : IPFS {
         }
     }
 
-    override fun resolveNode(root: ContentId, path: MutableList<String>,timeoutSeconds: Long): ContentId? {
-        return resolveNode(filesDir + "/" + path.joinToString("/"), timeoutSeconds)
+    override fun resolveNode(root: ContentId, path: String, timeoutSeconds: Long): ContentId? {
+        return resolveNode(filesDir + "/" + path, timeoutSeconds)
     }
 
     private var _root: ContentId = filesDir

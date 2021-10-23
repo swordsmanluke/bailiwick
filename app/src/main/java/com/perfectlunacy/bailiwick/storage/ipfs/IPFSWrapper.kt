@@ -7,6 +7,7 @@ import com.google.common.io.BaseEncoding
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import threads.lite.cid.Cid
+import threads.lite.core.ClosedException
 import threads.lite.core.TimeoutCloseable
 import threads.lite.utils.Link
 import java.util.*
@@ -17,7 +18,12 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     }
 
     fun String.toCid(): Cid {
-        return Cid(BaseEncoding.base32().decode(this))
+        Log.d(TAG, "Converting $this to a Cid")
+        return try {
+            Cid.decode(this)
+        } catch(e: IllegalStateException) {
+            Cid(BaseEncoding.base32().decode(this))
+        }
     }
 
     override fun bootstrap(context: Context){
@@ -42,7 +48,12 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
 
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {
         Log.i(TAG, "getLinks: $cid")
-        return ipfs.getLinks(cid.toCid(), resolveChildren, TimeoutCloseable(timeoutSeconds))
+        return try {
+            ipfs.getLinks(cid.toCid(), resolveChildren, TimeoutCloseable(timeoutSeconds))
+        } catch (e: ClosedException) {
+            Log.e(TAG, "timeout retrieving $cid")
+            null
+        }
     }
 
     override fun storeData(data: ByteArray): ContentId {
@@ -66,25 +77,32 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
         val rec = ipfs.resolveName(peerId, sequence, TimeoutCloseable(timeoutSeconds)) ?: return null
         Log.i(TAG, "Resolved $peerId:$sequence to ${rec.hash}:${rec.sequence}")
-        return IPNSRecord(rec.hash, rec.sequence)
+        return IPNSRecord(Calendar.getInstance().timeInMillis, rec.hash, rec.sequence)
     }
 
     override fun resolveNode(link: String, timeoutSeconds: Long): ContentId? {
-        try {
-            return ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+        return try {
+            ipfs.resolveNode(link, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
                 Log.i(TAG, "resolved path $link to node: $it")
             }
         } catch(e: Exception) {
-            Log.e(TAG,"Failed to resolve $link: $e")
-            return null
+            Log.e(TAG,"Failed to resolve $link: $e\n${e.stackTraceToString()}")
+            null
         }
 
     }
 
-    override fun resolveNode(root: ContentId, path: MutableList<String>, timeoutSeconds: Long): ContentId? {
-        return ipfs.resolveNode(root.toCid(), path, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
-            Log.i(TAG, "resolved path ${path.joinToString("/")} to node: $it")
+    override fun resolveNode(root: ContentId, path: String, timeoutSeconds: Long): ContentId? {
+        return try {
+            ipfs.resolveNode(root.toCid(), path.split("/").filter { it.isNotBlank() }, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+                Log.i(TAG, "resolved path $path to node: $it")
+            }
+        } catch(e: Exception) {
+            Log.e(TAG,"Failed to resolve $path: $e\n" +
+                    "${e.stackTraceToString()}")
+            null
         }
+
     }
 
     override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {

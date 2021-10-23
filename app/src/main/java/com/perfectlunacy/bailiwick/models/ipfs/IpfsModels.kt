@@ -20,20 +20,3 @@ data class Interaction(val type: InteractionType,
                        val signature: String)
 
 data class FileDef(val mimeType: String, val cid: String)
-
-enum class ActionType { Delete, UpdateKey, Introduce }
-data class Action(val type: ActionType, val data: Map<String, String>)
-
-data class Post(val timestamp: Long,
-                val parentCid: String?,
-                val text: String,
-                val files: List<FileDef>,
-                val signature: String)
-
-data class Feed(val updatedAt: Long,
-                val posts: List<ContentId>,
-                val interactions: List<ContentId>,
-                val actions: List<ContentId>,
-                val identity: ContentId)
-
-data class Manifest(val feeds: List<ContentId>)
