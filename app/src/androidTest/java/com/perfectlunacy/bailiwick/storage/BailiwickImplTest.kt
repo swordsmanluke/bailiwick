@@ -10,8 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
-import com.perfectlunacy.bailiwick.models.Introduction
+import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
@@ -53,12 +52,12 @@ class BailiwickImplTest {
     fun creatingAndRetrievingPostWorks() {
         val cipher = bw.encryptorForKey("${bw.peerId}:everyone")
 
-        val finalPost = post()
+        val finalPost = post(cipher)
         val cid = bw.store(finalPost, cipher)
 
         Assert.assertNotNull("Failed to create Post", cid)
 
-        val post2 = bw.retrieve(cid, cipher, Post::class.java)!!
+        val post2 = bw.retrieve(cid, cipher, Post.PostRecord::class.java)!!
 
         Log.i("BailiwickImplTest", "Post: $post2")
 
@@ -69,15 +68,15 @@ class BailiwickImplTest {
     fun creatingAndRetrievingManifestWorks() {
         val cipher = bw.encryptorForKey("${bw.peerId}:everyone")
 
-        val ogPost = postWithPicture()
+        val ogPost = postWithPicture(cipher)
         val postCid = bw.store(ogPost, cipher)
-        val idCid = bw.store(Identity("my identity", ""), bw.encryptorForKey("public"))
+        val everyoneFeed = bw.manifest.feeds.first()
+        everyoneFeed.addPost(postCid)
+        bw.manifest.updateFeed(everyoneFeed, cipher)
 
-        bw.ipfsManifest = manifest(idCid, listOf(postCid), cipher)
-
-        val manifest = bw.ipfsManifest
-        val feed = bw.retrieve(manifest.feeds[0], cipher, Feed::class.java)!!
-        val post = bw.retrieve(feed.posts[0], cipher, Post::class.java)!!
+        val manifest = bw.manifest
+        val feed = manifest.feeds.first()
+        val post = feed.posts.first()
 
         Log.i(javaClass.simpleName, "Post: $post vs $ogPost")
 
@@ -89,9 +88,6 @@ class BailiwickImplTest {
         /***
          * Create my account
          */
-        val myCipher = bw.encryptorForKey("${bw.peerId}:everyone")
-        val idCid = bw.store(Identity("another identity", ""), myCipher)
-        bw.ipfsManifest = manifest(idCid, listOf(), myCipher)
 
         /***
          * Create a subscribe request to send
@@ -114,24 +110,14 @@ class BailiwickImplTest {
         assertEquals(request.publicKey, Base64.getEncoder().encodeToString(bw.keyPair.public.encoded))
     }
 
-    private fun post(): Post {
+    private fun post(cipher: Encryptor): Post {
         val text = Faker().lorem.sentence()
-
-        val p = Post(Calendar.getInstance().timeInMillis, null, text, emptyList(), "")
-        val unsigned = Gson().toJson(p)
-        Log.i("BailiwickImplTest", "Post: $unsigned")
-        val signature = Base64.getEncoder()
-            .encodeToString(
-                RsaSignature(
-                    keyPair.public,
-                    keyPair.private
-                ).sign(unsigned.toByteArray())
-            )
-        val finalPost = Post(p.timestamp, p.parentCid, p.text, p.files, signature)
-        return finalPost
+        val cid = Post.create(bw, cipher,null, text, emptyList())
+        val author = UserIdentity(null, "someone", "ciddy")
+        return Post(bw, cipher, author, cid)
     }
 
-    private fun postWithPicture(): Post {
+    private fun postWithPicture(cipher: Encryptor): Post {
         val text = Faker().lorem.sentence()
         val imgUrl = URL(Faker().avatar.image())
         val bm = BitmapFactory.decodeStream(imgUrl.openConnection().getInputStream())
@@ -146,29 +132,14 @@ class BailiwickImplTest {
         val fileDef = FileDef("image/png", fileCid)
         input.close()
 
-        val p = Post(Calendar.getInstance().timeInMillis, null, text, listOf(fileDef), "")
-        val unsigned = Gson().toJson(p)
-        Log.i("BailiwickImplTest", "Post: $unsigned")
-        val signature = Base64.getEncoder()
-            .encodeToString(
-                RsaSignature(
-                    keyPair.public,
-                    keyPair.private
-                ).sign(unsigned.toByteArray())
-            )
-        return Post(p.timestamp, p.parentCid, p.text, p.files, signature)
+        val cid = Post.create(bw, cipher,null, text, emptyList())
+        val author = UserIdentity(null, "someone", "ciddy")
+        return Post(bw, cipher, author, cid)
     }
 
-    private fun manifest(identity: ContentId, posts: List<ContentId>, cipher: Encryptor): Manifest {
-        val feedCid = bw.store(
-            Feed(
-                Calendar.getInstance().timeInMillis,
-                posts,
-                emptyList(),
-                emptyList(),
-                identity
-            ), cipher
-        )
-        return Manifest(listOf(feedCid))
+    private fun manifest(identity: ContentId, cipher: Encryptor): Manifest {
+        Manifest.create(bw, Feed.create(bw, identity, cipher), cipher)
+
+        return Manifest(bw, bw.peerId)
     }
 }

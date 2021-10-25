@@ -15,7 +15,6 @@ import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
-import com.perfectlunacy.bailiwick.models.ipfs.Post
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -24,6 +23,8 @@ import kotlin.collections.ArrayList
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
+import com.perfectlunacy.bailiwick.models.Manifest
+import com.perfectlunacy.bailiwick.models.Post
 
 
 /**
@@ -74,14 +75,20 @@ class ContentFragment : BailiwickFragment() {
             binding.txtPostText.text.clear()
 
             GlobalScope.launch {
-                val newPost = Post(
-                    Calendar.getInstance().timeInMillis,
+                val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
+                val newPostCid = Post.create(
+                    bwModel.network,
+                    cipher,
                     null,
                     text,
-                    emptyList(),
-                    ""
+                    emptyList()
                 )
-                bwModel.savePost(newPost, "${bwModel.network.peerId}:everyone")
+                // TODO: Feeds need UUIDs or something
+                val feed = bwModel.network.manifest.feeds.first()
+                feed.addPost(newPostCid)
+                val manCid = bwModel.network.manifest.updateFeed(feed, cipher)
+                bwModel.network.addBailiwickFile("manifest.json", manCid)
+
                 Log.i(TAG, "Saved new post. Refreshing...")
                 refreshContent()
             }

@@ -2,6 +2,7 @@ package com.perfectlunacy.bailiwick.models
 
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.ipfs.FileDef
+import com.perfectlunacy.bailiwick.models.ipfs.User
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ContentId

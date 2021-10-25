@@ -3,13 +3,9 @@ package com.perfectlunacy.bailiwick.storage
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
-import com.perfectlunacy.bailiwick.models.ipfs.*
-import com.perfectlunacy.bailiwick.models.ipfs.Manifest
-import com.perfectlunacy.bailiwick.models.ipfs.Post
-import com.perfectlunacy.bailiwick.storage.ipfs.*
+import com.perfectlunacy.bailiwick.models.ipfs.Identity
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import java.security.KeyPair
-import java.security.PublicKey
-import java.util.*
 
 typealias PeerId=String
 typealias ContentId=String
@@ -23,14 +19,13 @@ interface Bailiwick {
     val circles: Circles
     val keyring: Keyring
 
-    var ipfsManifest: com.perfectlunacy.bailiwick.models.ipfs.Manifest
-    val manifest: com.perfectlunacy.bailiwick.models.Manifest
+    val manifest: Manifest
     var identity: Identity
 
     val keyPair: KeyPair
 
     fun newAccount(publicName: String, username: String, password: String, profilePicCid: ContentId?): Account
-    fun manifestFor(peerId: PeerId, encryptor: Encryptor, minSequence: Int): Manifest?
+    fun manifestFor(peerId: PeerId): Manifest?
     fun encryptorForKey(keyId: String): Encryptor
     fun encryptorForPeer(peerId: PeerId): Encryptor
 
@@ -42,7 +37,6 @@ interface Bailiwick {
     fun <T> retrieve(cid: ContentId?, cipher: Encryptor, clazz: Class<T>): T?
     fun addBailiwickFile(filename: String, cid: ContentId)
     fun publishRoot(newRoot: ContentId)
-    fun sign(post: Post): Post
     fun createIntroduction(identityCid: ContentId, password: String): ByteArray
     fun createIntroductionResponse(identityCid: ContentId, password: String): ByteArray
 
