@@ -175,7 +175,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
 
     override fun download(cid: ContentId): ByteArray? {
         return cache.get(cid) ?: run {
+            Log.d(TAG, "Cid $cid not in cache, retrieving from IPFS")
             val data = ipfs.getData(cid, 10)
+            Log.d(TAG, "Retrieved $cid from IPFS. Storing in Cache!")
             cache.cache(cid, data)
             data
         }

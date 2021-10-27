@@ -13,7 +13,7 @@ import java.util.*
 class IPNS(val ipfs: IPFS, val accounts: AccountDao) {
     companion object {
         const val TAG = "IPNS"
-        const val TIMEOUT_LONG = 30L
+        const val TIMEOUT_LONG = 600L
     }
 
     init {
@@ -121,9 +121,13 @@ class IPNS(val ipfs: IPFS, val accounts: AccountDao) {
 
         // Let's start caching values
         if(root != null) {
+            val now = Calendar.getInstance().timeInMillis
+            cachedPaths.put("/$peerId", CidRecord(now, maxRoot!!.sequence.toInt(), root))
             val links = ipfs.getLinks(root, true, TIMEOUT_LONG) ?: emptyList()
             Log.i(TAG, "Updating cache for discovered root")
             cacheLinks(peerId, links, maxRoot!!.sequence.toInt(),"")
+        } else {
+            Log.w(TAG, "Failed to resolve root for $peerId")
         }
 
         // And try one more time

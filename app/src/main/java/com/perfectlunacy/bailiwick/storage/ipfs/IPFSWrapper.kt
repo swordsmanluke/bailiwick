@@ -7,6 +7,7 @@ import com.google.common.io.BaseEncoding
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import threads.lite.cid.Cid
+import threads.lite.core.Closeable
 import threads.lite.core.ClosedException
 import threads.lite.core.TimeoutCloseable
 import threads.lite.utils.Link
@@ -35,6 +36,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
         ipfs.updateNetwork(interfaceName!!)
 
         ipfs.bootstrap()
+        ipfs.relays()
         Log.i(TAG, "Bootstrap completed.")
     }
 
@@ -43,7 +45,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
 
     override fun getData(cid: ContentId, timeoutSeconds: Long): ByteArray {
         Log.i(TAG, "GetData: $cid")
-        return ipfs.getData(cid.toCid(), TimeoutCloseable(timeoutSeconds))
+        return ipfs.getData(cid.toCid()) { false }
     }
 
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {
@@ -75,8 +77,11 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     }
 
     override fun resolveName(peerId: PeerId, sequence: Long, timeoutSeconds: Long): IPNSRecord? {
-        val rec = ipfs.resolveName(peerId, sequence, TimeoutCloseable(timeoutSeconds)) ?: return null
-        Log.i(TAG, "Resolved $peerId:$sequence to ${rec.hash}:${rec.sequence}")
+        val rec = ipfs.resolveName(peerId, sequence, TimeoutCloseable(timeoutSeconds))
+        Log.i(TAG, "Resolved $peerId:$sequence to '${rec?.hash ?: ""}':${rec?.sequence ?: 0}")
+        if(rec == null) {
+            return null
+        }
         return IPNSRecord(Calendar.getInstance().timeInMillis, rec.hash, rec.sequence)
     }
 

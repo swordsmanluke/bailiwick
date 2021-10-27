@@ -36,7 +36,7 @@ class BailiwickActivity : AppCompatActivity() {
 
     private suspend fun initBailiwick() {
         withContext(Dispatchers.Default) {
-            val useMocks = true
+            val useMocks = false
 
             val ipfs = if(useMocks) {
                 MockIPFS(applicationContext.filesDir.path)
