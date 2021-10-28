@@ -2,16 +2,16 @@ package com.perfectlunacy.bailiwick.signatures
 
 import java.security.MessageDigest
 
-class Md5Signature {
-    fun sign(text: ByteArray): ByteArray {
+class Md5Signature: Signer {
+    override fun sign(data: ByteArray): ByteArray {
         val md = MessageDigest.getInstance("MD5")
-        md.update(text)
+        md.update(data)
         return md.digest()
     }
 
-    fun verify(text: ByteArray, hash: ByteArray): Boolean {
+    override fun verify(data: ByteArray, signature: ByteArray): Boolean {
         val md = MessageDigest.getInstance("MD5")
-        md.update(text)
-        return hash.contentEquals(md.digest())
+        md.update(data)
+        return signature.contentEquals(md.digest())
     }
 }

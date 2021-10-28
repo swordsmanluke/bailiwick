@@ -25,6 +25,8 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.models.Manifest
 import com.perfectlunacy.bailiwick.models.Post
+import com.perfectlunacy.bailiwick.signatures.RsaSignature
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 
 
 /**
@@ -77,7 +79,9 @@ class ContentFragment : BailiwickFragment() {
             GlobalScope.launch {
                 val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
                 val newPostCid = Post.create(
-                    bwModel.network,
+                    bwModel.network.ipfs,
+                    bwModel.network.cache,
+                    RsaSignature(bwModel.network.keyPair.public, bwModel.network.keyPair.private),
                     cipher,
                     null,
                     text,

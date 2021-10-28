@@ -2,8 +2,9 @@ package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
 import android.util.Log
+import com.perfectlunacy.bailiwick.models.Link
+import com.perfectlunacy.bailiwick.models.LinkType
 import com.perfectlunacy.bailiwick.storage.ipfs.*
-import threads.lite.utils.Link
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -32,7 +33,18 @@ class MockIPFS(val filesDir: String) : IPFS {
     }
 
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {
-        TODO("No impl")
+        val dir = cid.split("/").last()
+        return when(dir) {
+            "files","" -> { listOf(Link("bw", "bw", LinkType.Dir)) }
+            "bw" -> { listOf(Link("0.2", "bw/0.2", LinkType.Dir)) }
+            "0.2" -> { listOf(
+                Link("manifest.json", "bw/0.2/manifest.json", LinkType.File),
+                Link("identity.json", "bw/0.2/identity.json", LinkType.File),
+                Link("circles.json", "bw/0.2/circles.json", LinkType.File),
+                Link("subscriptions.json", "bw/0.2/subscriptions.json", LinkType.File),
+            )}
+            else -> { null }
+        }?.toMutableList()
     }
 
     override fun storeData(data: ByteArray): ContentId {

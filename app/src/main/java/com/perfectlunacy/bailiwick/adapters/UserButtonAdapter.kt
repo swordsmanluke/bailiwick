@@ -4,15 +4,11 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
-import android.widget.ListAdapter
 import androidx.annotation.NonNull
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.UserButtonBinding
-import com.perfectlunacy.bailiwick.models.Post
 import com.perfectlunacy.bailiwick.models.UserIdentity
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
 
 class UserButtonAdapter(val context: Context, private val items: List<UserIdentity>): BaseAdapter() {
     override fun getCount(): Int {

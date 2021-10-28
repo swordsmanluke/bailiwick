@@ -12,6 +12,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
+import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -26,7 +27,12 @@ class SplashFragment : BailiwickFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = DataBindingUtil.inflate<FragmentSplashBinding>(inflater, R.layout.fragment_splash, container, false)
+        val binding = DataBindingUtil.inflate<FragmentSplashBinding>(
+            inflater,
+            R.layout.fragment_splash,
+            container,
+            false
+        )
 
         showSplashScreen()
 
@@ -36,6 +42,8 @@ class SplashFragment : BailiwickFragment() {
     @DelicateCoroutinesApi
     private fun showSplashScreen() {
         GlobalScope.launch {
+            val db = getBailiwickDb(requireContext())
+            db.query("DELETE FROM account", arrayOf())
 
             bwModel.bootstrap(requireContext())
             Log.i(TAG, "Connected to IPFS network")

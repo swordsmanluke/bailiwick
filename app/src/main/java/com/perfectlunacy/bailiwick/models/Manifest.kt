@@ -1,18 +1,22 @@
 package com.perfectlunacy.bailiwick.models
 
-import android.util.Log
+import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.storage.Bailiwick
-import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheReader
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheWriter
 
-class Manifest(val bw: Bailiwick, val peerId: PeerId) {
+class Manifest(val cipher: Encryptor, val ipfs: IPFSCacheReader, val cid: ContentId) {
     companion object {
         const val TAG="Manifest"
         @JvmStatic
-        fun create(bw: Bailiwick, everyoneFeed: ContentId, cipher: Encryptor): ContentId {
-            return bw.store(ManifestRecord(mutableListOf(everyoneFeed)), cipher)
+        fun create(ipfsCache: IPFSCacheWriter, ipfs: IPFS, everyoneFeed: ContentId, cipher: Encryptor): ContentId {
+            val json = Gson().toJson(ManifestRecord(mutableListOf(everyoneFeed)))
+            val data = cipher.encrypt(json.toByteArray())
+            val cid = ipfs.storeData(data)
+            ipfsCache.store(cid, data)
+            return cid
         }
     }
 
@@ -22,14 +26,7 @@ class Manifest(val bw: Bailiwick, val peerId: PeerId) {
     private val record: ManifestRecord?
         get() {
             if(_record== null) {
-                val cipher = bw.encryptorForPeer(peerId)
-                val manifestCid = bw.cidForPath(peerId,"bw/${BailiwickImpl.VERSION}/manifest.json")
-
-                if(manifestCid != null) {
-                    _record = bw.retrieve(manifestCid, cipher, ManifestRecord::class.java)
-                } else {
-                    Log.i(TAG, "Could not find Manifest record for $peerId")
-                }
+                _record = ipfs.retrieve(cid, cipher, ManifestRecord::class.java)
             }
 
             return _record
@@ -38,18 +35,17 @@ class Manifest(val bw: Bailiwick, val peerId: PeerId) {
     val feeds: List<Feed>
         get() {
             return record?.feeds?.map { feedCid ->
-                Feed(bw, peerId, feedCid)
+                Feed(cipher, ipfs, feedCid)
             } ?: emptyList()
         }
 
-    fun updateFeed(feed: Feed, cipher: Encryptor): ContentId {
-        val idx = feeds.indexOfFirst { it.uuid == feed.uuid }
-        record!!.let {
-            it.feeds.removeAt(idx)
-            it.feeds.add(0, feed.save(cipher)) // order doesn't matter
+    val feedCids: List<ContentId>
+        get() {
+            return record?.feeds ?: emptyList()
         }
 
-        return bw.store(record, cipher)
+    fun updateFeed(feed: Feed, cipher: Encryptor): ContentId {
+        TODO("Store feed")
     }
 
 }

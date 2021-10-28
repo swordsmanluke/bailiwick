@@ -1,13 +1,13 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
 import android.util.Log
+import com.perfectlunacy.bailiwick.models.Link
 import com.perfectlunacy.bailiwick.models.db.AccountDao
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import threads.lite.utils.Link
 import java.util.*
 
 class IPNS(val ipfs: IPFS, val accounts: AccountDao) {
@@ -66,11 +66,11 @@ class IPNS(val ipfs: IPFS, val accounts: AccountDao) {
             val now = Calendar.getInstance().timeInMillis
             val pathSoFar = "$path/${link.name}"
             val key = "/$peerId$pathSoFar"
-            Log.i(TAG, "Caching $key = ${link.cid.key}")
+            Log.i(TAG, "Caching $key = ${link.cid}")
 
-            cachedPaths[key] = CidRecord(now, version, link.cid.key)
+            cachedPaths[key] = CidRecord(now, version, link.cid)
 
-            val nextLinks = ipfs.getLinks(link.cid.key, true, TIMEOUT_LONG) ?: emptyList()
+            val nextLinks = ipfs.getLinks(link.cid, true, TIMEOUT_LONG) ?: emptyList()
             cacheLinks(peerId, nextLinks, version, pathSoFar)
         }
     }

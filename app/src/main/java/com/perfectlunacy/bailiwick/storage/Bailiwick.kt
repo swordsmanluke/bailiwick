@@ -3,14 +3,18 @@ package com.perfectlunacy.bailiwick.storage
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
+import com.perfectlunacy.bailiwick.models.db.IpnsCacheDao
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import java.security.KeyPair
 
 typealias PeerId=String
 typealias ContentId=String
 
 interface Bailiwick {
+    val ipnsDao: IpnsCacheDao
+    val cache: IPFSCache
+    val peers: List<PeerId>
     val ipfs: IPFS
     val peerId: PeerId
     val bailiwickAccount: BailiwickAccount
@@ -20,7 +24,7 @@ interface Bailiwick {
     val keyring: Keyring
 
     val manifest: Manifest
-    var identity: Identity
+    var identity: UserIdentity
 
     val keyPair: KeyPair
 

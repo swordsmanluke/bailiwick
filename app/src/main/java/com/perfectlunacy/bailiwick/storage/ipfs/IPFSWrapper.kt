@@ -4,13 +4,13 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.util.Log
 import com.google.common.io.BaseEncoding
+import com.perfectlunacy.bailiwick.models.Link
+import com.perfectlunacy.bailiwick.models.LinkType
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import threads.lite.cid.Cid
-import threads.lite.core.Closeable
 import threads.lite.core.ClosedException
 import threads.lite.core.TimeoutCloseable
-import threads.lite.utils.Link
 import java.util.*
 
 class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
@@ -51,7 +51,9 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {
         Log.i(TAG, "getLinks: $cid")
         return try {
-            ipfs.getLinks(cid.toCid(), resolveChildren, TimeoutCloseable(timeoutSeconds))
+            ipfs.getLinks(cid.toCid(), resolveChildren, TimeoutCloseable(timeoutSeconds))?.map{
+                Link(it.name, it.cid.key, if(it.isDirectory) { LinkType.Dir } else { LinkType.File } )
+            }?.toMutableList()
         } catch (e: ClosedException) {
             Log.e(TAG, "timeout retrieving $cid")
             null

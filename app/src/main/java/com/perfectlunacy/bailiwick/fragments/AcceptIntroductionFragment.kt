@@ -26,6 +26,7 @@ import com.perfectlunacy.bailiwick.models.Action
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -184,10 +185,10 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                         val everyone =
                             bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
                         val action = Action.updateKeyAction(
-                            bwModel.network,
+                            bwModel.network.ipfs,
+                            bwModel.network.cache,
                             rsa,
-                            bwModel.network.keyring.secretKeys("${bwModel.network.peerId}:everyone")!!
-                                .last()
+                            bwModel.network.keyring.secretKeys("${bwModel.network.peerId}:everyone")!!.last()
                         )
                         val feedEveryone = bwModel.network.manifest.feeds.first()
                         feedEveryone.addAction(action)

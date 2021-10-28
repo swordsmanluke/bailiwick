@@ -122,6 +122,8 @@ dependencies {
     def room_version = "2.4.0-beta01"
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
+    implementation "androidx.room:room-ktx:$room_version"
+    testImplementation "androidx.room:room-testing:$room_version"
 
     // Arrow - FP in Kotlin
     def arrow_version = "0.11.0"
@@ -129,12 +131,12 @@ dependencies {
     implementation "io.arrow-kt:arrow-syntax:$arrow_version"
     kapt    "io.arrow-kt:arrow-meta:$arrow_version"
 
-    // optional - Kotlin Extensions and Coroutines support for Room
-    implementation "androidx.room:room-ktx:$room_version"
-
+    // WORK
+    def work_version = "2.7.0"
+    // Kotlin + coroutines
+    implementation("androidx.work:work-runtime-ktx:$work_version")
     // optional - Test helpers
-    testImplementation "androidx.room:room-testing:$room_version"
-
+    androidTestImplementation("androidx.work:work-testing:$work_version")
 
     // TESTS
     testImplementation 'junit:junit:4.13.2'

@@ -13,7 +13,9 @@ import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
+import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import io.bloco.faker.Faker
 import junit.framework.Assert.*
 import org.junit.Assert
@@ -33,7 +35,7 @@ class BailiwickImplTest {
     private var context: Context = ApplicationProvider.getApplicationContext()
     private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
     private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
-    private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db, MockFileCache())
+    private val bw: BailiwickImpl = BailiwickImpl(MockIPFS(context.filesDir.path), keyPair, db, MockFileCache(), context.filesDir.path)
 
     fun deleteCachedFiles() {
         val bwDir = File(context.filesDir.path + "/bw")
@@ -112,9 +114,12 @@ class BailiwickImplTest {
 
     private fun post(cipher: Encryptor): Post {
         val text = Faker().lorem.sentence()
-        val cid = Post.create(bw, cipher,null, text, emptyList())
-        val author = UserIdentity(null, "someone", "ciddy")
-        return Post(bw, cipher, author, cid)
+        val ipfs = MockIPFS(context.filesDir.path)
+        val ipfsCache = IPFSCache(context.filesDir.path)
+
+        val cid = Post.create(ipfs, ipfsCache, Sha1Signature(), cipher,null, text, emptyList())
+        val author = UserIdentity(cipher, ipfsCache, cid)
+        return Post(cipher, ipfsCache, author, cid)
     }
 
     private fun postWithPicture(cipher: Encryptor): Post {
@@ -132,14 +137,21 @@ class BailiwickImplTest {
         val fileDef = FileDef("image/png", fileCid)
         input.close()
 
-        val cid = Post.create(bw, cipher,null, text, emptyList())
-        val author = UserIdentity(null, "someone", "ciddy")
-        return Post(bw, cipher, author, cid)
+        val ipfs = MockIPFS(context.filesDir.path)
+        val ipfsCache = IPFSCache(context.filesDir.path)
+
+        val cid = Post.create(ipfs, ipfsCache, Sha1Signature(), cipher, null, text, listOf(fileDef))
+        val id = UserIdentity.create(ipfs, ipfsCache, cipher, "My Name", "")
+        val author = UserIdentity(cipher, ipfsCache, id)
+        return Post(cipher, ipfsCache, author, cid)
     }
 
     private fun manifest(identity: ContentId, cipher: Encryptor): Manifest {
-        Manifest.create(bw, Feed.create(bw, identity, cipher), cipher)
+        val ipfs = MockIPFS(context.filesDir.path)
+        val ipfsCache = IPFSCache(context.filesDir.path)
+        val everyoneFeed = Feed.create(ipfsCache, ipfs, identity, listOf(), listOf(), cipher)
+        val mCid = Manifest.create(ipfsCache, ipfs, everyoneFeed, cipher)
 
-        return Manifest(bw, bw.peerId)
+        return Manifest(cipher, ipfsCache, mCid)
     }
 }

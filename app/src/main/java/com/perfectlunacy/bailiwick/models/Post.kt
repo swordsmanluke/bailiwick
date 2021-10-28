@@ -1,28 +1,34 @@
 package com.perfectlunacy.bailiwick.models
 
+import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.ipfs.FileDef
-import com.perfectlunacy.bailiwick.models.ipfs.User
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
-import com.perfectlunacy.bailiwick.storage.Bailiwick
+import com.perfectlunacy.bailiwick.signatures.Signer
 import com.perfectlunacy.bailiwick.storage.ContentId
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheReader
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheWriter
 import java.util.*
 
-class Post(val bw: Bailiwick, val cipher: Encryptor, val author: UserIdentity, val postCid: ContentId) {
+class Post(val cipher: Encryptor, val ipfs: IPFSCacheReader, val author: UserIdentity, val postCid: ContentId) {
 
     companion object {
         @JvmStatic
-        fun create(bw: Bailiwick, cipher: Encryptor, parentCid: String?, text: String, files: List<FileDef>): ContentId {
+        fun create(ipfs: IPFS, ipfsCache: IPFSCacheWriter, signer: Signer, cipher: Encryptor, parentCid: String?, text: String, files: List<FileDef>): ContentId {
             val record = PostRecord(Calendar.getInstance().timeInMillis,
                 parentCid,
                 text,
                 files,
                 "")
 
-            val signer = RsaSignature(bw.keyPair.public, bw.keyPair.private)
             record.sign(signer)
 
-            return bw.store(record, cipher)
+            val data = cipher.encrypt(Gson().toJson(record).toByteArray())
+            val cid = ipfs.storeData(data)
+            ipfsCache.store(cid, data)
+
+            return cid
         }
     }
 
@@ -32,7 +38,7 @@ class Post(val bw: Bailiwick, val cipher: Encryptor, val author: UserIdentity, v
                           val files: List<FileDef>,
                           var signature: String) {
 
-        fun sign(signer: RsaSignature) {
+        fun sign(signer: Signer) {
             signature = Base64.getEncoder().encodeToString(signer.sign(unsigned.toByteArray()))
         }
 
@@ -49,7 +55,7 @@ class Post(val bw: Bailiwick, val cipher: Encryptor, val author: UserIdentity, v
     private val record: PostRecord
         get() {
             if(_record == null) {
-                _record = bw.retrieve(postCid, cipher, PostRecord::class.java)
+                _record = ipfs.retrieve(postCid, cipher, PostRecord::class.java)
             }
             return _record!!
         }

@@ -7,11 +7,11 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
-import com.perfectlunacy.bailiwick.storage.IpfsFileCache
-import com.perfectlunacy.bailiwick.storage.MockFileCache
 import com.perfectlunacy.bailiwick.storage.MockIPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
@@ -44,15 +44,11 @@ class BailiwickActivity : AppCompatActivity() {
                 IPFSWrapper(IPFS.getInstance(applicationContext))
             }
 
-            val cache = if(useMocks) {
-                MockFileCache()
-            } else {
-                IpfsFileCache(applicationContext.filesDir.path)
-            }
+            val cache = IPFSCache(applicationContext.filesDir.path + "/bwcache")
 
             val bwDb = getBailiwickDb(applicationContext)
-            val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb, cache)
-            bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(bwNetwork) }).value
+            val bwNetwork = BailiwickImpl(ipfs, keyPair, bwDb, cache, applicationContext.filesDir.path)
+            bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork) }).value
         }
     }
 

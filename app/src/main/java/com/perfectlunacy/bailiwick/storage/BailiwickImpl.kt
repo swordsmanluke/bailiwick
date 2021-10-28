@@ -5,18 +5,19 @@ import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.*
 import com.perfectlunacy.bailiwick.models.*
 import com.perfectlunacy.bailiwick.models.db.Account
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
+import com.perfectlunacy.bailiwick.models.db.IpnsCacheDao
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.signatures.Sha1Signature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import com.perfectlunacy.bailiwick.storage.ipfs.IPNS
 import java.security.KeyPair
 import java.util.*
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 
-class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, private val db: BailiwickDatabase, private val cache: IpfsCache):
+class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, private val db: BailiwickDatabase, override val cache: IPFSCache, private val filesDir: String):
     Bailiwick {
     companion object {
         val TAG = "BailiwickImpl"
@@ -26,7 +27,13 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         const val USER_PRIVATE = "user_private"
     }
 
-    val ipns = IPNS(ipfs, db.accountDao())
+    private val ipns = IPNS(ipfs, db.accountDao())
+
+    override val ipnsDao: IpnsCacheDao
+        get() = db.ipnsCacheDao()
+
+    override val peers: List<PeerId>
+        get() = circles.all().flatMap { it.peers }.toSet().toList()
 
     override val peerId: PeerId = ipfs.peerID
 
@@ -49,7 +56,8 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override var manifest: Manifest
         get() {
             if (_manifest == null) {
-                _manifest = Manifest(this, peerId)
+                // TODO: This is guaranteed to blow up
+                _manifest = Manifest(this.keyring.encryptorForPeer(peerId), IPFSCache(""), "")
             }
             return _manifest!!
         }
@@ -59,12 +67,12 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         }
 
 
-    private var _identity: Identity? = null
-    override var identity: Identity
+    private var _identity: UserIdentity? = null
+    override var identity: UserIdentity
         get() {
             if(_identity == null) {
-                val cid = cidForPath(peerId, "bw/$VERSION/identity.json", sequence)!!
-                _identity = retrieve(cid, NoopEncryptor(), Identity::class.java)
+                val cid = ipns.cidForPath(peerId, "bw/$VERSION/identity.json", account?.sequence ?:0)!!
+                _identity = UserIdentity(keyring.encryptorForPeer(peerId), cache, cid)
             }
             return _identity!!
         }
@@ -78,7 +86,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     override val keyring: Keyring
         get() {
             if( _keyring == null) {
-                _keyring = Keyring(this)
+                _keyring = KeyringImpl(this)
             }
             return _keyring!!
         }
@@ -101,7 +109,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         val passwordHash = Base64.getEncoder().encode(hash).toString()
 
         // TODO: CID of random Robot/Kitten/whatever for avatar
-        val rootCid = initializeBailiwick(ipfs.peerID, publicName, profilePicCid ?: "")
+        val rootCid = initializeBailiwick(ipfs.peerID, publicName, profilePicCid ?: "", filesDir)
         Log.i(TAG, "Created Bailiwick structure. Publishing...")
         // Finally, publish the baseDir to IPNS
         publishRoot(rootCid)
@@ -120,7 +128,9 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun manifestFor(peerId: PeerId): Manifest? {
-        return Manifest(this, peerId)
+        // TODO: This is guaranteed to blow up
+        val ipnsRec = ipnsDao.getPath(peerId, "bw/$VERSION/manifest.json") ?: return null
+        return Manifest(this.keyring.encryptorForPeer(peerId), cache, ipnsRec.cid)
     }
 
     override fun encryptorForKey(keyId: String): Encryptor {
@@ -165,7 +175,7 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
 
     override fun store(data: ByteArray): ContentId {
         val cid = ipfs.storeData(data)
-        cache.cache(cid, data)
+        cache.store(cid, data)
         return cid
     }
 
@@ -174,11 +184,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
     }
 
     override fun download(cid: ContentId): ByteArray? {
-        return cache.get(cid) ?: run {
+        return cache.raw(cid) ?: run {
             Log.d(TAG, "Cid $cid not in cache, retrieving from IPFS")
+            if(cid.isBlank()) {
+                return null
+            }
             val data = ipfs.getData(cid, 10)
             Log.d(TAG, "Retrieved $cid from IPFS. Storing in Cache!")
-            cache.cache(cid, data)
+            cache.store(cid, data)
             data
         }
     }
@@ -223,14 +236,14 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         return aes.encrypt(request.toByteArray())
     }
 
-    private fun initializeBailiwick(myPeerId: PeerId, name: String, profilePicCid: ContentId): String {
+    private fun initializeBailiwick(myPeerId: PeerId, name: String, profilePicCid: ContentId, filesDir: String): String {
         var verCid = ipfs.createEmptyDir()!!
         Log.i(TAG, "Created version dir. Adding files...")
 
         // Now create and add our basic files
         // Create encrypted account file
         val everyoneCircleKey = KeyGenerator.getInstance("AES").generateKey()
-        val keyFileCid = Keyring.create(this, ipfs.peerID, Base64.getEncoder().encodeToString(everyoneCircleKey.encoded))
+        val keyFileCid = KeyringImpl.create(this, ipfs.peerID, Base64.getEncoder().encodeToString(everyoneCircleKey.encoded))
         Log.i(TAG, "Created key file @ ${keyFileCid}")
 
         val circlesCid = Circles.create(this)
@@ -246,13 +259,13 @@ class BailiwickImpl(override val ipfs: IPFS, override val keyPair: KeyPair, priv
         verCid = ipfs.addLinkToDir(verCid, "account.json", acctFileCid)!!
 
         // Create the subscriber-facing manifest
-        val identity = Identity(name, profilePicCid)
-        val publicIdCid = store(identity, NoopEncryptor())
+        val ipfsCache = IPFSCache(filesDir)
+        val publicIdCid = UserIdentity.create(ipfs, ipfsCache, NoopEncryptor(), name, profilePicCid)
         verCid= ipfs.addLinkToDir(verCid, "identity.json", publicIdCid)!!
 
         val aes = AESEncryptor(everyoneCircleKey)
-        val everyoneFeed = Feed.create(this, publicIdCid, aes)
-        val manifestCid = Manifest.create(this, everyoneFeed, aes)
+        val everyoneFeed = Feed.create(ipfsCache, ipfs, publicIdCid, listOf(), listOf(), aes)
+        val manifestCid = Manifest.create(ipfsCache, this.ipfs, everyoneFeed, aes)
         Log.i(TAG, "Stored encrypted manifest @ ${manifestCid}")
 
         verCid = ipfs.addLinkToDir(verCid, "manifest.json", manifestCid)!!

@@ -1,6 +1,8 @@
 package com.perfectlunacy.bailiwick.models
 
 import android.util.Log
+import com.google.gson.Gson
+import com.perfectlunacy.bailiwick.ciphers.*
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ContentId
@@ -9,8 +11,18 @@ import java.security.KeyFactory
 import java.security.PublicKey
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
+import javax.crypto.spec.SecretKeySpec
 
-class Keyring(private val bw: Bailiwick) {
+interface Keyring {
+    fun publicKeyFor(peerId: PeerId): PublicKey?
+    fun secretKeys(id: String): List<String>?
+    fun addSecretKey(circle: String, key: String)
+    fun addPublicKey(peer: PeerId, pubkey: String)
+    fun encryptorForPeer(peerId: PeerId): Encryptor
+    fun save()
+}
+
+open class KeyringImpl(private val bw: Bailiwick) : Keyring {
 
     companion object {
         const val TAG = "Keyring"
@@ -35,13 +47,14 @@ class Keyring(private val bw: Bailiwick) {
                 val kfCid = bw.bailiwickAccount.keyFileCid
                 if(kfCid != null) {
                     _record = bw.retrieve(kfCid, cipher, KeyRecord::class.java)
-                    _record!!.secretKeys.forEach { circle, keys ->
+
+                    _record?.secretKeys?.forEach { circle, keys ->
                         keys.forEach { k ->
                             addSecretKey(circle, k)
                         }
                     }
 
-                    _record!!.publicKeys.forEach { peerId, key ->
+                    _record?.publicKeys?.forEach { peerId, key ->
                         addPublicKey(peerId, key)
                     }
                 }
@@ -53,25 +66,43 @@ class Keyring(private val bw: Bailiwick) {
     private val secretKeys = mutableMapOf<String, MutableList<String>>()
     private val publicKeys = mutableMapOf<String, String>()
 
-    fun publicKeyFor(peerId: PeerId): PublicKey? {
+    override fun publicKeyFor(peerId: PeerId): PublicKey? {
         val keyBytes = publicKeys.get(peerId) ?: record?.publicKeys?.get(peerId) ?: return null
 
         return KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(keyBytes)))
     }
 
-    fun secretKeys(id: String): List<String>? {
+    override fun secretKeys(id: String): List<String>? {
         return secretKeys.get(id) ?: record?.secretKeys?.get(id)
     }
 
-    fun addSecretKey(circle: String, key: String){
+    override fun addSecretKey(circle: String, key: String){
         secretKeys.getOrPut(circle, { mutableListOf() }).add(key)
     }
 
-    fun addPublicKey(peer: PeerId, pubkey: String) {
+    override fun addPublicKey(peer: PeerId, pubkey: String) {
         publicKeys[peer] = pubkey
     }
 
-    fun save() {
+    override fun encryptorForPeer(peerId: PeerId): Encryptor {
+        val ciphers = (secretKeys(peerId)?: emptyList()).map { key ->
+            AESEncryptor(SecretKeySpec(Base64.getDecoder().decode(key), "AES"))
+        }.reversed()
+
+        // Our RSA key can also be used to decrypt certain Actions (Key Updates)
+        val rsa = RsaWithAesEncryptor(bw.keyPair.private, bw.keyPair.public)
+
+        // Try all the keys we have for this Peer, including "no key at all"
+        val finalCipher = MultiCipher(ciphers + NoopEncryptor() + rsa) {
+            try { Gson().newJsonReader(String(it).reader()).hasNext(); true }
+            catch(e: Exception) { false }
+        }
+
+
+        return finalCipher
+    }
+
+    override fun save() {
         val record = KeyRecord(secretKeys, publicKeys)
         bw.bailiwickAccount.keyFileCid = bw.store(record, bw.encryptorForKey(BailiwickImpl.USER_PRIVATE))
     }

@@ -2,42 +2,62 @@ package com.perfectlunacy.bailiwick.models
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.ciphers.MultiCipher
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
-import com.perfectlunacy.bailiwick.models.ipfs.Identity
-import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ContentId
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheReader
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheWriter
 
-class UserIdentity(val avatar: Bitmap?, val name: String, val cid: ContentId) {
-    companion object {
-        @JvmStatic
-        fun fromIPFS(bw: Bailiwick, cipher: Encryptor, identityCid: ContentId): UserIdentity {
-            // Public identities and avatars may not be encrypted. Use a multicipher to check
-            val idCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
+class UserIdentity(val cipher: Encryptor, val ipfs: IPFSCacheReader, val cid: ContentId) {
+
+    data class Identity(var name: String, var profilePicCid: String)
+
+    val avatar: Bitmap?
+    get() {
+        try {
+            val picData = cipher.decrypt(ipfs.raw(profilePicCid) ?: return null)
+            return BitmapFactory.decodeByteArray(picData, 0, picData.size)
+        } catch(e: Exception) {
+            return null
+        }
+    }
+
+    var profilePicCid
+        get() = record.profilePicCid
+        set(value) {
+            record.profilePicCid = value
+        }
+
+    var name
+        get() = record.name
+        set(value) {
+            record.name = value
+        }
+
+    private var _record: Identity? = null
+    private val record: Identity
+        get() {
+            if(_record == null) {
                 try {
-                    String(data)
-                    true
-                } catch (e: Exception) {
-                    false
+                    _record = ipfs.retrieve(cid, cipher, Identity::class.java)!!
+                } catch(e: Exception) {
+                    // Null Record pattern
+                    _record = Identity("Unknown", "")
                 }
             }
 
-            val picCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
-                BitmapFactory.decodeByteArray(data, 0, data.size) != null
-            }
+            return _record!!
+        }
 
-            val identity = bw.retrieve(identityCid, idCiphers, Identity::class.java)!!
-            val profilePicBytes = bw.download(identity.profilePicCid)
+    companion object {
+        @JvmStatic
+        fun create(ipfs: IPFS, ipfsCache: IPFSCacheWriter, cipher: Encryptor, name: String, profilePicCid: ContentId): ContentId {
+            val identityBytes = cipher.encrypt(Gson().toJson(Identity(name, profilePicCid)).toByteArray())
+            val cid = ipfs.storeData(identityBytes)
+            ipfsCache.store(cid, identityBytes)
 
-            return if (profilePicBytes == null) {
-                UserIdentity(null, identity.name, identityCid)
-            } else {
-                val picBytes = picCiphers.decrypt(profilePicBytes)
-                val avatar = BitmapFactory.decodeByteArray(picBytes, 0, picBytes.size)
-
-                UserIdentity(avatar, identity.name, identityCid)
-            }
+            return cid
         }
     }
 }

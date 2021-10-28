@@ -1,21 +1,28 @@
 package com.perfectlunacy.bailiwick.models
 
 import android.util.Log
+import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
-import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheReader
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheWriter
 import java.util.*
 
 // TODO: Add remaining Feed types
-class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var feedId: ContentId) {
+class Feed(private val cipher: Encryptor, private val ipfs: IPFSCacheReader, private var feedId: ContentId) {
     companion object {
         const val TAG = "Feed"
         @JvmStatic
-        fun create(bw: Bailiwick, identityCid: ContentId, cipher: Encryptor): ContentId {
+        fun create(ipfsCache: IPFSCacheWriter, ipfs: IPFS, identityCid: ContentId, posts: List<ContentId>, actions: List<ContentId>, cipher: Encryptor): ContentId {
             val now = Calendar.getInstance().timeInMillis
-            return bw.store(FeedRecord(now, UUID.randomUUID(), mutableListOf(), mutableListOf(), mutableListOf(), identityCid), cipher)
+            val rec = FeedRecord(now, UUID.randomUUID(), posts.toMutableList(), mutableListOf(), actions.toMutableList(), identityCid)
+            val json = Gson().toJson(rec)
+            val cipherText = cipher.encrypt(json.toByteArray())
+            val cid = ipfs.storeData(cipherText)
+            ipfsCache.store(cid, cipherText)
+
+            return cid
         }
     }
 
@@ -30,11 +37,14 @@ class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var fe
     private val record: FeedRecord
     get() {
         if(_record == null) {
-            val cipher = bw.encryptorForPeer(peerId)
-            _record = bw.retrieve(feedId, cipher, FeedRecord::class.java)
+            try {
+                _record = ipfs.retrieve(feedId, cipher, FeedRecord::class.java)
+            } catch(e: Exception) {
+                Log.e(TAG, e.stackTraceToString())
+            }
         }
 
-        return _record!!
+        return _record ?: FeedRecord(Calendar.getInstance().timeInMillis, UUID.randomUUID(), mutableListOf(), mutableListOf(), mutableListOf(), "")
     }
 
     val uuid: UUID
@@ -45,11 +55,10 @@ class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var fe
 
     val posts: List<Post>
         get() {
-            val cipher= bw.encryptorForPeer(peerId)
-            val author = UserIdentity.fromIPFS(bw, cipher, identityCid)
+            val author = UserIdentity(cipher, ipfs, identityCid)
             Log.i(TAG, "Found ${postCids.count()} posts")
             return postCids.map { cid ->
-                Post(bw, cipher, author, cid)
+                Post(cipher, ipfs, author, cid)
             }
         }
 
@@ -58,11 +67,10 @@ class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var fe
 
     val actions: List<Action>
         get() = actionCids.mapNotNull { cid ->
-            val cipher = RsaWithAesEncryptor(bw.keyPair.private, bw.keyPair.public)
             try {
                 // There will be lots of actions which are not for us
                 // We won't be able to decrypt them.
-                Action(bw, cipher, cid)
+                Action(cipher, ipfs, cid)
             } catch (e: Exception) {
                 // TODO: What exception is actually expected here
                 null
@@ -77,8 +85,7 @@ class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var fe
 
     val identity: UserIdentity
         get() {
-            val cipher = bw.encryptorForPeer(peerId)
-            return UserIdentity.fromIPFS(bw, cipher, identityCid)
+            return UserIdentity(cipher, ipfs, identityCid)
         }
 
     fun addPost(postCid: ContentId) {
@@ -91,9 +98,4 @@ class Feed(private val bw: Bailiwick, private val peerId: PeerId, private var fe
         record.actions.add(actionCid)
         record.updatedAt = Calendar.getInstance().timeInMillis
     }
-
-    fun save(cipher: Encryptor): ContentId {
-        return bw.store(record, cipher)
-    }
-
 }
