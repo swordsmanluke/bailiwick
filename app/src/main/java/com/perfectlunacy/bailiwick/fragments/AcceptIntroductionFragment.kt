@@ -25,7 +25,6 @@ import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
 import com.perfectlunacy.bailiwick.models.Action
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.storage.BailiwickImpl
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -116,20 +115,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
 
                     val password = ""
 
-                    // Populate QR Response
-                    bwModel.viewModelScope.launch {
-                        withContext(Dispatchers.Default) {
-                            val req = bwModel.network.createIntroductionResponse(
-                                bwModel.network.cidForPath("bw/${BailiwickImpl.VERSION}/identity.json")!!,
-                                password
-                            )
-                            Handler(requireContext().mainLooper).post {
-                                binding.imgResponseQr.setImageBitmap(
-                                    QRCode.create(req)
-                                )
-                            }
-                        }
-                    }
+                    // TODO: Populate QR Response
                 }
                 AcceptMode.NoResponseReqd -> {
                     binding.layoutButtons.visibility = View.GONE
@@ -178,33 +164,31 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 bwModel.viewModelScope.launch {
                     withContext(Dispatchers.Default) {
 
-                        // Remember their key
-                        bwModel.network.keyring.addPublicKey(subReq.peerId, subReq.publicKey)
-                        // Send them our "everyone" key
-                        val rsa = RsaWithAesEncryptor(null, pubkey)
-                        val everyone =
-                            bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
-                        val action = Action.updateKeyAction(
-                            bwModel.network.ipfs,
-                            bwModel.network.cache,
-                            rsa,
-                            bwModel.network.keyring.secretKeys("${bwModel.network.peerId}:everyone")!!.last()
-                        )
-                        val feedEveryone = bwModel.network.manifest.feeds.first()
-                        feedEveryone.addAction(action)
-
-                        val manCid = bwModel.network.manifest.updateFeed(feedEveryone, everyone)
-                        bwModel.network.addBailiwickFile("manifest.json", manCid)
-
-                        bwModel.network.users.add(subReq.peerId, pubkey)
-                        bwModel.network.circles.all().first().add(subReq.peerId)
-
-                        bwModel.acceptViewModel.request = subReq
-                        if (subReq.isResponse) {
-                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
-                        } else {
-                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
-                        }
+//                        // Remember their key
+//                        bwModel.network.keyring.addPublicKey(subReq.peerId, subReq.publicKey)
+//                        // Send them our "everyone" key
+//                        val rsa = RsaWithAesEncryptor(null, pubkey)
+//                        val everyone =
+//                            bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
+//                        val action = Action.updateKeyAction(
+//                            bwModel.network.ipfsStore,
+//                            rsa,
+//                            bwModel.network.keyring.secretKeys("${bwModel.network.peerId}:everyone")!!.last()
+//                        )
+//                        val feedEveryone = bwModel.network.manifest.feeds.first()
+//                        feedEveryone.addAction(action)
+//
+//                        val manCid = bwModel.network.manifest.updateFeed(feedEveryone, bwModel.network.ipfsStore, everyone)
+//                        bwModel.network.addBailiwickFile("manifest.json", manCid)
+//
+//                        bwModel.network.circles.all().first().add(subReq.peerId)
+//
+//                        bwModel.acceptViewModel.request = subReq
+//                        if (subReq.isResponse) {
+//                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
+//                        } else {
+//                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
+//                        }
                     }
                 }
             }

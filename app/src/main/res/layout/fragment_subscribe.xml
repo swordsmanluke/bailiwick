@@ -6,7 +6,7 @@
     tools:context=".fragments.ContentFragment">
 
     <data>
-        <variable name="user" type="com.perfectlunacy.bailiwick.models.UserIdentity"/>
+        <variable name="user" type="com.perfectlunacy.bailiwick.models.db.Identity"/>
     </data>
 
     <LinearLayout

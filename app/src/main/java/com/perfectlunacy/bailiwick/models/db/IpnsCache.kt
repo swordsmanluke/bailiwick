@@ -5,12 +5,15 @@ import com.perfectlunacy.bailiwick.storage.PeerId
 import java.security.PublicKey
 
 @Entity
-data class IpnsCache(@PrimaryKey(autoGenerate = true) val id: Int=0,
-                     var peerId: String,
-                     var path: String,
-                     var cid: String,
-                     var sequence: Long
-)
+data class IpnsCache(
+    var peerId: String,
+    var path: String,
+    var cid: String,
+    var sequence: Long
+){
+    @PrimaryKey(autoGenerate = true)
+    var id: Long=0
+}
 
 @Dao
 interface IpnsCacheDao {

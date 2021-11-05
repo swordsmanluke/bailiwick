@@ -2,28 +2,24 @@ package com.perfectlunacy.bailiwick.models
 
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
-import com.perfectlunacy.bailiwick.signatures.Signer
-import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheReader
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCacheWriter
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsStore
 
 class Action(val cipher: Encryptor, val ipfs: IPFSCacheReader, val cid: ContentId) {
 
     companion object {
         @JvmStatic
-        fun create(ipfs: IPFS, ipfsCache: IPFSCacheWriter, cipher: Encryptor, type: ActionType, metadata: Map<String, String>): ContentId {
+        fun create(ipfs: IpfsStore, cipher: Encryptor, type: ActionType, metadata: Map<String, String>): ContentId {
             val record = Gson().toJson(ActionRecord(type, metadata))
             val data = cipher.encrypt(record.toByteArray())
             val cid = ipfs.storeData(data)
-            ipfsCache.store(cid, data)
             return cid
         }
 
         @JvmStatic
-        fun updateKeyAction(ipfs: IPFS, ipfsCache: IPFSCacheWriter, cipher: Encryptor, key: String): ContentId {
-            return create(ipfs, ipfsCache, cipher, ActionType.UpdateKey, mapOf(Pair("key", key)))
+        fun updateKeyAction(ipfs: IpfsStore, cipher: Encryptor, key: String): ContentId {
+            return create(ipfs, cipher, ActionType.UpdateKey, mapOf(Pair("key", key)))
         }
     }
 
@@ -34,7 +30,7 @@ class Action(val cipher: Encryptor, val ipfs: IPFSCacheReader, val cid: ContentI
     private val record: ActionRecord
         get() {
             if (_record == null) {
-                _record = ipfs.retrieve(cid, cipher, ActionRecord::class.java)
+                _record = ipfs.retrieveFromCache(cid, cipher, ActionRecord::class.java)
             }
             return _record!!
         }

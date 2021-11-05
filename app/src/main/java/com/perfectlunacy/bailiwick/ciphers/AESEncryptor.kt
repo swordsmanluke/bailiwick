@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.ciphers
 
+import android.util.Log
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
@@ -19,6 +20,11 @@ class AESEncryptor(private val key: SecretKey): Encryptor {
     }
 
     override fun decrypt(data: ByteArray): ByteArray {
+        if(data.size % 16 != 0) {
+            Log.d(TAG,"AES cannot decrypt - block size is wrong")
+            return byteArrayOf()
+        }
+
         val IV = data.sliceArray(0..15)
         val c = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         val keySpec = SecretKeySpec(key.encoded, "AES")
@@ -26,5 +32,9 @@ class AESEncryptor(private val key: SecretKey): Encryptor {
         c.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
 
         return c.doFinal(data.sliceArray(16 until data.size))
+    }
+
+    companion object {
+        const val TAG = "AESEncryptor"
     }
 }

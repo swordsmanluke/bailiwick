@@ -8,9 +8,9 @@ import android.widget.BaseAdapter
 import androidx.annotation.NonNull
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.UserButtonBinding
-import com.perfectlunacy.bailiwick.models.UserIdentity
+import com.perfectlunacy.bailiwick.models.db.Identity
 
-class UserButtonAdapter(val context: Context, private val items: List<UserIdentity>): BaseAdapter() {
+class UserButtonAdapter(val context: Context, private val items: List<Identity>): BaseAdapter() {
     override fun getCount(): Int {
         return items.count()
     }
@@ -25,7 +25,7 @@ class UserButtonAdapter(val context: Context, private val items: List<UserIdenti
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.user_button, parent, false)
-        val user = getItem(position) as UserIdentity
+        val user = getItem(position) as Identity
 
         val binding = if(convertView == null) {
             UserButtonBinding.bind(view)
@@ -34,7 +34,7 @@ class UserButtonAdapter(val context: Context, private val items: List<UserIdenti
         }
 
         binding.root.tag = binding
-        binding.btnAvatar.setImageBitmap(user.avatar)
+        binding.btnAvatar.setImageBitmap(user.avatar(context.filesDir.toPath()))
 
         return binding.root
     }

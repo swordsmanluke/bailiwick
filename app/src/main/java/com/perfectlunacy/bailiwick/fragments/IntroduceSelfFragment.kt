@@ -31,6 +31,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
+import kotlin.io.path.Path
 
 
 class IntroduceSelfFragment : BailiwickFragment() {
@@ -57,7 +58,7 @@ class IntroduceSelfFragment : BailiwickFragment() {
         //  Also, these files need their CIDs readily available.
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val identities = bwModel.network.manifest.feeds.map { it.identity.name }
+                val identities = bwModel.network.users.map { it.name }
 
                 Handler(requireContext().mainLooper).post {
                     binding.spnIdentities.adapter = ArrayAdapter(
@@ -71,18 +72,28 @@ class IntroduceSelfFragment : BailiwickFragment() {
 
         binding.spnIdentities.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?,view: View?,position: Int,id: Long) {
-                val identity = bwModel.network.manifest.feeds.getOrNull(position - 1)?.identity
-                binding.txtName.text = identity?.name ?: ""
-                binding.avatar.setImageBitmap(identity?.avatar ?:
-                    BitmapFactory.decodeStream(requireContext().assets.open("avatar.png")))
+                bwModel.viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val identity = bwModel.network.users.getOrNull(position - 1)
+                        binding.txtName.text = identity?.name ?: ""
+                        binding.avatar.setImageBitmap(identity?.avatar(requireContext().filesDir.toPath()))
 
-                if(identity != null) {
-                    val key = Md5Signature().sign(binding.txtPassword.text.toString().toByteArray())
-                    val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
-                    val request = buildRequest(binding.txtName.text.toString(), bwModel.network.peerId)
-                    val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
+                        if (identity != null) {
+                            val key =
+                                Md5Signature().sign(
+                                    binding.txtPassword.text.toString().toByteArray()
+                                )
+                            val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
+                            val request =
+                                buildRequest(
+                                    binding.txtName.text.toString(),
+                                    bwModel.network.peerId
+                                )
+                            val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
 
-                    binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
+                            binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
+                        }
+                    }
                 }
             }
 
@@ -117,10 +128,11 @@ class IntroduceSelfFragment : BailiwickFragment() {
     }
 
     fun buildRequest(name: String, peerId: PeerId): Introduction {
+        TODO("Access public key")
         return Introduction(false,
             peerId,
             name,
-            Base64.getEncoder().encodeToString(bwModel.network.keyPair.public.encoded))
+            "")
     }
 
     companion object {

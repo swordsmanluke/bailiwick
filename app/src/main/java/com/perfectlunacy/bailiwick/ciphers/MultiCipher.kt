@@ -18,7 +18,7 @@ class MultiCipher(val ciphers: List<Encryptor>, val validator: (ByteArray)->Bool
                 if (validator.invoke(plainText)) {
                     plainText
                 } else {
-                    Log.i(TAG, "Decryption validation failure with cipher $cipher")
+                    Log.d(TAG, "Decryption validation failure with cipher $cipher")
                     null
                 }
             } catch (e: Exception) {
@@ -30,6 +30,8 @@ class MultiCipher(val ciphers: List<Encryptor>, val validator: (ByteArray)->Bool
 
         if(plaintext==null) {
             Log.w(TAG,"Could not decrypt data")
+        } else {
+            Log.i(TAG, "Decryption succeeded")
         }
 
         return plaintext ?: byteArrayOf()

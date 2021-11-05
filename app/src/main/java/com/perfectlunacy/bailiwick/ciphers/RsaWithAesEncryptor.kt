@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.ciphers
 
+import android.util.Log
 import java.security.PrivateKey
 import java.security.PublicKey
 import javax.crypto.Cipher
@@ -23,6 +24,11 @@ class RsaWithAesEncryptor(private val privateKey: PrivateKey?, private val publi
     }
 
     override fun decrypt(data: ByteArray): ByteArray {
+        Log.d(TAG, "Attempting to decrypt ${data.size} bytes")
+        if(data.size < 256 + 32) { // rsa + aes iv + aes block
+            Log.d(TAG, "Provided block is too small for RSA + AES.")
+            return byteArrayOf()
+        }
         val rsa = Cipher.getInstance("RSA")
         rsa.init(Cipher.DECRYPT_MODE, privateKey)
         val aesKey = data.sliceArray(0..255)
@@ -30,5 +36,9 @@ class RsaWithAesEncryptor(private val privateKey: PrivateKey?, private val publi
         val aes = AESEncryptor(key)
 
         return aes.decrypt(data.sliceArray(256 until data.size))
+    }
+
+    companion object {
+        const val TAG = "RsaWithAesEncryptor"
     }
 }

@@ -9,52 +9,58 @@ import java.io.FileOutputStream
 import java.lang.Exception
 
 interface IPFSCacheWriter {
-    fun contains(cid: ContentId): Boolean
-    fun store(cid: ContentId, content: ByteArray)
+    fun cacheContains(cid: ContentId): Boolean
+    fun putInCache(cid: ContentId, content: ByteArray)
 }
 
 interface IPFSCacheReader {
-    fun <T>retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T?
-    fun raw(cid: ContentId): ByteArray?
+    fun <T>retrieveFromCache(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T?
+    fun downloadFromCache(cid: ContentId): ByteArray?
 }
 
 class IPFSCache(private val filesDir: String): IPFSCacheWriter, IPFSCacheReader {
     companion object {
         const val TAG = "IPFSCache"
     }
-    override fun contains(cid: ContentId): Boolean {
+    override fun cacheContains(cid: ContentId): Boolean {
         val cid = cid.split("/").last() // if we're using filenames, split them off and just use the cid
-        val f = File("$filesDir/bwcache/$cid")
+        val f = File("$filesDir/$cid")
         return f.exists()
     }
 
-    override fun store(cid: ContentId, content: ByteArray) {
+    override fun putInCache(cid: ContentId, content: ByteArray) {
         val cid = cid.split("/").last() // if we're using filenames, split them off and just use the cid
 
-        val f = File("$filesDir/bwcache/$cid")
+        val f = File("$filesDir/$cid")
         if(f.exists()) { return } // we already have this file - nothing to do!
 
         // Just in case
-        File("$filesDir/bwcache").mkdirs()
+        File(filesDir).mkdirs()
 
         val fout = FileOutputStream(f)
         fout.write(content)
         fout.close()
     }
 
-    override fun <T>retrieve(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
+    override fun <T>retrieveFromCache(cid: ContentId, cipher: Encryptor, clazz: Class<T>): T? {
         val cid = cid.split("/").last() // if we're using filenames, split them off and just use the cid
-        val f = File("$filesDir/bwcache/$cid")
+        val f = File("$filesDir/$cid")
         if(!f.exists()) { return null } // No file here
 
         // TODO: This will fail on files larger than 2Gb
         //       Probably safe enough for now, but large
         //       files will need different handling.
-        val raw = cipher.decrypt(raw(cid)!!)
-        return Gson().fromJson(String(raw), clazz)
+        try{
+            val raw = cipher.decrypt(downloadFromCache(cid)!!)
+            return Gson().fromJson(String(raw), clazz)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to retrieve cid $cid: ${e.message}\n${e.stackTraceToString()} ")
+            return null
+        }
     }
 
-    override fun raw(cid: ContentId): ByteArray? {
+    override fun downloadFromCache(cid: ContentId): ByteArray? {
+        val cid = cid.split("/").last() // if we're using filenames, split them off and just use the cid
         val f = File("$filesDir/$cid")
         if(!f.exists()) { return null } // No file here
 

@@ -112,8 +112,8 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
 
     }
 
-    override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {
+    override fun publishName(root: ContentId, sequence: Long, timeoutSeconds: Long) {
         Log.i(TAG, "Publishing new root cid: $root:$sequence")
-        ipfs.publishName(root.toCid(), sequence, TimeoutCloseable(timeoutSeconds))
+        ipfs.publishName(root.toCid(), sequence.toInt(), TimeoutCloseable(timeoutSeconds))
     }
 }

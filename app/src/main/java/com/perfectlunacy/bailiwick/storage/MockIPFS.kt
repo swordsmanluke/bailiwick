@@ -4,11 +4,11 @@ import android.content.Context
 import android.util.Log
 import com.perfectlunacy.bailiwick.models.Link
 import com.perfectlunacy.bailiwick.models.LinkType
-import com.perfectlunacy.bailiwick.storage.ipfs.*
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IPNSRecord
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.*
@@ -50,6 +50,7 @@ class MockIPFS(val filesDir: String) : IPFS {
     override fun storeData(data: ByteArray): ContentId {
         val name = String(data).hashCode().toString() + ".hash"
         val file = File(basePath, name)
+        File(basePath).mkdirs() // Just in case
         Log.i(TAG, "Storing data at ${file.path}")
 
         val stream = FileOutputStream(file)
@@ -113,18 +114,18 @@ class MockIPFS(val filesDir: String) : IPFS {
     }
 
     private var _root: ContentId = filesDir
-    private var _seq: Int = 0
-    override fun publishName(root: ContentId, sequence: Int, timeoutSeconds: Long) {
+    private var _seq: Long = 0
+    override fun publishName(root: ContentId, sequence: Long, timeoutSeconds: Long) {
         _root = root
         _seq = sequence
     }
 
     val basePath: String
         get() {
-            val path = filesDir + "/bw/${BailiwickImpl.VERSION}/"
+            val path = filesDir + "/bw/0.2/"
             File(path).also {
                 if (!it.exists()) {
-                    Log.i(TAG, "Creating base dirs: ${filesDir+"/bw/${BailiwickImpl.VERSION}"}")
+                    Log.i(TAG, "Creating base dirs: ${filesDir+"/bw/0.2"}")
                     it.mkdirs()
                 }
             }

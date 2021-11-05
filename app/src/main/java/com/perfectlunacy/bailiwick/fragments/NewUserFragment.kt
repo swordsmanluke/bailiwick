@@ -5,20 +5,25 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.widget.doOnTextChanged
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
+import com.perfectlunacy.bailiwick.models.db.Circle
+import com.perfectlunacy.bailiwick.models.db.CircleMember
+import com.perfectlunacy.bailiwick.models.db.Identity
+import com.perfectlunacy.bailiwick.models.db.Subscription
+import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import io.bloco.faker.Faker
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.io.*
 import java.net.URL
 import java.util.*
@@ -88,13 +93,11 @@ class NewUserFragment : BailiwickFragment() {
             GlobalScope.launch {
                 val out = ByteArrayOutputStream()
                 avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-                val avatarCid = bwModel.network.store(out.toByteArray())
-                bwModel.createAccount(binding.newPublicName.text.toString(),
-                    binding.newUserName.text.toString(),
-                    binding.newPassword.text.toString(),
-                    avatarCid
-                )
-                // TODO: After create account returns an AccountSuccess event (or something) transition
+                val peerId = bwModel.network.peerId
+                // TODO: This needs to be a CID as well.
+                bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
+                newAccount(peerId, binding.name ?: "", "avatar.png")
+
                 val nav = requireView().findNavController()
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
             }
@@ -103,33 +106,49 @@ class NewUserFragment : BailiwickFragment() {
         // FIXME: Delete this permanently once account creation is deemed ready
         binding.btnSwdslk.setOnClickListener {
             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
+
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-            val avatarCid = bwModel.network.store(out.toByteArray())
+            val peerId = bwModel.network.peerId
+            // TODO: This needs to be a CID as well.
+            bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
+            newAccount(peerId, "Lucas Taylor", "avatar.png")
 
-            GlobalScope.launch {
-                bwModel.createAccount("Lucas Taylor", "swordsmanluke", "fake1@3pass", avatarCid)
-                // TODO: After create account returns an AccountSuccess event (or something) transition
-                val nav = requireView().findNavController()
-                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
-            }
+            val nav = requireView().findNavController()
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
         }
 
         binding.btnRando.setOnClickListener {
             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-            val avatarCid = bwModel.network.store(out.toByteArray())
+            val peerId = bwModel.network.peerId
+            bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
+            newAccount(peerId, Faker().name.name(), "avatar.png")
 
-            GlobalScope.launch {
-                bwModel.createAccount(Faker().name.name(), Faker().internet.userName(), "fake1@3pass", avatarCid)
-                // TODO: After create account returns an AccountSuccess event (or something) transition
-                val nav = requireView().findNavController()
-                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
-            }
+            val nav = requireView().findNavController()
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
         }
 
         return binding.root
+    }
+
+    private fun newAccount(peerId: PeerId, name: String, avatarCid: String) {
+        val db = getBailiwickDb(requireContext())
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val identity = Identity(null, peerId, name, avatarCid)
+                val identityId = db.identityDao().insert(identity)
+
+                db.subscriptionDao()
+                    .insert(Subscription(peerId, 0)) // Always subscribed to ourselves
+
+                val circle = Circle("everyone", identityId, null)
+                val circleId = db.circleDao().insert(circle)
+
+                db.circleMemberDao().insert(CircleMember(circleId, identityId))
+            }
+        }
     }
 
     companion object {

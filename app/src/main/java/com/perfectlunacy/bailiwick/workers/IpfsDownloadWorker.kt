@@ -13,10 +13,8 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
         const val TAG = "IpfsDownloadWorker"
 
         @JvmStatic
-        fun enqueue(context: Context, cid: ContentId, cache: IPFSCache, ipfs: IPFS) {
+        fun enqueue(context: Context, cid: ContentId) {
             val data = Data.Builder().putAll(mapOf(
-                Pair("ipfsCache", cache),
-                Pair("ipfs", ipfs),
                 Pair("cid", cid)
             )).build()
 
@@ -30,16 +28,15 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
 
     override fun doWork(): Result {
         val cid = inputData.keyValueMap["cid"] as ContentId
-        val ipfs = BailiwickViewModel.bailiwick().ipfs
-        val cache = BailiwickViewModel.bailiwick().cache
-
-        try {
-            val data = ipfs.getData(cid, 600)
-            cache.store(cid, data)
-        } catch(e: Exception) {
-            Log.e(TAG, "Failed to download cid $cid. ${e.message}\n${e.stackTraceToString()}")
-            return Result.failure()
-        }
+//        val ipfs = BailiwickViewModel.bailiwick().ipfsStore
+//
+//        try {
+//            // Downloading in the IPFS store _also_ stores it in the cache.
+//            ipfs.getData(cid, 600)
+//        } catch(e: Exception) {
+//            Log.e(TAG, "Failed to download cid $cid. ${e.message}\n${e.stackTraceToString()}")
+//            return Result.failure()
+//        }
 
         return Result.success()
     }

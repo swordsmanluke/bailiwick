@@ -1,10 +1,11 @@
 package com.perfectlunacy.bailiwick.workers
 
 import android.content.Context
-import androidx.work.*
-import com.perfectlunacy.bailiwick.storage.Bailiwick
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
-import com.perfectlunacy.bailiwick.workers.runners.RefreshRunner
 import java.time.Duration
 import java.util.*
 
@@ -24,14 +25,13 @@ class RefreshWorker(context: Context, workerParameters: WorkerParameters): Worke
     override fun doWork(): Result {
         return try {
             val bailiwick = BailiwickViewModel.bailiwick()
-            RefreshRunner(
-                applicationContext,
-                bailiwick.peers,
-                bailiwick.keyring,
-                bailiwick.cache,
-                bailiwick.ipnsDao,
-                bailiwick.ipfs
-            ).run()
+//            RefreshRunner(
+//                applicationContext,
+//                bailiwick.peers,
+//                bailiwick.keyring,
+//                bailiwick.ipfsStore,
+//                bailiwick.ipnsDao,
+//            ).run()
             Result.success()
         }catch (e: Exception){
             Result.failure()

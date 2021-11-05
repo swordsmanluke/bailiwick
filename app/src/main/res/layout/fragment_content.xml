@@ -6,7 +6,7 @@
     tools:context=".fragments.ContentFragment">
 
     <data>
-        <variable name="user" type="com.perfectlunacy.bailiwick.models.UserIdentity"/>
+        <variable name="user" type="com.perfectlunacy.bailiwick.models.db.Identity"/>
     </data>
 
     <LinearLayout
@@ -20,9 +20,12 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             >
-            <ImageView
+            <ImageButton
+                android:id="@+id/btn_refresh"
                 android:layout_width="wrap_content"
                 android:layout_height="75dp"
+                android:scaleType="fitCenter"
+                android:background="@color/cardview_light_background"
                 android:src="@drawable/img_bailiwick_icon"
                 android:contentDescription="@string/profile_picture" />
         </LinearLayout>

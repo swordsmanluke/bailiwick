@@ -4,7 +4,7 @@
     <data>
         <variable
             name="post"
-            type="com.perfectlunacy.bailiwick.models.Post"/>
+            type="com.perfectlunacy.bailiwick.models.db.Post"/>
     </data>
     <LinearLayout
         android:id="@+id/linearLayout"

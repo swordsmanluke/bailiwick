@@ -10,23 +10,21 @@ import android.view.ViewGroup
 import android.widget.ListView
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
-import com.perfectlunacy.bailiwick.ciphers.MultiCipher
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
+import com.perfectlunacy.bailiwick.models.db.Post
+import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.ArrayList
-
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.perfectlunacy.bailiwick.R
-import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
-import com.perfectlunacy.bailiwick.models.Manifest
-import com.perfectlunacy.bailiwick.models.Post
-import com.perfectlunacy.bailiwick.signatures.RsaSignature
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
+import kotlin.io.path.pathString
 
 
 /**
@@ -47,24 +45,17 @@ class ContentFragment : BailiwickFragment() {
 
 //        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 //        binding.listUsers.setLayoutManager(layoutManager)
-        binding.listUsers.adapter = UserButtonAdapter(requireContext(), bwModel.users)
 
-        GlobalScope.launch {
-            val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
-            val picCiphers = MultiCipher(listOf(cipher, NoopEncryptor())) { data ->
-                BitmapFactory.decodeByteArray(data, 0, data.size) != null
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val users = bwModel.getUsers()
+                binding.listUsers.adapter = UserButtonAdapter(requireContext(), users)
+                displayAvatar(binding)
             }
+        }
 
-            val profilePicBytes = bwModel.network.download(bwModel.network.identity.profilePicCid)
-
-            val avatar = if (profilePicBytes == null) {
-                BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
-            } else {
-                val picBytes = picCiphers.decrypt(profilePicBytes)
-                BitmapFactory.decodeByteArray(picBytes, 0, picBytes.size)
-            }
-
-            Handler(requireContext().mainLooper).post { binding.imgMyAvatar.setImageBitmap(avatar) }
+        binding.btnRefresh.setOnClickListener {
+            refreshContent()
         }
 
         binding.btnAddSubscription.setOnClickListener {
@@ -77,35 +68,40 @@ class ContentFragment : BailiwickFragment() {
             binding.txtPostText.text.clear()
 
             GlobalScope.launch {
-                val cipher = bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
-                val newPostCid = Post.create(
-                    bwModel.network.ipfs,
-                    bwModel.network.cache,
-                    RsaSignature(bwModel.network.keyPair.public, bwModel.network.keyPair.private),
-                    cipher,
+                // TODO: Signatures
+                val newPost = Post(
+                    bwModel.network.me.id,
+                    null,
+                    Calendar.getInstance().timeInMillis,
                     null,
                     text,
-                    emptyList()
-                )
-                // TODO: Feeds need UUIDs or something
-                val feed = bwModel.network.manifest.feeds.first()
-                feed.addPost(newPostCid)
-                val manCid = bwModel.network.manifest.updateFeed(feed, cipher)
-                bwModel.network.addBailiwickFile("manifest.json", manCid)
+                    "")
+
+                val circId = bwModel.network.circles.first().id
+                bwModel.network.storePost(circId, newPost)
 
                 Log.i(TAG, "Saved new post. Refreshing...")
                 refreshContent()
             }
         }
 
-        if (bwModel.selectedUser != null) {
-            binding.user = bwModel.selectedUser
-        }
-
         buildAdapter(binding.listContent)
         refreshContent()
 
         return binding.root
+    }
+
+    private fun displayAvatar(binding: FragmentContentBinding) {
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val avatar = bwModel.network.me.avatar(requireContext().filesDir.toPath())
+                    ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+
+                Handler(requireContext().mainLooper).post {
+                    binding.imgMyAvatar.setImageBitmap(avatar)
+                }
+            }
+        }
     }
 
     private var adapter: Optional<PostAdapter> = Optional.empty()
@@ -115,17 +111,22 @@ class ContentFragment : BailiwickFragment() {
     }
 
     private fun refreshContent() {
-        GlobalScope.launch {
-            val adapter: PostAdapter = adapter.get()
-            bwModel.refreshContent()
-            adapter.clear()
-            val posts = bwModel.content["everyone"]?.toList() ?: emptyList() // Wrap in the style the adapter expects
-            adapter.addToEnd(posts)
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val adapter: PostAdapter = adapter.get()
+                bwModel.refreshContent()
+                adapter.clear()
+                val posts = bwModel.content["everyone"]?.toList()
+                    ?: emptyList() // Wrap in the style the adapter expects
+                adapter.addToEnd(posts)
+            }
         }
     }
 
     private fun buildListAdapter(): PostAdapter {
         val adapter = PostAdapter(
+            getBailiwickDb(requireContext()),
+            bwModel,
             requireContext(),
             ArrayList()
         )
