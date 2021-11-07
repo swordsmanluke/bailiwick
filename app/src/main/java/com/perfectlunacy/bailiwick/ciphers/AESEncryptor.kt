@@ -11,12 +11,10 @@ class AESEncryptor(private val key: SecretKey): Encryptor {
     override fun encrypt(data: ByteArray): ByteArray {
         val iv = ByteArray(16)
         SecureRandom().nextBytes(iv)
-        val c = Cipher.getInstance("AES/CBC/PKCS5PADDING")
-        val keySpec = SecretKeySpec(key.encoded, "AES")
-        val ivSpec = IvParameterSpec(iv)
-        c.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
+        val c = Cipher.getInstance("AES/CBC/PKCS7PADDING")
+        c.init(Cipher.ENCRYPT_MODE, key)
 
-        return ivSpec.iv + c.doFinal(data)
+        return c.iv + c.doFinal(data)
     }
 
     override fun decrypt(data: ByteArray): ByteArray {
@@ -26,10 +24,9 @@ class AESEncryptor(private val key: SecretKey): Encryptor {
         }
 
         val IV = data.sliceArray(0..15)
-        val c = Cipher.getInstance("AES/CBC/PKCS5PADDING")
-        val keySpec = SecretKeySpec(key.encoded, "AES")
+        val c = Cipher.getInstance("AES/CBC/PKCS7PADDING")
         val ivSpec = IvParameterSpec(IV)
-        c.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
+        c.init(Cipher.DECRYPT_MODE, key, ivSpec)
 
         return c.doFinal(data.sliceArray(16 until data.size))
     }

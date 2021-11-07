@@ -17,15 +17,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import com.google.gson.Gson
 import com.google.zxing.integration.android.IntentIntegrator
-import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
-import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
-import com.perfectlunacy.bailiwick.models.Action
-import com.perfectlunacy.bailiwick.models.Introduction
+import com.perfectlunacy.bailiwick.models.ipfs.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

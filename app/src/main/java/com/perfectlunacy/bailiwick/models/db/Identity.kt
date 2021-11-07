@@ -39,8 +39,14 @@ interface IdentityDao {
     @Query("SELECT * FROM identity WHERE id = :id LIMIT 1")
     fun find(id: Long): Identity
 
+    @Query("SELECT * FROM identity WHERE cid = :cid LIMIT 1")
+    fun findByCid(cid: ContentId): Identity
+
     @Query("SELECT * FROM identity WHERE owner = :owner")
     fun identitiesFor(owner: PeerId): List<Identity>
+
+    @Query("UPDATE identity SET cid = :cid WHERE id = :id")
+    fun updateCid(id: Long, cid: ContentId?)
 
     @Insert
     fun insert(identity: Identity): Long

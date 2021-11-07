@@ -21,7 +21,7 @@ import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
-import com.perfectlunacy.bailiwick.models.Introduction
+import com.perfectlunacy.bailiwick.models.ipfs.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.PeerId
 import kotlinx.coroutines.Dispatchers
@@ -29,9 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
 import javax.crypto.spec.SecretKeySpec
-import kotlin.io.path.Path
 
 
 class IntroduceSelfFragment : BailiwickFragment() {

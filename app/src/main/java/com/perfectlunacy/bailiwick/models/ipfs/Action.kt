@@ -1,4 +1,4 @@
-package com.perfectlunacy.bailiwick.models
+package com.perfectlunacy.bailiwick.models.ipfs
 
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.Encryptor

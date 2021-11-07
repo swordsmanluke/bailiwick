@@ -17,9 +17,12 @@ import com.perfectlunacy.bailiwick.models.db.*
                 CirclePost::class,
                 Post::class,
                 PostFile::class,
-                Subscription::class],
-    version = 3,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)])
+                Subscription::class,
+                Key::class],
+    version = 4,
+    autoMigrations = [AutoMigration(from = 1, to = 2),
+                      AutoMigration(from = 2, to = 3),
+                      AutoMigration(from = 3, to = 4)])
 abstract class BailiwickDatabase: RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun ipnsCacheDao(): IpnsCacheDao
@@ -31,6 +34,7 @@ abstract class BailiwickDatabase: RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun postFileDao(): PostFileDao
     abstract fun subscriptionDao(): SubscriptionDao
+    abstract fun keyDao(): KeyDao
 }
 
 fun getBailiwickDb(context: Context): BailiwickDatabase {

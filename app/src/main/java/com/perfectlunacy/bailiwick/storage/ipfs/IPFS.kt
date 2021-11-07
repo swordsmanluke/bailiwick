@@ -1,7 +1,7 @@
 package com.perfectlunacy.bailiwick.storage.ipfs
 
 import android.content.Context
-import com.perfectlunacy.bailiwick.models.Link
+import com.perfectlunacy.bailiwick.models.ipfs.Link
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 

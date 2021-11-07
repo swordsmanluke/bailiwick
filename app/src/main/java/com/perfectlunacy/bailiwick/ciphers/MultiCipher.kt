@@ -15,7 +15,7 @@ class MultiCipher(val ciphers: List<Encryptor>, val validator: (ByteArray)->Bool
         val plaintext = ciphers.mapNotNull { cipher ->
             try {
                 val plainText = cipher.decrypt(data)
-                if (validator.invoke(plainText)) {
+                if (valid(plainText)) {
                     plainText
                 } else {
                     Log.d(TAG, "Decryption validation failure with cipher $cipher")
@@ -35,6 +35,14 @@ class MultiCipher(val ciphers: List<Encryptor>, val validator: (ByteArray)->Bool
         }
 
         return plaintext ?: byteArrayOf()
+    }
+
+    private fun valid(plainText: ByteArray): Boolean {
+        return try {
+            validator.invoke(plainText)
+        } catch(e: java.lang.Exception) {
+            false
+        }
     }
 
 }

@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.util.Log
 import com.google.common.io.BaseEncoding
-import com.perfectlunacy.bailiwick.models.Link
-import com.perfectlunacy.bailiwick.models.LinkType
+import com.perfectlunacy.bailiwick.models.ipfs.Link
+import com.perfectlunacy.bailiwick.models.ipfs.LinkType
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
 import threads.lite.cid.Cid
@@ -101,7 +101,8 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
 
     override fun resolveNode(root: ContentId, path: String, timeoutSeconds: Long): ContentId? {
         return try {
-            ipfs.resolveNode(root.toCid(), path.split("/").filter { it.isNotBlank() }, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
+            val paths = path.split("/").filter { it.isNotBlank() }
+            ipfs.resolveNode(root.toCid(), paths, TimeoutCloseable(timeoutSeconds))?.cid?.key.also {
                 Log.i(TAG, "resolved path $path to node: $it")
             }
         } catch(e: Exception) {

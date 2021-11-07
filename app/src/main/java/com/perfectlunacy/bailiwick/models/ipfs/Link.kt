@@ -1,4 +1,4 @@
-package com.perfectlunacy.bailiwick.models
+package com.perfectlunacy.bailiwick.models.ipfs
 
 import com.perfectlunacy.bailiwick.storage.ContentId
 

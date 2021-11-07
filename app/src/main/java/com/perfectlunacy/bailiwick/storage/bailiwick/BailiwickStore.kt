@@ -1,6 +1,6 @@
 package com.perfectlunacy.bailiwick.storage.bailiwick
 
-import com.perfectlunacy.bailiwick.models.Action
+import com.perfectlunacy.bailiwick.models.ipfs.Action
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post

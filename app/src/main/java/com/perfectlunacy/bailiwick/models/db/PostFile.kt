@@ -4,7 +4,7 @@ import androidx.room.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 
 @Entity(indices = [Index(value = ["postId", "fileCid"], unique = true)])
-data class PostFile(val postId: Long, val fileCid: ContentId) {
+data class PostFile(val postId: Long, val fileCid: ContentId, @ColumnInfo(defaultValue = "") val mimeType: String) {
     @PrimaryKey(autoGenerate = true) var id: Long = 0
 }
 

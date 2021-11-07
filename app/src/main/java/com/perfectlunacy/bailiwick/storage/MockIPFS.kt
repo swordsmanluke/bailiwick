@@ -2,8 +2,8 @@ package com.perfectlunacy.bailiwick.storage
 
 import android.content.Context
 import android.util.Log
-import com.perfectlunacy.bailiwick.models.Link
-import com.perfectlunacy.bailiwick.models.LinkType
+import com.perfectlunacy.bailiwick.models.ipfs.Link
+import com.perfectlunacy.bailiwick.models.ipfs.LinkType
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPNSRecord
 import java.io.File

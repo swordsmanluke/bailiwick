@@ -20,6 +20,9 @@ interface PostDao {
     @Query("SELECT * FROM post")
     fun all(): List<Post>
 
+    @Query("SELECT * FROM post WHERE cid IS NULL")
+    fun inNeedOfSync(): List<Post>
+
     @Query("SELECT * FROM post WHERE id = :id LIMIT 1")
     fun find(id: Long): Post
 
@@ -28,6 +31,12 @@ interface PostDao {
 
     @Query("SELECT * FROM post WHERE authorId IN (:authorIds)")
     fun postsFor(authorIds: List<Long>): List<Post>
+
+    @Query("SELECT EXISTS( SELECT 1 FROM post WHERE cid = :cid)")
+    fun postExists(cid: ContentId): Boolean
+
+    @Query("UPDATE post SET cid = :cid WHERE id = :id")
+    fun updateCid(id: Long, cid: ContentId)
 
     @Insert
     fun insert(post: Post): Long

@@ -4,22 +4,23 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.perfectlunacy.bailiwick.fragments.AcceptIntroductionFragment
-import com.perfectlunacy.bailiwick.models.Action
+import com.perfectlunacy.bailiwick.models.ipfs.Action
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.Identity
+import com.perfectlunacy.bailiwick.models.db.IpnsCacheDao
 import com.perfectlunacy.bailiwick.storage.Bailiwick
 import com.perfectlunacy.bailiwick.storage.PeerId
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsStore
 
-class BailiwickViewModel(context: Context, val network: Bailiwick): ViewModel() {
+class BailiwickViewModel(context: Context, val network: Bailiwick, val ipfs: IPFS, val ipns: IpnsCacheDao): ViewModel() {
 
     init {
         // Store the Bailiwick network for other's access
         BailiwickViewModel.network = network
+        BailiwickViewModel.ipfs = ipfs
+        BailiwickViewModel.ipns = ipns
 
 //        val id = RefreshWorker.enqueue(context)
 //        WorkManager.getInstance(context).getWorkInfoById(id).addListener(
@@ -78,10 +79,22 @@ class BailiwickViewModel(context: Context, val network: Bailiwick): ViewModel() 
     companion object {
         const val TAG = "BailiwickViewModel"
         private lateinit var network: Bailiwick
+        private lateinit var ipfs: IPFS
+        private lateinit var ipns: IpnsCacheDao
 
         @JvmStatic
         fun bailiwick(): Bailiwick {
             return network
+        }
+
+        @JvmStatic
+        fun ipfs(): IPFS {
+            return ipfs
+        }
+
+        @JvmStatic
+        fun ipns(): IpnsCacheDao {
+            return ipns
         }
     }
 }

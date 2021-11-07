@@ -10,9 +10,7 @@ import androidx.core.app.ActivityCompat
 import com.perfectlunacy.bailiwick.storage.BWick
 import com.perfectlunacy.bailiwick.storage.MockIPFS
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFSCache
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
-import com.perfectlunacy.bailiwick.storage.ipfs.IpnsImpl
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import kotlinx.coroutines.Dispatchers
@@ -46,15 +44,10 @@ class BailiwickActivity : AppCompatActivity() {
                 IPFSWrapper(IPFS.getInstance(applicationContext))
             }
 
-            val cache = IPFSCache(applicationContext.filesDir.path + "/bwcache")
-
             val bwDb = getBailiwickDb(applicationContext)
 
-            val ipns = IpnsImpl(ipfs, bwDb.accountDao(), bwDb.ipnsCacheDao())
-
-//            val bwNetwork = BailiwickImpl(IpfsStore(cache, ipfs, ipns), keyPair, bwDb)
             val bwNetwork = BWick(bwDb, ipfs.peerID, applicationContext.filesDir.toPath())
-            bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork) }).value
+            bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork, ipfs, bwDb.ipnsCacheDao()) }).value
         }
     }
 

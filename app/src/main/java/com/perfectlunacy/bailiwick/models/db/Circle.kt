@@ -23,4 +23,10 @@ interface CircleDao{
 
     @Insert
     fun insert(circle: Circle): Long
+
+    @Query("UPDATE circle SET cid = NULL WHERE id = :id")
+    fun clearCid(id: Long)
+
+    @Query("UPDATE circle SET cid = :cid WHERE id = :id")
+    fun storeCid(id: Long, cid: ContentId)
 }
