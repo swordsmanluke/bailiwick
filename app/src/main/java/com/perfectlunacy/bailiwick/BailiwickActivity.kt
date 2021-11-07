@@ -7,7 +7,7 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.perfectlunacy.bailiwick.storage.BWick
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.MockIPFS
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
@@ -46,7 +46,7 @@ class BailiwickActivity : AppCompatActivity() {
 
             val bwDb = getBailiwickDb(applicationContext)
 
-            val bwNetwork = BWick(bwDb, ipfs.peerID, applicationContext.filesDir.toPath())
+            val bwNetwork = BailiwickNetworkImpl(bwDb, ipfs.peerID, applicationContext.filesDir.toPath())
             bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork, ipfs, bwDb.ipnsCacheDao()) }).value
         }
     }

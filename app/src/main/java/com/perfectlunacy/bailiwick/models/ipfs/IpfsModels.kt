@@ -17,5 +17,3 @@ data class Interaction(val type: InteractionType,
                        val content: String,
                        val parentCid: String,
                        val signature: String)
-
-data class FileDef(val mimeType: String, val cid: String)

@@ -18,7 +18,7 @@ class IpfsDeserializer {
         @JvmStatic
         fun <T> fromBailiwickFile(cipher: Encryptor, ipfs: IPFS, peerId: PeerId, filename: String, clazz: Class<T>): T? {
             val record = ipfs.resolveName(peerId, 0, 3000) ?: return null
-            val cid = ipfs.resolveNode(record.hash,"bw/${Bailiwick.VERSION}/$filename", 1000) ?: return null
+            val cid = ipfs.resolveNode(record.hash,"bw/${Bailiwick.VERSION}/$filename", 300) ?: return null
 
             return fromCid(cipher, ipfs, cid, clazz)
         }

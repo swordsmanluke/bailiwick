@@ -31,7 +31,7 @@ class BWickTest {
         db.circleMemberDao().insert(CircleMember(circleId, identityId))
 
         // acct does not exist now, but will by the time we finish saving all the below.
-        val bw = BWick(db, peerId, context.filesDir.toPath())
+        val bw = BailiwickNetworkImpl(db, peerId, context.filesDir.toPath())
 
         assertEquals(0, bw.posts.count())
 
@@ -59,7 +59,7 @@ class BWickTest {
         }
 
         // After all of that set up... connect to our account and validate stuff
-        val bailiwick = BWick(db, myPeerId, context.filesDir.toPath())
+        val bailiwick = BailiwickNetworkImpl(db, myPeerId, context.filesDir.toPath())
         assertTrue(bailiwick.posts.containsAll(listOf(myPost, yourPost)))
     }
 
@@ -75,7 +75,7 @@ class BWickTest {
         val myPost = buildPost(me)
         val yourPost = buildPost(you)
 
-        val bw = BWick(db, myPeerId, context.filesDir.toPath())
+        val bw = BailiwickNetworkImpl(db, myPeerId, context.filesDir.toPath())
         val friendCirc = bw.createCircle("BestFriends", me)
         val coworkersCirc = bw.createCircle("Cow Orkers", me) // IRL, this would be tied to my "professional" profile
         val everyoneCirc =  bw.circles.find { it.name == "everyone" }!!

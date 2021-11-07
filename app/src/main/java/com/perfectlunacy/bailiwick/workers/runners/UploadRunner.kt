@@ -91,7 +91,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         // just that there's a list I can't read.
         val identityCid = db.identityDao().find(circle.identityId).cid!!
         val now = Calendar.getInstance().timeInMillis
-        val feed = Feed(now, postCids, listOf(), listOf(), identityCid)
+        val feed = IpfsFeed(now, postCids, listOf(), listOf(), identityCid)
         val feedCid = feed.toIpfs(cipher, ipfs)
         db.circleDao().storeCid(circle.id, feedCid)
     }

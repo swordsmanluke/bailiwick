@@ -9,12 +9,11 @@ import com.perfectlunacy.bailiwick.models.ipfs.Action
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.IpnsCacheDao
-import com.perfectlunacy.bailiwick.storage.Bailiwick
+import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
-import com.perfectlunacy.bailiwick.storage.ipfs.IpfsStore
 
-class BailiwickViewModel(context: Context, val network: Bailiwick, val ipfs: IPFS, val ipns: IpnsCacheDao): ViewModel() {
+class BailiwickViewModel(context: Context, val network: BailiwickNetwork, val ipfs: IPFS, val ipns: IpnsCacheDao): ViewModel() {
 
     init {
         // Store the Bailiwick network for other's access
@@ -78,12 +77,12 @@ class BailiwickViewModel(context: Context, val network: Bailiwick, val ipfs: IPF
 
     companion object {
         const val TAG = "BailiwickViewModel"
-        private lateinit var network: Bailiwick
+        private lateinit var network: BailiwickNetwork
         private lateinit var ipfs: IPFS
         private lateinit var ipns: IpnsCacheDao
 
         @JvmStatic
-        fun bailiwick(): Bailiwick {
+        fun bailiwick(): BailiwickNetwork {
             return network
         }
 

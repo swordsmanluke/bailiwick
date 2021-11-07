@@ -40,7 +40,7 @@ interface IdentityDao {
     fun find(id: Long): Identity
 
     @Query("SELECT * FROM identity WHERE cid = :cid LIMIT 1")
-    fun findByCid(cid: ContentId): Identity
+    fun findByCid(cid: ContentId): Identity?
 
     @Query("SELECT * FROM identity WHERE owner = :owner")
     fun identitiesFor(owner: PeerId): List<Identity>

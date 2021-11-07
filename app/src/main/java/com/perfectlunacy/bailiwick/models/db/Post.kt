@@ -26,6 +26,9 @@ interface PostDao {
     @Query("SELECT * FROM post WHERE id = :id LIMIT 1")
     fun find(id: Long): Post
 
+    @Query("SELECT * FROM post WHERE cid = :cid")
+    fun findByCid(cid: ContentId): Post?
+
     @Query("SELECT * FROM post WHERE authorId = :authorId")
     fun postsFor(authorId: Long): List<Post>
 
@@ -40,4 +43,5 @@ interface PostDao {
 
     @Insert
     fun insert(post: Post): Long
+
 }

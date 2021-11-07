@@ -6,16 +6,14 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.perfectlunacy.bailiwick.Bailiwick
-import com.perfectlunacy.bailiwick.storage.BWick
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import io.bloco.faker.Faker
-import junit.framework.Assert
 import org.junit.Assert.*
 
 import org.junit.Test
 import org.junit.runner.RunWith
-import threads.lite.IPFS
 import threads.lite.TestEnv
 import java.security.KeyStore
 import java.util.*
@@ -25,10 +23,9 @@ import android.util.Log
 import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
-import com.perfectlunacy.bailiwick.models.ipfs.Feed
+import com.perfectlunacy.bailiwick.models.ipfs.IpfsFeed
 import com.perfectlunacy.bailiwick.models.ipfs.Manifest
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
-import threads.lite.core.TimeoutCloseable
 
 
 @RunWith(AndroidJUnit4::class)
@@ -62,7 +59,7 @@ class UploadRunnerTest {
         assertEquals(1, manifest.feeds.size)
 
         manifest.feeds.forEach { feedCid ->
-            val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, Feed::class.java)!!
+            val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java)!!
             assertEquals(1, feed.posts.size)
             feed.posts.forEach { postCid ->
                 IpfsDeserializer.fromCid(cipher, ipfs, postCid, Post::class.java)!!
@@ -98,7 +95,7 @@ class UploadRunnerTest {
         keyGen.generateKey()
         db.keyDao().insert(Key("circle:$circleId", alias, "AES", KeyType.Secret))
 
-        val bw = BWick(db, peerId, context.filesDir.toPath())
+        val bw = BailiwickNetworkImpl(db, peerId, context.filesDir.toPath())
         bw.storePost(circleId, buildPost(identity))
     }
 

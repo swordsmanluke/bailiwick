@@ -18,9 +18,9 @@ import kotlin.io.path.pathString
 typealias PeerId=String
 typealias ContentId=String
 
-interface Bailiwick : BailiwickStoreReader, BailiwickStoreWriter
+interface BailiwickNetwork : BailiwickStoreReader, BailiwickStoreWriter
 
-class BWick(val db: BailiwickDatabase, override val peerId: PeerId, private val filesDir: Path): Bailiwick {
+class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerId, private val filesDir: Path): BailiwickNetwork {
     override val me: Identity
         get() = db.identityDao().identitiesFor(peerId).first()
 
