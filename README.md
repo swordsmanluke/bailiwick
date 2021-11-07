@@ -51,11 +51,13 @@ device. Bailiwick makes no effort to track you as a person - but if you do somet
 to prove (more or less) that it was you who made a post.
 
 ### Great, so how does this work? 
-Bailiwick is built on a Distributed Hash Table (DHT): Everyones (encrypted) posts are stored in unreadable 
-chunks distributed across multiple nodes in the network. It's similar to the distributed technology that powers both BitTorrent and Bitcoin
+Bailiwick is built on the Inter-Planetary File System (IPFS): The lookup table for who has which files is stored in chunks distributed across 
+multiple nodes in the network. It's similar to the distributed technology that powers both BitTorrent and Bitcoin. When you access your friends' data
+you'll also store and host a copy of their files, to make it easier for other folks looking for those files. OTOH, you won't store random files belonging
+to folks you don't know. e.g. Your social networks will host copied files for each other, but you won't end up storing files for randos.
 
-Your device is both a client and server in that network - you'll store your own data, posts from your friends and 
-some random unreadable chunks from other participants in the network, just as they will do the same for you!
+Your device is both a client and server in the IPFS network - you'll store your own data, posts from your friends and 
+some "directory" chunks to aid in file lookup for other participants in the network - just as they will do the same for you!
 
 
 ### So how do I use it?
