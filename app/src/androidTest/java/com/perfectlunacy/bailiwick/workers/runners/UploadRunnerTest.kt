@@ -26,6 +26,8 @@ import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.ipfs.IpfsFeed
 import com.perfectlunacy.bailiwick.models.ipfs.Manifest
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer.Companion.LongTimeout
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer.Companion.ShortTimeout
 
 
 @RunWith(AndroidJUnit4::class)
@@ -40,11 +42,13 @@ class UploadRunnerTest {
 
         UploadRunner(context, db, ipfs).run()
 
-        val ipnsNode = ipfs.resolveName(ipfs.peerID, 0, 30)!!
-        Log.i("UploadRunnerTest", "Published thingy. Looking for manifest")
-        val manCid = ipfs.resolveNode(ipnsNode.hash, "bw/${Bailiwick.VERSION}/manifest.json", 30)!!
+        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(),
+                                                          ipfs,
+                                                          ipfs.peerID,
+                                                          "manifest.json",
+                                                          Manifest::class.java)!!
 
-        assertNotNull("Failed to locate manifest", manCid)
+        assertNotNull("Failed to locate manifest", manifest)
     }
 
     @Test
@@ -53,11 +57,11 @@ class UploadRunnerTest {
 
         UploadRunner(context, db, ipfs).run()
 
-        val cipher = Keyring.encryptorForCircle(db, db.circleDao().all().first().id)
         val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, "manifest.json", Manifest::class.java)!!
 
         assertEquals(1, manifest.feeds.size)
 
+        val cipher = Keyring.encryptorForCircle(db, db.circleDao().all().first().id)
         manifest.feeds.forEach { feedCid ->
             val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java)!!
             assertEquals(1, feed.posts.size)

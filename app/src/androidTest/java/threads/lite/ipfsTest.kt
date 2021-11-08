@@ -36,7 +36,7 @@ class IpfsTest {
 
     @Test
     fun publishStoresStuffAtPid() {
-        val timeout = 10L
+        val timeout = 30L
         val ipfs = TestEnv.getTestInstance(context)
         val pid = ipfs.peerID
         val content = "Some text"
