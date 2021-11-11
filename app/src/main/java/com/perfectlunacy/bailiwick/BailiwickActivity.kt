@@ -7,13 +7,17 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
-import com.perfectlunacy.bailiwick.storage.MockIPFS
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
+import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import threads.lite.IPFS
@@ -36,18 +40,26 @@ class BailiwickActivity : AppCompatActivity() {
 
     private suspend fun initBailiwick() {
         withContext(Dispatchers.Default) {
-            val useMocks = false
-
-            val ipfs = if(useMocks) {
-                MockIPFS(applicationContext.filesDir.path)
-            } else {
-                IPFSWrapper(IPFS.getInstance(applicationContext))
-            }
-
+            val ipfs = IPFSWrapper(IPFS.getInstance(applicationContext), keyPair)
             val bwDb = getBailiwickDb(applicationContext)
-
             val bwNetwork = BailiwickNetworkImpl(bwDb, ipfs.peerID, applicationContext.filesDir.toPath())
+            Bailiwick.init(bwNetwork, ipfs, bwDb)
             bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork, ipfs, bwDb.ipnsCacheDao()) }).value
+
+            ipfs.bootstrap(applicationContext)
+
+            // Start up our background jobs:
+            IpfsUploadWorker.enqueue(applicationContext)
+            val refreshId = IpfsDownloadWorker.enqueue(applicationContext)
+
+            WorkManager.getInstance(applicationContext).getWorkInfoById(refreshId).addListener(
+                { // Runnable
+                    bwModel.viewModelScope.launch {
+                        withContext(Dispatchers.Default) { bwModel.refreshContent() }
+                    }
+                },
+                { it.run() }  // Executable
+            )
         }
     }
 
@@ -67,8 +79,9 @@ class BailiwickActivity : AppCompatActivity() {
             val decoder = Base64.getDecoder()
 
             if(privateKeyString != null) {
-                val privateKeyData = decoder.decode(privateKeyString)
-                val publicKeyData = decoder.decode(publicKeyString)
+                val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
+                val privateKeyData = decoder.decode(sharedPref.getString("privateKey", ""))
+                val publicKeyData = decoder.decode(sharedPref.getString("publicKey", ""))
 
                 val publicKey =
                     KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
@@ -95,10 +108,7 @@ class BailiwickActivity : AppCompatActivity() {
             return sharedPref.getString("privateKey", null)
         }
 
-    private val publicKeyString: String?
-        get() {
-            // Use the IPFS private key
-            val sharedPref = applicationContext.getSharedPreferences("liteKey", Context.MODE_PRIVATE)
-            return sharedPref.getString("publicKey", null)
-        }
+    companion object {
+        const val TAG = "BailiwickActivitiy"
+    }
 }

@@ -1,6 +1,6 @@
 package com.perfectlunacy.bailiwick.storage.bailiwick
 
-import com.perfectlunacy.bailiwick.models.ipfs.Action
+import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
@@ -12,6 +12,7 @@ import java.io.InputStream
 
 interface BailiwickStoreReader {
     val me: Identity
+    val myIdentities: List<Identity>
     val peerId: PeerId
     val peers: List<PeerId>
     val users: List<Identity>
@@ -28,4 +29,5 @@ interface BailiwickStoreWriter {
     fun createCircle(name: String, identity: Identity): Circle
     fun storePost(circleId: Long, post: Post)
     fun storeFile(filename: String, input: InputStream)
+    fun storeAction(action: Action)
 }

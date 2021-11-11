@@ -1,15 +1,18 @@
 package com.perfectlunacy.bailiwick.workers.runners
 
 import android.content.Context
+import android.util.Log
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.ipfs.IpnsImpl
 import java.util.*
 
 class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
@@ -24,18 +27,29 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
     fun run() {
         val idsToSync = db.identityDao().all().filter { it.cid == null }
         val postsToSync = db.postDao().inNeedOfSync()
+        // Sync any required Actions
+        val syncActions = db.actionDao().inNeedOfSync()
+        if(syncActions.isNotEmpty()) {
+            Log.i(TAG, "Uploading ${syncActions.count()} new action(s)")
+            dirty = true
+            uploadActionsToIpfs(syncActions)
+        }
 
         db.circleDao().all().forEach { circle ->
-            val cipher = Keyring.encryptorForCircle(db, circle.id)
+            Log.i(TAG, "Syncing circle ${circle.name}")
+            val cipher = Keyring.encryptorForCircle(db.keyDao(), circle.id)
             val postIds = db.circlePostDao().postsIn(circle.id)
             val syncPosts = postsToSync.filter { postIds.contains(it.id) }
-            idsToSync.first{it.id == circle.identityId}.also { ident ->
+
+            idsToSync.firstOrNull{it.id == circle.identityId}?.let { ident ->
+                Log.i(TAG, "Syncing identity ${ident.name}")
                 val cid = IpfsIdentity(ident.name, ident.profilePicCid ?: "").toIpfs(cipher, ipfs)
                 db.identityDao().updateCid(ident.id, cid)
             }
 
             // Sync any required posts
             if(syncPosts.isNotEmpty()) {
+                Log.i(TAG, "Uploading ${syncPosts.count()} new post(s)!")
                 dirty = true
                 db.circleDao().clearCid(circle.id)
                 circle.cid = null
@@ -50,15 +64,42 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         }
 
         // Now publish a new manifest if we changed anything
-        if(dirty) { publishNewManifest() }
+        if(dirty) {
+            Log.i(TAG, "Publishing a new manifest")
+            publishNewManifest()
+        } else {
+            Log.i(TAG, "Nothing new to upload. Sleeping")
+        }
+    }
+
+    private fun uploadActionsToIpfs(syncActions: List<Action>) {
+        syncActions.forEach { action ->
+            // Actions are encrypted with the key of their User
+            val pubkey = Keyring.pubKeyFor(db.userDao(), action.toPeerId)
+            val cipher = RsaWithAesEncryptor(null, pubkey)
+
+            val metadata = mutableMapOf<String, String>()
+            when(ActionType.valueOf(action.actionType)) {
+                ActionType.Delete -> TODO()
+                ActionType.UpdateKey -> { metadata.put("key", action.data) }
+                ActionType.Introduce -> TODO()
+            }
+
+            val ipfsAction = IpfsAction(action.actionType, metadata)
+            val actionCid = ipfsAction.toIpfs(cipher, ipfs)
+            Log.i(TAG, "Uploaded Action to CID $actionCid")
+            db.actionDao().updateCid(action.id, actionCid)
+        }
+        Log.i(TAG, "All actions stored")
     }
 
     private fun publishNewManifest() {
-        val manCid = Manifest(db.circleDao().all().mapNotNull { it.cid }, listOf()).toIpfs(
-            NoopEncryptor(),
-            ipfs
-        )
-        val seq = db.ipnsCacheDao().sequenceFor(ipfs.peerID) ?: 0
+        val feeds = db.circleDao().all().mapNotNull { it.cid }
+        val actions = db.actionDao().all().mapNotNull { it.cid }
+        val manCid = Manifest(feeds, actions).toIpfs( NoopEncryptor(), ipfs )
+        val seq = 1 + (db.ipnsCacheDao().sequenceFor(ipfs.peerID) ?: 0)
+
+        Log.i(TAG, "New IPNS record sequence: $seq")
 
         var verCid = cidForDir("bw/${Bailiwick.VERSION}", seq)
         var bwCid = cidForDir("bw", seq)
@@ -73,7 +114,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw", bwCid, seq + 1))
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}", verCid, seq + 1))
 
-        ipfs.publishName(rootCid, seq + 1, 10)
+        ipfs.publishName(rootCid, seq, 300)
     }
 
     private fun cidForDir(path: String, seq: Long): ContentId {

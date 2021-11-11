@@ -17,18 +17,25 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import com.google.gson.Gson
 import com.google.zxing.integration.android.IntentIntegrator
+import com.perfectlunacy.bailiwick.Keyring
+import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
+import com.perfectlunacy.bailiwick.models.db.Action
+import com.perfectlunacy.bailiwick.models.db.Key
+import com.perfectlunacy.bailiwick.models.db.KeyType
+import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.ipfs.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
+import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.security.KeyFactory
-import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
@@ -72,16 +79,19 @@ class AcceptIntroductionFragment : BailiwickFragment() {
         binding.btnImages.setOnClickListener {
             // TODO pick image
             // TODO and then use zxing to decode the barcode
+            TODO("Not yet implemented")
         }
 
         binding.btnSend.setOnClickListener {
             val imagefolder = File(requireContext().cacheDir, "images")
             imagefolder.mkdirs()
             val f = File(imagefolder, "connect_response.png")
-            val out = FileOutputStream(f)
-            binding.imgResponseQr.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100, out)
-            out.flush()
-            out.close()
+            FileOutputStream(f).use { out ->
+                binding.imgResponseQr
+                    .drawable
+                    .toBitmap()
+                    .compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
             val uri = FileProvider.getUriForFile(
                 requireContext(),
                 "com.perfectlunacy.shareimage.fileprovider",
@@ -108,10 +118,26 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 AcceptMode.SendResponse -> {
                     binding.layoutButtons.visibility = View.GONE
                     binding.layoutSendResponse.visibility = View.VISIBLE
+                    binding.btnSend.isEnabled = false
 
                     val password = ""
 
-                    // TODO: Populate QR Response
+                    bwModel.viewModelScope.launch {
+                        withContext(Dispatchers.Default) {
+                            val key = Md5Signature().sign(password.toByteArray())
+                            val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
+
+                            val response = buildResponse(bwModel.name, bwModel.network.peerId)
+                            val ciphertext = cipher.encrypt(Gson().toJson(response).toByteArray())
+                            Handler(requireContext().mainLooper).post {
+                                binding.imgResponseQr.setImageBitmap(
+                                    QRCode.create(ciphertext)
+                                )
+
+                                binding.btnSend.isEnabled = true
+                            }
+                        }
+                    }
                 }
                 AcceptMode.NoResponseReqd -> {
                     binding.layoutButtons.visibility = View.GONE
@@ -122,7 +148,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                     builder.setTitle("Introduction Made")
 
                     builder.apply {
-                        setPositiveButton(R.string.ok) { dialog, id ->
+                        setPositiveButton(R.string.ok) { _, _ ->
                             val nav = requireView().findNavController()
                             Handler(requireContext().mainLooper).post {
                                 nav.navigate(R.id.action_acceptSubscriptionFragment_to_contentFragment)
@@ -136,6 +162,10 @@ class AcceptIntroductionFragment : BailiwickFragment() {
         return binding.root
     }
 
+    fun buildResponse(name: String, peerId: PeerId): Introduction {
+        return Introduction(true, peerId, name, Base64.getEncoder().encodeToString(bwModel.ipfs.publicKey.encoded))
+    }
+
     // TODO: Replace this with registerForActivityResult
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
@@ -147,44 +177,34 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 val key = Md5Signature().sign(byteArrayOf())
                 val aes = AESEncryptor(SecretKeySpec(key, "AES"))
                 val json = String(aes.decrypt(Base64.getDecoder().decode(result.contents)))
-                val subReq = Gson().fromJson(json, Introduction::class.java)
+                val intro = Gson().fromJson(json, Introduction::class.java)
 
                 // TODO: Display identity and ask for confirmation
                 // TODO: And which Circles to add them to. If any.
-                val pubkey = KeyFactory.getInstance("RSA").generatePublic(
-                    X509EncodedKeySpec(
-                        Base64.getDecoder().decode(subReq.publicKey)
-                    )
-                )
-
                 bwModel.viewModelScope.launch {
                     withContext(Dispatchers.Default) {
+                        val db = getBailiwickDb(requireContext())
 
-//                        // Remember their key
-//                        bwModel.network.keyring.addPublicKey(subReq.peerId, subReq.publicKey)
-//                        // Send them our "everyone" key
-//                        val rsa = RsaWithAesEncryptor(null, pubkey)
-//                        val everyone =
-//                            bwModel.network.encryptorForKey("${bwModel.network.peerId}:everyone")
-//                        val action = Action.updateKeyAction(
-//                            bwModel.network.ipfsStore,
-//                            rsa,
-//                            bwModel.network.keyring.secretKeys("${bwModel.network.peerId}:everyone")!!.last()
-//                        )
-//                        val feedEveryone = bwModel.network.manifest.feeds.first()
-//                        feedEveryone.addAction(action)
-//
-//                        val manCid = bwModel.network.manifest.updateFeed(feedEveryone, bwModel.network.ipfsStore, everyone)
-//                        bwModel.network.addBailiwickFile("manifest.json", manCid)
-//
-//                        bwModel.network.circles.all().first().add(subReq.peerId)
-//
-//                        bwModel.acceptViewModel.request = subReq
-//                        if (subReq.isResponse) {
-//                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
-//                        } else {
-//                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
-//                        }
+                        // Store the new user and their key
+                        db.userDao().insert(User(intro.peerId, intro.publicKey))
+
+                        // Create an Action with our "everyone" key. It will be encrypted with their Public key
+                        val rsa = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
+                        val everyoneId = bwModel.network.circles.find{ it.name == "everyone" }?.id ?: 0
+                        val circKey = Keyring.keyForCircle(
+                            db.keyDao(),
+                            requireContext().filesDir.toPath(),
+                            everyoneId.toInt(),
+                            rsa)
+
+                        bwModel.network.storeAction(Action.updateKeyAction(intro.peerId, circKey))
+
+                        bwModel.acceptViewModel.request = intro
+                        if (intro.isResponse) {
+                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
+                        } else {
+                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
+                        }
                     }
                 }
             }

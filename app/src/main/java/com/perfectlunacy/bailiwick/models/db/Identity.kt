@@ -22,7 +22,7 @@ data class Identity(
         if(profilePicCid == null) { return null }
 
         val avatarFile = Path(cacheFilesDir.pathString, "bwcache", profilePicCid.toString()).toFile()
-        if(!avatarFile.exists()) { return null }
+        if(!avatarFile.exists() || !avatarFile.isFile) { return null }
 
         BufferedInputStream(FileInputStream(avatarFile)).use { file ->
             val picData = file.readBytes()

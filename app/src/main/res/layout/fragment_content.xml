@@ -28,6 +28,10 @@
                 android:background="@color/cardview_light_background"
                 android:src="@drawable/img_bailiwick_icon"
                 android:contentDescription="@string/profile_picture" />
+            <TextView
+                android:id="@+id/txt_peer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
         </LinearLayout>
         <LinearLayout
             android:orientation="horizontal"

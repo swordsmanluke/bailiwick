@@ -5,12 +5,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.perfectlunacy.bailiwick.Bailiwick
+import com.perfectlunacy.bailiwick.Keyring
+import com.perfectlunacy.bailiwick.ValidatorFactory
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.IpnsCache
-import com.perfectlunacy.bailiwick.models.ipfs.IpfsFeed
-import com.perfectlunacy.bailiwick.models.ipfs.IpfsIdentity
-import com.perfectlunacy.bailiwick.models.ipfs.IpfsPost
-import com.perfectlunacy.bailiwick.models.ipfs.Manifest
+import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
@@ -19,13 +18,16 @@ import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import threads.lite.TestEnv
+import java.security.KeyPairGenerator
 import java.util.*
+import javax.crypto.KeyGenerator
 
 @RunWith(AndroidJUnit4::class)
 class RefreshRunnerTest {
     private var context: Context = ApplicationProvider.getApplicationContext()
     private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
-    private val ipfs = IPFSWrapper(TestEnv.getTestInstance(context))
+    private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
+    private val ipfs = IPFSWrapper(TestEnv.getTestInstance(context), keyPair)
 
     @Test
     fun runDownloadsIpfsData() {
@@ -41,21 +43,31 @@ class RefreshRunnerTest {
             emptyList(),
             "")
 
+        val keyBytes = KeyGenerator.getInstance("AES").generateKey().encoded
+        val action = IpfsAction("UpdateKey", mapOf(Pair("key", Base64.getEncoder().encodeToString(
+            keyBytes
+        ))))
+
         val postCid = post.toIpfs(cipher, ipfs)
+
+        val actionCid = action.toIpfs(cipher, ipfs)
 
         val feed = IpfsFeed(now, listOf(postCid), emptyList(), emptyList(), idCid)
         val feedCid = feed.toIpfs(cipher, ipfs)
 
-        val manifest = Manifest(listOf(feedCid), emptyList())
+        val manifest = Manifest(listOf(feedCid), listOf(actionCid))
         val manCid = manifest.toIpfs(cipher, ipfs)
         publishNewManifest(manCid)
 
         Assert.assertEquals(0, db.postDao().all().count())
 
-        RefreshRunner(context, listOf(ipfs.peerID), db, ipfs, db.ipnsCacheDao()).run()
+        DownloadRunner(context, db, ipfs).run()
 
-        // Should download the post we backdoor'd into IPFS
+        val validator = ValidatorFactory.jsonValidator()
+
+        // Should download the data we backdoor'd into IPFS
         Assert.assertEquals(1, db.postDao().all().count())
+        Assert.assertNotNull(Keyring.encryptorForPeer(db.keyDao(), ipfs.peerID, validator))
     }
 
     private fun publishNewManifest(manCid: ContentId) {

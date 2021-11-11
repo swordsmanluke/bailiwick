@@ -1,10 +1,6 @@
 package com.perfectlunacy.bailiwick.storage
 
-import com.perfectlunacy.bailiwick.models.ipfs.Action
-import com.perfectlunacy.bailiwick.models.db.Circle
-import com.perfectlunacy.bailiwick.models.db.CirclePost
-import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.models.db.Post
+import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.ipfs.Interaction
 import com.perfectlunacy.bailiwick.storage.bailiwick.BailiwickStoreReader
 import com.perfectlunacy.bailiwick.storage.bailiwick.BailiwickStoreWriter
@@ -22,7 +18,10 @@ interface BailiwickNetwork : BailiwickStoreReader, BailiwickStoreWriter
 
 class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerId, private val filesDir: Path): BailiwickNetwork {
     override val me: Identity
-        get() = db.identityDao().identitiesFor(peerId).first()
+        get() = myIdentities.first()
+
+    override val myIdentities: List<Identity>
+        get() = db.identityDao().identitiesFor(peerId)
 
     override val peers: List<PeerId>
         get() = db.subscriptionDao().all().map { it.peerId }
@@ -98,6 +97,10 @@ class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerI
         f.parentFile?.mkdirs() // Just in case
         val out = BufferedOutputStream(FileOutputStream(f))
         input.copyTo(out)
+    }
+
+    override fun storeAction(action: Action) {
+        db.actionDao().insert(action)
     }
 
 }

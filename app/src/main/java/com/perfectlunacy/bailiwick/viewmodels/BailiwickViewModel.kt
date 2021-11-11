@@ -5,32 +5,13 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.perfectlunacy.bailiwick.fragments.AcceptIntroductionFragment
-import com.perfectlunacy.bailiwick.models.ipfs.Action
-import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.IpnsCacheDao
+import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
-import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 
 class BailiwickViewModel(context: Context, val network: BailiwickNetwork, val ipfs: IPFS, val ipns: IpnsCacheDao): ViewModel() {
-
-    init {
-        // Store the Bailiwick network for other's access
-        BailiwickViewModel.network = network
-        BailiwickViewModel.ipfs = ipfs
-        BailiwickViewModel.ipns = ipns
-
-//        val id = RefreshWorker.enqueue(context)
-//        WorkManager.getInstance(context).getWorkInfoById(id).addListener(
-//            { // Runnable
-//                viewModelScope.launch {
-//                    withContext(Dispatchers.Default) { refreshContent() }
-//                }
-//            },
-//            { it.run() }  // Executable
-//        )
-    }
 
     // Currently visible content from the network
     // TODO: LiveData?
@@ -61,39 +42,7 @@ class BailiwickViewModel(context: Context, val network: BailiwickNetwork, val ip
 //        sub.actions.forEach { processAction(sub.peerId, it) }
     }
 
-    private fun processAction(peerId: PeerId, action: Action) {
-        when (action.type) {
-            Action.ActionType.UpdateKey -> {
-                Log.i(TAG, "Received new key from $peerId")
-                val newKey = action.get("key")!!
-                Log.i(TAG, "TODO: Import key!")
-//                network.keyring.addSecretKey(peerId, newKey)
-//                Log.i(TAG, "Imported key successfully")
-            }
-            Action.ActionType.Delete -> TODO()
-            Action.ActionType.Introduce -> TODO()
-        }
-    }
-
     companion object {
         const val TAG = "BailiwickViewModel"
-        private lateinit var network: BailiwickNetwork
-        private lateinit var ipfs: IPFS
-        private lateinit var ipns: IpnsCacheDao
-
-        @JvmStatic
-        fun bailiwick(): BailiwickNetwork {
-            return network
-        }
-
-        @JvmStatic
-        fun ipfs(): IPFS {
-            return ipfs
-        }
-
-        @JvmStatic
-        fun ipns(): IpnsCacheDao {
-            return ipns
-        }
     }
 }

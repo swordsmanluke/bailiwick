@@ -14,7 +14,9 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.R
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentNewUserBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
@@ -146,6 +148,11 @@ class NewUserFragment : BailiwickFragment() {
                 val circle = Circle("everyone", identityId, null)
                 val circleId = db.circleDao().insert(circle)
 
+                // Create a key for this circle
+                val rsaCipher = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
+                Keyring.generateAesKey(db.keyDao(), requireContext().filesDir.toPath(), circleId, rsaCipher)
+
+                // Add a new member to the circle
                 db.circleMemberDao().insert(CircleMember(circleId, identityId))
             }
         }

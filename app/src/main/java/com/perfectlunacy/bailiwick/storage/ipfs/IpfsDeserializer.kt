@@ -29,13 +29,33 @@ class IpfsDeserializer {
                 return null
             }
 
-            val cid = ipfs.resolveNode(record.hash,"bw/${Bailiwick.VERSION}/$filename", LongTimeout)
-            if(cid == null) {
-                Log.w(TAG, "Failed to locate file $filename for $peerId")
-                return null
+            val cid = ipfs.resolveNode(record.hash,"bw/${Bailiwick.VERSION}/$filename", ShortTimeout)
+            if(cid != null) {
+                return fromCid(cipher, ipfs, cid, clazz)
+            }
+            Log.w(TAG, "Failed to locate file $filename for $peerId. Trying links")
+
+            ipfs.getLinks(record.hash, true, ShortTimeout)?.
+            find {it.name == "bw"}?.
+            let { bw ->
+                Log.i(TAG, "Found Bailiwick dir @ ${bw.cid}")
+                ipfs.getLinks(bw.cid, true, ShortTimeout)?.
+                        find{ it.name == Bailiwick.VERSION}?.
+                        let { ver ->
+                            Log.i(TAG, "Found version dir @ ${ver.cid}")
+                            val fileCid = ipfs.getLinks(ver.cid, true, ShortTimeout)?.find {
+                                it.name == filename
+                            }?.cid
+
+                            if(fileCid != null) {
+                                Log.i(TAG, "Success! Found $filename @ $fileCid!")
+                                return fromCid(cipher, ipfs, fileCid, clazz)
+                            }
+                        }
             }
 
-            return fromCid(cipher, ipfs, cid, clazz)
+            Log.w(TAG, "Failure to locate $filename!")
+            return null
         }
 
         @JvmStatic

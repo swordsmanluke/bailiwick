@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.*
 import javax.crypto.spec.SecretKeySpec
 
 
@@ -56,7 +57,7 @@ class IntroduceSelfFragment : BailiwickFragment() {
         //  Also, these files need their CIDs readily available.
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val identities = bwModel.network.users.map { it.name }
+                val identities = bwModel.network.myIdentities.map { it.name }
 
                 Handler(requireContext().mainLooper).post {
                     binding.spnIdentities.adapter = ArrayAdapter(
@@ -72,9 +73,11 @@ class IntroduceSelfFragment : BailiwickFragment() {
             override fun onItemSelected(parent: AdapterView<*>?,view: View?,position: Int,id: Long) {
                 bwModel.viewModelScope.launch {
                     withContext(Dispatchers.IO) {
-                        val identity = bwModel.network.users.getOrNull(position - 1)
-                        binding.txtName.text = identity?.name ?: ""
-                        binding.avatar.setImageBitmap(identity?.avatar(requireContext().filesDir.toPath()))
+                        val identity = bwModel.network.myIdentities.getOrNull(position - 1)
+                        Handler(context!!.mainLooper).post {
+                            binding.txtName.text = identity?.name ?: ""
+                            binding.avatar.setImageBitmap(identity?.avatar(requireContext().filesDir.toPath()))
+                        }
 
                         if (identity != null) {
                             val key =
@@ -89,7 +92,9 @@ class IntroduceSelfFragment : BailiwickFragment() {
                                 )
                             val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
 
-                            binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
+                            Handler(context!!.mainLooper).post {
+                                binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
+                            }
                         }
                     }
                 }
@@ -115,7 +120,8 @@ class IntroduceSelfFragment : BailiwickFragment() {
             val sendIntent = Intent()
             sendIntent.action = Intent.ACTION_SEND
             sendIntent.putExtra(Intent.EXTRA_TEXT,
-                "Hi! I'd like to connect on Bailiwick: the pro-social network! You can find out more here: https://bailiwick.space")
+                "Hi! Let's connect on Bailiwick: the pro-user social network!\n" +
+                        "You can find out more here: https://bailiwick.space")
             Log.i(TAG, "Attaching ${f.path}")
             sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
             sendIntent.type = "image/png"
@@ -126,11 +132,7 @@ class IntroduceSelfFragment : BailiwickFragment() {
     }
 
     fun buildRequest(name: String, peerId: PeerId): Introduction {
-        TODO("Access public key")
-        return Introduction(false,
-            peerId,
-            name,
-            "")
+        return Introduction(false, peerId, name, Base64.getEncoder().encodeToString(bwModel.ipfs.publicKey.encoded))
     }
 
     companion object {

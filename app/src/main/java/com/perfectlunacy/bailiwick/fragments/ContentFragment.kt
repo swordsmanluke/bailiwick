@@ -63,6 +63,8 @@ class ContentFragment : BailiwickFragment() {
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_connectFragment) }
         }
 
+        binding.txtPeer.text = bwModel.ipfs.peerID
+
         binding.btnPost.setOnClickListener {
             val text = binding.txtPostText.text.toString()
             binding.txtPostText.text.clear()

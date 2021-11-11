@@ -64,7 +64,6 @@ class IpfsTest {
         Log.i(TAG, "Created Bailiwick structure. Publishing...")
 
         // Finally, publish the baseDir to IPNS
-        // TODO: Is this doing what I think it's doing?
         ipfs.publishName(rootCid, 1, TimeoutCloseable(timeout))
         Log.i(TAG, "Published Name")
 

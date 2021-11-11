@@ -8,12 +8,17 @@ import com.perfectlunacy.bailiwick.models.ipfs.Link
 import com.perfectlunacy.bailiwick.models.ipfs.LinkType
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
+import net.luminis.quic.QuicConnection
 import threads.lite.cid.Cid
 import threads.lite.core.ClosedException
 import threads.lite.core.TimeoutCloseable
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.util.*
 
-class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
+class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IPFS {
     companion object {
         const val TAG = "IPFSWrapper"
     }
@@ -36,12 +41,18 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
         ipfs.updateNetwork(interfaceName!!)
 
         ipfs.bootstrap()
-        ipfs.relays()
+        ipfs.relays(threads.lite.IPFS.TIMEOUT_BOOTSTRAP.toLong())
         Log.i(TAG, "Bootstrap completed.")
     }
 
     override val peerID: PeerId
         get() = ipfs.peerID.toBase32()
+
+    override val publicKey: PublicKey
+        get() = keyPair.public
+
+    override val privateKey: PrivateKey
+        get() = keyPair.private
 
     override fun getData(cid: ContentId, timeoutSeconds: Long): ByteArray {
         Log.i(TAG, "GetData: $cid")
@@ -61,9 +72,10 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
     }
 
     override fun storeData(data: ByteArray): ContentId {
-        val cid = ipfs.storeData(data).key
+        val cid = ipfs.storeData(data)
+        ipfs.provide(cid, TimeoutCloseable(30))
         Log.i(TAG, "stored data: $cid")
-        return cid
+        return cid.key
     }
 
     override fun createEmptyDir(): ContentId? {
@@ -107,10 +119,15 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS): IPFS {
             }
         } catch(e: Exception) {
             Log.e(TAG,"Failed to resolve $path: $e\n" +
-                    "${e.stackTraceToString()}")
+                    e.stackTraceToString()
+            )
             null
         }
 
+    }
+
+    override fun enhanceSwarm(peerId: PeerId) {
+        ipfs.swarmEnhance(threads.lite.cid.PeerId.decodeName(peerId))
     }
 
     override fun publishName(root: ContentId, sequence: Long, timeoutSeconds: Long) {

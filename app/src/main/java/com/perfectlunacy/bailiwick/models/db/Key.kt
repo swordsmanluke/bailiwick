@@ -1,16 +1,14 @@
 package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
-import com.perfectlunacy.bailiwick.storage.PeerId
 import java.security.KeyStore
 import java.security.PrivateKey
-import java.util.*
 import javax.crypto.SecretKey
-import javax.crypto.spec.SecretKeySpec
 
 enum class KeyType{
     Private,
-    Secret
+    Secret,
+    Public
 }
 
 @Entity(indices = [Index(value = ["alias"], unique = true)])
@@ -43,6 +41,9 @@ interface KeyDao {
     @Query("SELECT * FROM `key` WHERE `key` = :key ORDER BY id DESC")
     fun keysFor(key: String): List<Key>
 
-    @Insert
+    @Query("SELECT * FROM `key` WHERE alias = :peerId AND type = \"Public\"")
+    fun pubKeyFor(peerId: String): Key
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(key: Key): Long
 }

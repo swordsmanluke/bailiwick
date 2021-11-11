@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import threads.lite.IPFS
 import threads.lite.cid.Cid
+import java.security.KeyPairGenerator
 import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(AndroidJUnit4::class)
@@ -20,7 +21,9 @@ class IPFSWrapperTest {
 
     @Test
     fun createEmptyDirCreatesNewDirectories() {
-        val ipfs = IPFSWrapper(TestEnv.getTestInstance(context))
+        val ipfsTest = TestEnv.getTestInstance(context)
+        val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
+        val ipfs = IPFSWrapper(ipfsTest, keyPair)
         var dir = ipfs.createEmptyDir()!!
         val dir2 = ipfs.createEmptyDir()!!
         dir = ipfs.addLinkToDir(dir, "subdir", dir2)!!
@@ -29,7 +32,8 @@ class IPFSWrapperTest {
 
     @Test
     fun convertToAndFromCid() {
-        val ipfs = IPFSWrapper(TestEnv.getTestInstance(context))
+        val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
+        val ipfs = IPFSWrapper(TestEnv.getTestInstance(context), keyPair)
         val cid = ipfs.createEmptyDir()!!
         val convertedCid = Cid(BaseEncoding.base32().decode(cid)).key
 
