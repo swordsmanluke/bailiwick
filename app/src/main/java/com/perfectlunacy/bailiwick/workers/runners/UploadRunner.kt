@@ -13,7 +13,6 @@ import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
-import io.bloco.faker.components.Bool
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -26,7 +25,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
     private var dirty = false
 
     // TODO: LOTS of N+1 queries in here. Update our DAOs so we don't need so many.
-    fun run(refresh: Boolean=false) {
+    fun run() {
         // Wait for IPFS connection
         while(!ipfs.isConnected()) {
             Log.i(TAG, "Waiting for ipfs to connect")
@@ -72,14 +71,17 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         }
 
         // Now publish a new manifest if we changed anything
-        if(dirty || refresh) {
+        if(dirty) {
             Log.i(TAG, "Publishing a new manifest")
-            // If this is _only_ a refresh, we won't increment the sequence number
-            val isRefresh = refresh && !dirty
-            publishNewManifest(isRefresh)
+            publishNewManifest(false)
         } else {
             Log.i(TAG, "Nothing new to upload. Sleeping")
         }
+    }
+
+    fun refresh() {
+        Log.i(TAG, "Refreshing existing manifest")
+        publishNewManifest(true)
     }
 
     private fun uploadActionsToIpfs(syncActions: List<Action>) {
@@ -106,7 +108,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
     private fun publishNewManifest(isRefresh: Boolean) {
         val feeds = db.circleDao().all().mapNotNull { it.cid }
         val actions = db.actionDao().all().mapNotNull { it.cid }
-        val manCid = Manifest(feeds, actions).toIpfs( NoopEncryptor(), ipfs )
+        val manCid = manifestCid(isRefresh, feeds, actions)
         var seq = (db.sequenceDao().find(ipfs.peerID)?.sequence ?: 0)
         var verCid = cidForDir("bw/${Bailiwick.VERSION}", seq)
         var bwCid = cidForDir("bw", seq)
@@ -132,6 +134,10 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}/manifest.json", manCid, seq))
 
         ipfs.publishName(rootCid, seq, 30)
+        if((db.manifestDao().currentSequence() ?: 0) < seq) {
+            db.manifestDao().insert(Manifest(manCid, seq))
+        }
+
         ipfs.provide(rootCid, 30)
         if(seq > 1) {
             db.sequenceDao().updateSequence(peerId, seq)
@@ -150,6 +156,16 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         }
 
         Log.i(TAG, "New manifest: $manCid")
+    }
+
+    private fun manifestCid(isRefresh: Boolean, feeds: List<ContentId>, actions: List<ContentId>): ContentId {
+        return if(isRefresh){
+            val sequence = db.manifestDao().currentSequence() ?: 0
+            db.manifestDao().find(sequence)?.cid
+                ?: IpfsManifest(feeds, actions).toIpfs(NoopEncryptor(), ipfs)
+        } else {
+            IpfsManifest(feeds, actions).toIpfs(NoopEncryptor(), ipfs)
+        }
     }
 
     private fun provideLinks(links: List<Link>, timeoutSeconds: Long) {

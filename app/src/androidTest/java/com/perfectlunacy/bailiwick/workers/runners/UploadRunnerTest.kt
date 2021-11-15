@@ -10,7 +10,7 @@ import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.ipfs.IpfsFeed
-import com.perfectlunacy.bailiwick.models.ipfs.Manifest
+import com.perfectlunacy.bailiwick.models.ipfs.IpfsManifest
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
@@ -45,7 +45,7 @@ class UploadRunnerTest {
                                                           ipfs,
                                                           ipfs.peerID,
                                                           "manifest.json",
-                                                          Manifest::class.java)!!
+                                                          IpfsManifest::class.java)!!
 
         assertNotNull("Failed to locate manifest", manifest)
     }
@@ -56,7 +56,7 @@ class UploadRunnerTest {
 
         UploadRunner(context, db, ipfs).run()
 
-        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, "manifest.json", Manifest::class.java)!!
+        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, "manifest.json", IpfsManifest::class.java)!!
 
         assertEquals(1, manifest.feeds.size)
 

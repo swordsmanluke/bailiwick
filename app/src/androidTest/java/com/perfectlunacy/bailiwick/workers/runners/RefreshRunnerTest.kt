@@ -55,7 +55,7 @@ class RefreshRunnerTest {
         val feed = IpfsFeed(now, listOf(postCid), emptyList(), emptyList(), idCid)
         val feedCid = feed.toIpfs(cipher, ipfs)
 
-        val manifest = Manifest(listOf(feedCid), listOf(actionCid))
+        val manifest = IpfsManifest(listOf(feedCid), listOf(actionCid))
         val manCid = manifest.toIpfs(cipher, ipfs)
         publishNewManifest(manCid)
 

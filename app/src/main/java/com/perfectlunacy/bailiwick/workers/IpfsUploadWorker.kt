@@ -32,7 +32,11 @@ class IpfsUploadWorker(val context: Context, workerParameters: WorkerParameters)
         val db = Bailiwick.getInstance().db
         val refresh = inputData.getBoolean("refresh", false)
         try {
-            UploadRunner(context, db, ipfs).run(refresh)
+            if(refresh) {
+                UploadRunner(context, db, ipfs).refresh()
+            } else {
+                UploadRunner(context, db, ipfs).run()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to publish updates", e)
         }

@@ -75,7 +75,11 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
 
     fun addToEnd(posts: List<Post>) {
         Log.i(TAG, "Adding ${posts.count()} posts with text: ${posts.map{it.text}}")
-        list.addAll(posts)
+        val tempPosts: MutableSet<Post> = mutableSetOf()
+        tempPosts.addAll(list)
+        tempPosts.addAll(posts)
+        list.clear()
+        list.addAll(tempPosts)
         list.sortByDescending { it.timestamp }
         Handler(Looper.getMainLooper()).post(Runnable { notifyDataSetChanged() })
     }

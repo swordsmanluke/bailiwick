@@ -82,7 +82,7 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
             peerId,
             db.sequenceDao(),
             "manifest.json",
-            Manifest::class.java)
+            IpfsManifest::class.java)
 
         if (maniPair == null) {
             Log.w(TAG, "Failed to locate Manifest for peer $peerId")
