@@ -17,8 +17,12 @@ class IpfsUploadWorker(val context: Context, workerParameters: WorkerParameters)
         const val TAG = "IpfsUploadWorker"
 
         @JvmStatic
-        fun enqueue(context: Context) {
-            val request = OneTimeWorkRequestBuilder<IpfsUploadWorker>().build()
+        fun enqueue(context: Context, refresh: Boolean) {
+            val data = workDataOf("refresh" to refresh)
+            val request = OneTimeWorkRequestBuilder<IpfsUploadWorker>()
+                .setInputData(data)
+                .build()
+
             WorkManager.getInstance(context).enqueueUniqueWork("ipfs-uploader", ExistingWorkPolicy.APPEND, request)
         }
     }
@@ -26,8 +30,9 @@ class IpfsUploadWorker(val context: Context, workerParameters: WorkerParameters)
     override fun doWork(): Result {
         val ipfs = Bailiwick.getInstance().ipfs
         val db = Bailiwick.getInstance().db
+        val refresh = inputData.getBoolean("refresh", false)
         try {
-            UploadRunner(context, db, ipfs).run()
+            UploadRunner(context, db, ipfs).run(refresh)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to publish updates", e)
         }

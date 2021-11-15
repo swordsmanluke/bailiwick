@@ -46,7 +46,7 @@ class Keyring {
         }
 
         @JvmStatic
-        fun keyForCircle(keyDao: KeyDao, filesDir: Path, circleId: Int, cipher: Encryptor): String {
+        fun keyForCircle(keyDao: KeyDao, filesDir: Path, circleId: Int, cipher: Encryptor): ByteArray {
             val alias = keyDao.keysFor("circle:$circleId").last().alias
 
             val f = Path(filesDir.pathString, "bwcache", "keystore.json").toFile()
@@ -55,7 +55,7 @@ class Keyring {
             val store = Gson().fromJson(rawJson, KeyFile::class.java)
 
             val keyRec = store.keys.find { it.alias == alias }
-            return String(Base64.getDecoder().decode(keyRec!!.encKey))
+            return Base64.getDecoder().decode(keyRec!!.encKey)
         }
 
         @JvmStatic

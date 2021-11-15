@@ -17,7 +17,7 @@ interface SequenceDao{
     @Query("SELECT * FROM sequence WHERE peerId = :peerId LIMIT 1")
     fun find(peerId: PeerId): Sequence?
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(sequence: Sequence): Long
 
     @Query("UPDATE sequence SET sequence = :sequence WHERE peerId = :peerId")

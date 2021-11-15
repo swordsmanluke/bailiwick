@@ -197,7 +197,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                             everyoneId.toInt(),
                             rsa)
 
-                        bwModel.network.storeAction(Action.updateKeyAction(intro.peerId, circKey))
+                        bwModel.network.storeAction(Action.updateKeyAction(intro.peerId, Base64.getEncoder().encodeToString(circKey)))
 
                         bwModel.acceptViewModel.request = intro
                         if (intro.isResponse) {

@@ -35,11 +35,13 @@ import kotlin.io.path.pathString
  */
 class ContentFragment : BailiwickFragment() {
 
+    private var _binding: FragmentContentBinding? = null
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = DataBindingUtil.inflate<FragmentContentBinding>(
+        _binding = DataBindingUtil.inflate(
             inflater,
             R.layout.fragment_content,
             container,
@@ -49,6 +51,7 @@ class ContentFragment : BailiwickFragment() {
 //        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 //        binding.listUsers.setLayoutManager(layoutManager)
 
+        val binding = _binding!! // capture and assert not null to make the Kotlin compiler happy
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 val users = bwModel.getUsers()
@@ -105,7 +108,7 @@ class ContentFragment : BailiwickFragment() {
                     bwModel.network.storePost(circId, newPost)
 
                     Log.i(TAG, "Saved new post. Refreshing...")
-                    IpfsUploadWorker.enqueue(requireContext()) // Upload new content
+                    IpfsUploadWorker.enqueue(requireContext(), false) // Upload new content
 
                     refreshContent()
                 }
@@ -145,6 +148,13 @@ class ContentFragment : BailiwickFragment() {
                 adapter.clear()
                 val posts = bwModel.content["everyone"] ?: emptySet()
                 adapter.addToEnd(posts.toList())
+
+                val sequence = Bailiwick.getInstance().db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
+                Handler(requireContext().mainLooper).post {
+                    _binding?.let {
+                        it.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"
+                    }
+                }
             }
         }
     }

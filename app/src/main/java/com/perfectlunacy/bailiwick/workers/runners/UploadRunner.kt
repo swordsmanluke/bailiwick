@@ -13,6 +13,7 @@ import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
+import io.bloco.faker.components.Bool
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -25,8 +26,13 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
     private var dirty = false
 
     // TODO: LOTS of N+1 queries in here. Update our DAOs so we don't need so many.
+    fun run(refresh: Boolean=false) {
+        // Wait for IPFS connection
+        while(!ipfs.isConnected()) {
+            Log.i(TAG, "Waiting for ipfs to connect")
+            Thread.sleep(500)
+        }
 
-    fun run() {
         val idsToSync = db.identityDao().all().filter { it.cid == null }
         val postsToSync = db.postDao().inNeedOfSync()
         // Sync any required Actions
@@ -66,9 +72,11 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         }
 
         // Now publish a new manifest if we changed anything
-        if(dirty) {
+        if(dirty || refresh) {
             Log.i(TAG, "Publishing a new manifest")
-            publishNewManifest()
+            // If this is _only_ a refresh, we won't increment the sequence number
+            val isRefresh = refresh && !dirty
+            publishNewManifest(isRefresh)
         } else {
             Log.i(TAG, "Nothing new to upload. Sleeping")
         }
@@ -95,7 +103,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         Log.i(TAG, "All actions stored")
     }
 
-    private fun publishNewManifest() {
+    private fun publishNewManifest(isRefresh: Boolean) {
         val feeds = db.circleDao().all().mapNotNull { it.cid }
         val actions = db.actionDao().all().mapNotNull { it.cid }
         val manCid = Manifest(feeds, actions).toIpfs( NoopEncryptor(), ipfs )
@@ -113,8 +121,11 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         rootCid = ipfs.addLinkToDir(rootCid, "bw", bwCid)!!
 
         val peerId = ipfs.peerID
-        seq += 1
-        Log.i(TAG, "New IPNS record sequence: $seq")
+        if(!isRefresh) {
+            // We don't need to increment the sequence number during a refresh
+            seq += 1
+        }
+        Log.i(TAG, "IPNS record sequence: $seq")
         db.ipnsCacheDao().insert(IpnsCache(peerId, "", rootCid, seq))
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw", bwCid, seq))
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}", verCid, seq))

@@ -21,6 +21,7 @@ import java.util.*
 import android.net.NetworkCapabilities
 import com.perfectlunacy.bailiwick.models.db.Sequence
 import com.perfectlunacy.bailiwick.models.db.SequenceDao
+import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
 
 
 class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IPFS {
@@ -53,6 +54,8 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
                 ipfs.bootstrap()
                 ipfs.relays(threads.lite.IPFS.TIMEOUT_BOOTSTRAP.toLong())
                 Log.i(TAG, "Bootstrap completed.")
+
+                IpfsUploadWorker.enqueue(context, true)
             }
         })
     }
@@ -120,7 +123,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
         var rec = ipfs.resolveName(peerId, seq.sequence, TimeoutCloseable(timeoutSeconds))
         Log.i(TAG, "Resolved $peerId:${seq.sequence} to '${rec?.hash ?: "null"}':${rec?.sequence ?: ""}")
         var tries = 0
-        while (rec == null && tries < 10) {
+        while ((rec == null || rec.hash.isBlank()) && tries < 10) {
             tries += 1
             rec = ipfs.resolveName(peerId, seq.sequence, TimeoutCloseable(timeoutSeconds))
             Log.i(TAG, "Resolved $peerId:${seq.sequence} to '${rec?.hash ?: ""}':${rec?.sequence ?: 0}")
@@ -217,5 +220,11 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
     override fun provide(cid: ContentId, timeoutSeconds: Long) {
         ipfs.provide(cid.toCid(), TimeoutCloseable(timeoutSeconds))
     }
+
+    override fun isConnected(): Boolean{
+        Log.i(TAG, "Connected peers: ${ipfs.peers.size}")
+        return ipfs.peers.size >= 5
+    }
+
 
 }

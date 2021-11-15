@@ -19,6 +19,7 @@ import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import java.io.BufferedOutputStream
 import java.io.FileOutputStream
+import java.lang.Exception
 import kotlin.io.path.Path
 
 class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
@@ -26,9 +27,13 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
         const val TAG = "DownloadRunner"
     }
 
-    private val useBailiwick = true
-
     fun run() {
+        // Wait for IPFS connection
+        while(!ipfs.isConnected()) {
+            Log.i(UploadRunner.TAG, "Waiting for ipfs to connect")
+            Thread.sleep(500)
+        }
+
         Log.i(TAG, "Refreshing ${peers.count()} peers")
         peers.forEach { peerId ->
             Log.i(TAG, "Refreshing peer: $peerId")
@@ -49,28 +54,13 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
         if(db.identityDao().identitiesFor(peerId).isEmpty()) {
             Log.i(TAG, "Looking for identity for $peerId")
             val cipher = Keyring.encryptorForPeer(db.keyDao(), peerId, ValidatorFactory.jsonValidator())
-            val pair = if(useBailiwick) {
-                IpfsDeserializer.fromBailiwickFile(
-                    cipher,
-                    ipfs,
-                    peerId,
-                    db.sequenceDao(),
-                    "identity.json",
-                    IpfsIdentity::class.java)
-            } else {
-                val node = ipfs.resolveName(peerId, db.sequenceDao(), 30) ?: return
-                val cid = ipfs.resolveBailiwickFile(node.hash, "identity.json", 120)
-                if (cid == null) {
-                    Log.w(TAG, "Could not download public identity for $peerId")
-                    return
-                }
-
-                IpfsDeserializer.fromCid(
-                    cipher,
-                    ipfs,
-                    cid,
-                    IpfsIdentity::class.java)
-            }
+            val pair = IpfsDeserializer.fromBailiwickFile(
+                cipher,
+                ipfs,
+                peerId,
+                db.sequenceDao(),
+                "identity.json",
+                IpfsIdentity::class.java)
 
             if (pair == null) {
                 Log.w(TAG, "Could not download public identity for $peerId")
@@ -82,38 +72,17 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
             db.identityDao().insert(Identity(cid, peerId, pubId.name, pubId.profilePicCid))
         }
-
     }
 
     private fun downloadManifest(peerId: PeerId) {
         val manifestCipher = Keyring.encryptorForPeer(db.keyDao(), peerId, ValidatorFactory.jsonValidator())
-        val maniPair = if(useBailiwick) {
-            IpfsDeserializer.fromBailiwickFile(
-                manifestCipher,
-                ipfs,
-                peerId,
-                db.sequenceDao(),
-                "manifest.json",
-                Manifest::class.java)
-        } else {
-            val node = ipfs.resolveName(peerId, db.sequenceDao(), 30)
-            if(node == null) {
-                Log.e(TAG,"Manifest: Failed to locate node for $peerId")
-                return
-            }
-
-            val cid = ipfs.resolveBailiwickFile(node.hash, "identity.json", 120)
-            if (cid==null) {
-                Log.i(TAG, "Failed to locate manifest CID for peer $peerId")
-                return
-            }
-
-            IpfsDeserializer.fromCid(
-                manifestCipher,
-                ipfs,
-                cid,
-                Manifest::class.java)
-        }
+        val maniPair = IpfsDeserializer.fromBailiwickFile(
+            manifestCipher,
+            ipfs,
+            peerId,
+            db.sequenceDao(),
+            "manifest.json",
+            Manifest::class.java)
 
         if (maniPair == null) {
             Log.w(TAG, "Failed to locate Manifest for peer $peerId")
@@ -178,28 +147,40 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
     private fun downloadPost(postCid: ContentId, identity: Identity, cipher: Encryptor) {
         var post = db.postDao().findByCid(postCid)
-        if (post == null) {
-            val ipfsPostPair = IpfsDeserializer.fromCid(cipher, ipfs, postCid, IpfsPost::class.java)
-                ?: return
+        if (post != null) {
+            Log.i(TAG, "Already downloaded post $postCid!")
+            return
+        }
 
-            val ipfsPost = ipfsPostPair.first
+        val ipfsPostPair = try {
+            IpfsDeserializer.fromCid(cipher, ipfs, postCid, IpfsPost::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download Post $postCid", e)
+            return
+        }
 
-            Log.i(TAG, "Downloaded post!")
+        if (ipfsPostPair == null) {
+            Log.e(TAG, "Failed to process post $postCid")
+            return
+        }
 
-            post = Post(
-                identity.id,
-                postCid,
-                ipfsPost.timestamp,
-                ipfsPost.parent_cid,
-                ipfsPost.text,
-                ipfsPost.signature
-            )
+        val ipfsPost = ipfsPostPair.first
 
-            post.id = db.postDao().insert(post)
+        Log.i(TAG, "Downloaded post!")
 
-            ipfsPost.files.forEach {
-                db.postFileDao().insert(PostFile(post.id, it.cid, it.mimeType))
-            }
+        post = Post(
+            identity.id,
+            postCid,
+            ipfsPost.timestamp,
+            ipfsPost.parent_cid,
+            ipfsPost.text,
+            ipfsPost.signature
+        )
+
+        post.id = db.postDao().insert(post)
+
+        ipfsPost.files.forEach {
+            db.postFileDao().insert(PostFile(post.id, it.cid, it.mimeType))
         }
 
         db.postFileDao().filesFor(post.id).forEach { postFile ->

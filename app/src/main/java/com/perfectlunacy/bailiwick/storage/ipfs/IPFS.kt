@@ -29,6 +29,7 @@ interface IpfsWriter {
     fun addLinkToDir(dirCid: ContentId, name: String, cid: ContentId): ContentId?
     fun publishName(root: ContentId, sequence: Long, timeoutSeconds: Long)
     fun provide(cid: ContentId, timeoutSeconds: Long)
+    fun isConnected(): Boolean
 }
 
 data class IPNSRecord(val retrievedAt: Long, val hash: String, val sequence: Long)
