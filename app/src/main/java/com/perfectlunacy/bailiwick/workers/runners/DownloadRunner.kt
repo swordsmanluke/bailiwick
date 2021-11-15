@@ -2,6 +2,7 @@ package com.perfectlunacy.bailiwick.workers.runners
 
 import android.content.Context
 import android.util.Log
+import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.ValidatorFactory
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
@@ -18,9 +19,11 @@ import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import java.io.BufferedOutputStream
+import java.io.ByteArrayInputStream
 import java.io.FileOutputStream
 import java.lang.Exception
 import kotlin.io.path.Path
+import kotlin.io.path.pathString
 
 class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
     companion object {
@@ -72,6 +75,22 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
             db.identityDao().insert(Identity(cid, peerId, pubId.name, pubId.profilePicCid))
         }
+
+        val bw = Bailiwick.getInstance().bailiwick
+        db.identityDao().identitiesFor(peerId).filterNot {
+            Path(context.filesDir.path, "bwcache", it.profilePicCid?:"nonexist").toFile().exists()
+        }.mapNotNull { it.profilePicCid }
+        .forEach { cid ->
+            try {
+                while(!ipfs.isConnected()) {
+                    Thread.sleep(500)
+                }
+                Log.i(TAG, "Downloading profile pic $cid")
+                bw.storeFile(cid, ByteArrayInputStream(ipfs.getData(cid, 30)))
+            }catch (e: Exception) {
+                Log.e(TAG, "Failed to download profile pic for cid $cid", e)
+            }
+        }
     }
 
     private fun downloadManifest(peerId: PeerId) {
@@ -115,6 +134,8 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
             ActionType.UpdateKey -> {
                 Log.i(TAG, "Processing UpdateKey action from $peerId")
                 Keyring.storeAesKey(db.keyDao(), peerId, action.metadata["key"]!!)
+                val cipher = Keyring.encryptorForPeer(db.keyDao(), peerId, {d -> true}) as MultiCipher
+                Log.i(TAG, "I have ${cipher.ciphers.count()} keys for $peerId")
             }
             ActionType.Introduce -> TODO()
         }

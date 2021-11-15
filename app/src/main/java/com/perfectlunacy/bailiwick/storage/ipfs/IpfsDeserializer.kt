@@ -44,15 +44,16 @@ class IpfsDeserializer {
 
         @JvmStatic
         fun <T> fromCid(cipher: Encryptor, ipfs: IPFS, contentId: ContentId, clazz: Class<T>): Pair<T, ContentId>? {
-            val data = ipfs.getData(contentId, ShortTimeout)
-            val rawJson = String(cipher.decrypt(data))
+            var rawJson = ""
+            try{
+                val data = ipfs.getData(contentId, ShortTimeout)
+                rawJson = String(cipher.decrypt(data))
 
-            if(rawJson.isBlank() && data.size > 2) {
-                Log.e(TAG, "Failed to decrypt data for ${clazz.simpleName} : $contentId")
-                return null
-            }
+                if(rawJson.isBlank() && data.size > 2) {
+                    Log.e(TAG, "Failed to decrypt data for ${clazz.simpleName} : $contentId")
+                    return null
+                }
 
-            try {
                 val retVal = Gson().fromJson(rawJson, clazz)
                 if(retVal == null) {
                     Log.e(TAG, "Failed to convert rawJson to ${clazz.simpleName}. Json: $rawJson")

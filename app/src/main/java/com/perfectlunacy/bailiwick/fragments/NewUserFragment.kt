@@ -64,7 +64,8 @@ class NewUserFragment : BailiwickFragment() {
             }
         }
 
-        // Make sure new and confirmed password fields are the same
+        // Make
+        // sure new and confirmed password fields are the same
         binding.newPassword.doOnTextChanged { text, start, before, count ->
             val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
                     binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
@@ -96,9 +97,9 @@ class NewUserFragment : BailiwickFragment() {
                 val out = ByteArrayOutputStream()
                 avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
                 val peerId = bwModel.network.peerId
-                // TODO: This needs to be a CID as well.
-                bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
-                newAccount(peerId, binding.name ?: "", "avatar.png")
+                val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+                bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
+                newAccount(peerId, binding.name ?: "", avatarCid)
 
                 val nav = requireView().findNavController()
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -112,9 +113,9 @@ class NewUserFragment : BailiwickFragment() {
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
             val peerId = bwModel.network.peerId
-            // TODO: This needs to be a CID as well.
-            bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
-            newAccount(peerId, "Lucas Taylor", "avatar.png")
+            val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+            bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
+            newAccount(peerId,"Lucas Taylor", avatarCid)
 
             val nav = requireView().findNavController()
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -125,8 +126,9 @@ class NewUserFragment : BailiwickFragment() {
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
             val peerId = bwModel.network.peerId
-            bwModel.network.storeFile("avatar.png", ByteArrayInputStream(out.toByteArray()))
-            newAccount(peerId, Faker().name.name(), "avatar.png")
+            val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+            bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
+            newAccount(peerId, Faker().name.name(), avatarCid)
 
             val nav = requireView().findNavController()
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }

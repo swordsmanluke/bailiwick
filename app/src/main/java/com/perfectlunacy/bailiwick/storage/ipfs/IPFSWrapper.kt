@@ -71,7 +71,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
 
     override fun getData(cid: ContentId, timeoutSeconds: Long): ByteArray {
         Log.i(TAG, "GetData: $cid")
-        return ipfs.getData(cid.toCid()) { false }
+        return ipfs.getData(cid.toCid(), TimeoutCloseable(timeoutSeconds))
     }
 
     override fun getLinks(cid: ContentId, resolveChildren: Boolean, timeoutSeconds: Long): MutableList<Link>? {

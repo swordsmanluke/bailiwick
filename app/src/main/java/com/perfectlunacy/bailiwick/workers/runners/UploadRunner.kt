@@ -13,6 +13,7 @@ import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
+import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -34,13 +35,18 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
 
         val idsToSync = db.identityDao().all().filter { it.cid == null }
         val postsToSync = db.postDao().inNeedOfSync()
-        // Sync any required Actions
         val syncActions = db.actionDao().inNeedOfSync()
         if(syncActions.isNotEmpty()) {
             Log.i(TAG, "Uploading ${syncActions.count()} new action(s)")
             dirty = true
             uploadActionsToIpfs(syncActions)
         }
+
+        db.identityDao().identitiesFor(ipfs.peerID).mapNotNull {it.profilePicCid}
+            .forEach { cid ->
+                Log.i(TAG, "Providing profile pic $cid")
+                ipfs.provide(cid, IpfsDeserializer.ShortTimeout)
+            }
 
         db.circleDao().all().forEach { circle ->
             Log.i(TAG, "Syncing circle: '${circle.name}'")
