@@ -12,12 +12,15 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
+import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -55,6 +58,15 @@ class ContentFragment : BailiwickFragment() {
         }
 
         binding.btnRefresh.setOnClickListener {
+            bwModel.viewModelScope.launch {
+                withContext(Dispatchers.IO) {
+                    DownloadRunner(
+                        requireContext(),
+                        Bailiwick.getInstance().db,
+                        Bailiwick.getInstance().ipfs
+                    ).run()
+                }
+            }
             refreshContent()
         }
 
@@ -63,27 +75,40 @@ class ContentFragment : BailiwickFragment() {
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_connectFragment) }
         }
 
-        binding.txtPeer.text = bwModel.ipfs.peerID
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val sequence = Bailiwick.getInstance().db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
+                Handler(requireContext().mainLooper).post {
+                    binding.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"
+                }
+            }
+        }
+
 
         binding.btnPost.setOnClickListener {
             val text = binding.txtPostText.text.toString()
             binding.txtPostText.text.clear()
 
-            GlobalScope.launch {
-                // TODO: Signatures
-                val newPost = Post(
-                    bwModel.network.me.id,
-                    null,
-                    Calendar.getInstance().timeInMillis,
-                    null,
-                    text,
-                    "")
+            bwModel.viewModelScope.launch {
+                withContext(Dispatchers.Default) {
+                    // TODO: Signatures
+                    val newPost = Post(
+                        bwModel.network.me.id,
+                        null,
+                        Calendar.getInstance().timeInMillis,
+                        null,
+                        text,
+                        ""
+                    )
 
-                val circId = bwModel.network.circles.first().id
-                bwModel.network.storePost(circId, newPost)
+                    val circId = bwModel.network.circles.first().id
+                    bwModel.network.storePost(circId, newPost)
 
-                Log.i(TAG, "Saved new post. Refreshing...")
-                refreshContent()
+                    Log.i(TAG, "Saved new post. Refreshing...")
+                    IpfsUploadWorker.enqueue(requireContext()) // Upload new content
+
+                    refreshContent()
+                }
             }
         }
 
@@ -118,9 +143,8 @@ class ContentFragment : BailiwickFragment() {
                 val adapter: PostAdapter = adapter.get()
                 bwModel.refreshContent()
                 adapter.clear()
-                val posts = bwModel.content["everyone"]?.toList()
-                    ?: emptyList() // Wrap in the style the adapter expects
-                adapter.addToEnd(posts)
+                val posts = bwModel.content["everyone"] ?: emptySet()
+                adapter.addToEnd(posts.toList())
             }
         }
     }

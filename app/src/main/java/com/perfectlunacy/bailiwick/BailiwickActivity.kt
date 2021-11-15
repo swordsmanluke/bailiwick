@@ -16,10 +16,7 @@ import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import threads.lite.IPFS
 import java.security.KeyFactory
 import java.security.KeyPair
@@ -45,21 +42,6 @@ class BailiwickActivity : AppCompatActivity() {
             val bwNetwork = BailiwickNetworkImpl(bwDb, ipfs.peerID, applicationContext.filesDir.toPath())
             Bailiwick.init(bwNetwork, ipfs, bwDb)
             bwModel = (viewModels<BailiwickViewModel> { BailwickViewModelFactory(applicationContext, bwNetwork, ipfs, bwDb.ipnsCacheDao()) }).value
-
-            ipfs.bootstrap(applicationContext)
-
-            // Start up our background jobs:
-            IpfsUploadWorker.enqueue(applicationContext)
-            val refreshId = IpfsDownloadWorker.enqueue(applicationContext)
-
-            WorkManager.getInstance(applicationContext).getWorkInfoById(refreshId).addListener(
-                { // Runnable
-                    bwModel.viewModelScope.launch {
-                        withContext(Dispatchers.Default) { bwModel.refreshContent() }
-                    }
-                },
-                { it.run() }  // Executable
-            )
         }
     }
 

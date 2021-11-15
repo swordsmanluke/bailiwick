@@ -1,7 +1,5 @@
 package com.perfectlunacy.bailiwick.fragments
 
-import android.content.Context
-import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -9,15 +7,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import androidx.work.WorkManager
+import arrow.core.invalid
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
-import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import threads.lite.IPFS
-import java.util.*
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
+import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import kotlinx.coroutines.*
 
 /**
  * Shows the branded splash screen and determines if we already have an account loaded or not.
@@ -34,26 +33,50 @@ class SplashFragment : BailiwickFragment() {
             false
         )
 
-        showSplashScreen()
-
         return binding.root
     }
 
-    @DelicateCoroutinesApi
-    private fun showSplashScreen() {
-        GlobalScope.launch {
-//            bwModel.bootstrap(requireContext())
-//            Log.i(TAG, "Connected to IPFS network")
-            // Now that we're connected to IPFS, check for an account and go!
-            Thread.sleep(100)
-            val nav = requireView().findNavController()
-            if (bwModel.network.accountExists()) {
-                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_contentFragment) }
-            } else {
-                Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }
+    override fun onStart() {
+        super.onStart()
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                showSplashScreen()
+                launchIpfsJobs(bwModel.ipfs)
             }
         }
     }
+
+    private suspend fun showSplashScreen() {
+        Log.i(TAG, "Connected to IPFS network")
+
+        Thread.sleep(100)
+        val nav = requireView().findNavController()
+        if (bwModel.network.accountExists()) {
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_contentFragment) }
+        } else {
+            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }
+        }
+    }
+
+    private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
+        launch {
+            withContext(Dispatchers.Default) {
+                ipfs.bootstrap(requireContext())
+                // Start up our background sync job:
+                val refreshId = IpfsDownloadWorker.enqueue(requireContext())
+
+                WorkManager.getInstance(requireContext()).getWorkInfoById(refreshId)
+                    .addListener(
+                        { // Runnable
+                            bwModel.viewModelScope.launch {
+                                withContext(Dispatchers.Default) { bwModel.refreshContent() }
+                            }
+                        },
+                        { it.run() }  // Executable
+                    )
+            }
+        }
+
 
     companion object {
         private const val TAG = "SplashFragment"

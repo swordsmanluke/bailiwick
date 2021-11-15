@@ -12,7 +12,9 @@ import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
-import com.perfectlunacy.bailiwick.storage.ipfs.IpnsImpl
+import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
@@ -36,7 +38,7 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         }
 
         db.circleDao().all().forEach { circle ->
-            Log.i(TAG, "Syncing circle ${circle.name}")
+            Log.i(TAG, "Syncing circle: '${circle.name}'")
             val cipher = Keyring.encryptorForCircle(db.keyDao(), circle.id)
             val postIds = db.circlePostDao().postsIn(circle.id)
             val syncPosts = postsToSync.filter { postIds.contains(it.id) }
@@ -97,24 +99,65 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
         val feeds = db.circleDao().all().mapNotNull { it.cid }
         val actions = db.actionDao().all().mapNotNull { it.cid }
         val manCid = Manifest(feeds, actions).toIpfs( NoopEncryptor(), ipfs )
-        val seq = 1 + (db.ipnsCacheDao().sequenceFor(ipfs.peerID) ?: 0)
-
-        Log.i(TAG, "New IPNS record sequence: $seq")
-
+        var seq = (db.sequenceDao().find(ipfs.peerID)?.sequence ?: 0)
         var verCid = cidForDir("bw/${Bailiwick.VERSION}", seq)
         var bwCid = cidForDir("bw", seq)
         var rootCid = cidForDir("", seq)
 
         verCid = ipfs.addLinkToDir(verCid, "manifest.json", manCid)!!
+        val idCid = db.identityDao().identitiesFor(ipfs.peerID).first().cid
+        if(idCid != null) {
+            verCid = ipfs.addLinkToDir(verCid, "identity.json", idCid)!!
+        }
         bwCid = ipfs.addLinkToDir(bwCid, Bailiwick.VERSION, verCid)!!
         rootCid = ipfs.addLinkToDir(rootCid, "bw", bwCid)!!
 
         val peerId = ipfs.peerID
-        db.ipnsCacheDao().insert(IpnsCache(peerId, "", rootCid, seq + 1))
-        db.ipnsCacheDao().insert(IpnsCache(peerId, "bw", bwCid, seq + 1))
-        db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}", verCid, seq + 1))
+        seq += 1
+        Log.i(TAG, "New IPNS record sequence: $seq")
+        db.ipnsCacheDao().insert(IpnsCache(peerId, "", rootCid, seq))
+        db.ipnsCacheDao().insert(IpnsCache(peerId, "bw", bwCid, seq))
+        db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}", verCid, seq))
+        db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}/manifest.json", manCid, seq))
 
-        ipfs.publishName(rootCid, seq, 300)
+        ipfs.publishName(rootCid, seq, 30)
+        ipfs.provide(rootCid, 30)
+        if(seq > 1) {
+            db.sequenceDao().updateSequence(peerId, seq)
+        } else {
+            db.sequenceDao().insert(Sequence(peerId, seq))
+        }
+        val timeoutSeconds = 30L
+        Log.i(IPFSWrapper.TAG, "Providing links from root")
+        ipfs.getLinks(rootCid, true, timeoutSeconds).let { links ->
+            if(links == null) {
+                Log.e(IPFSWrapper.TAG,"Failed to locate links for root!")
+                return@let
+            }
+
+            provideLinks(links, timeoutSeconds)
+        }
+
+        Log.i(TAG, "New manifest: $manCid")
+    }
+
+    private fun provideLinks(links: List<Link>, timeoutSeconds: Long) {
+        links.forEach { link ->
+            GlobalScope.launch {
+                ipfs.provide(link.cid, timeoutSeconds)
+                Log.i(IPFSWrapper.TAG, "Providing link ${link.name}")
+            }
+            GlobalScope.launch {
+                // Recursively add our children as well
+                ipfs.getLinks(link.cid, true, timeoutSeconds).let { childLinks ->
+                    if(childLinks == null || childLinks.isEmpty()) {
+                        Log.w(TAG, "No links found for ${link.name}")
+                        return@let
+                    }
+                    provideLinks(childLinks, timeoutSeconds)
+                }
+            }
+        }
     }
 
     private fun cidForDir(path: String, seq: Long): ContentId {
@@ -147,6 +190,4 @@ class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IP
             db.postDao().updateCid(post.id, ipfsPost.toIpfs(cipher, ipfs))
         }
     }
-
-
 }

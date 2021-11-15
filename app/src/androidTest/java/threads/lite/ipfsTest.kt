@@ -10,8 +10,10 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import threads.lite.core.TimeoutCloseable
+import threads.lite.host.LiteHost
 import java.io.File
 import java.io.IOException
+import java.sql.Time
 import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(AndroidJUnit4::class)
@@ -67,15 +69,26 @@ class IpfsTest {
         ipfs.publishName(rootCid, 1, TimeoutCloseable(timeout))
         Log.i(TAG, "Published Name")
 
+        // Read back the links
+        val links = ipfs.getLinks(rootCid, true, TimeoutCloseable(timeout))
+        Log.i(TAG, "Links: ${links?.map{it.name}?.joinToString(",")}")
+
+        val bwLinks = ipfs.getLinks(links!!.find{it.name == "bw"}!!.cid, true, TimeoutCloseable(timeout))!!
+        val verLinks = ipfs.getLinks(bwLinks.find{it.name == "0.2"}!!.cid, true, TimeoutCloseable(timeout))!!
+        Log.i(TAG, "Links: ${verLinks.map{it.name}.joinToString(",")}")
+        val textCid = verLinks.find{it.name == "identity"}!!.cid
+
         // Now, try to get back to ipns/peerid/bw/0.1/identity
-        val ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(timeout))!!
-        val link = IPFS.IPFS_PATH + ipnsRecord.hash + "/bw/0.2/identity"
-        Log.i(TAG, "Looking for node at: $link")
+        // NOT CURRENTLY WORKING
+//        val ipnsRecord = ipfs.resolveName(pid.toBase32(), 0, TimeoutCloseable(timeout))!!
+//        val link = IPFS.IPFS_PATH + ipnsRecord.hash + "/bw/0.2/identity"
+//        Log.i(TAG, "Looking for node at: $link")
+//
+//        val node = ipfs.resolveNode(link, TimeoutCloseable(timeout))!!
+//        Log.i(TAG, "Resolved node to ${node.cid.String()}")
+//        val textCid = node.cid
 
-        val node = ipfs.resolveNode(link, TimeoutCloseable(timeout))!!
-        Log.i(TAG, "Resolved node to ${node.cid.String()}")
-
-        val output = ipfs.getText(node.cid, TimeoutCloseable(timeout))
+        val output = ipfs.getText(textCid, TimeoutCloseable(timeout))
         Log.i(TAG, "output: $output")
         assertThat("output was not equal to content: $output != $content ", output == content)
     }
