@@ -149,7 +149,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
             }
 
             val displayLinks: (String, List<threads.lite.utils.Link>) -> String = {header, links ->
-                "#header links: [${links.map { "${it.name}: ${it.cid.String()}" }.joinToString(", ")}]"
+                "$header links: [${links.map { "${it.name}: ${it.cid.String()}" }.joinToString(", ")}]"
             }
 
             Log.i(TAG, displayLinks.invoke("Root", links))
