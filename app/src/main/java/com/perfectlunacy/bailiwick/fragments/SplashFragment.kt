@@ -10,12 +10,11 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import androidx.work.WorkManager
-import arrow.core.invalid
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
-import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import kotlinx.coroutines.*
 
 /**
@@ -61,21 +60,28 @@ class SplashFragment : BailiwickFragment() {
     private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
         launch {
             withContext(Dispatchers.Default) {
-                ipfs.bootstrap(requireContext())
-                // Start up our background sync job:
-                val refreshId = IpfsDownloadWorker.enqueue(requireContext())
-
-                WorkManager.getInstance(requireContext()).getWorkInfoById(refreshId)
-                    .addListener(
-                        { // Runnable
-                            bwModel.viewModelScope.launch {
-                                withContext(Dispatchers.Default) { bwModel.refreshContent() }
-                            }
-                        },
-                        { it.run() }  // Executable
-                    )
+                startUploadJob()
+                startDownloadJob()
             }
         }
+
+    private fun startUploadJob() {
+        IpfsPublishWorker.enqueuePeriodicRefresh(requireContext())
+    }
+
+    private fun startDownloadJob() {
+        val refreshId = IpfsDownloadWorker.enqueue(requireContext())
+
+        WorkManager.getInstance(requireContext()).getWorkInfoById(refreshId)
+            .addListener(
+                { // Runnable
+                    bwModel.viewModelScope.launch {
+                        withContext(Dispatchers.Default) { bwModel.refreshContent() }
+                    }
+                },
+                { it.run() }  // Executable
+            )
+    }
 
 
     companion object {

@@ -23,7 +23,7 @@ import java.util.*
 import javax.crypto.KeyGenerator
 
 @RunWith(AndroidJUnit4::class)
-class RefreshRunnerTest {
+class DownloadRunnerTest {
     private var context: Context = ApplicationProvider.getApplicationContext()
     private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
     private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()

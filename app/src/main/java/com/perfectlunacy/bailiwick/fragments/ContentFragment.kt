@@ -12,6 +12,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
@@ -19,15 +20,13 @@ import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.io.path.pathString
 
 
 /**
@@ -108,9 +107,17 @@ class ContentFragment : BailiwickFragment() {
                     bwModel.network.storePost(circId, newPost)
 
                     Log.i(TAG, "Saved new post. Refreshing...")
-                    IpfsUploadWorker.enqueue(requireContext(), false) // Upload new content
+                    val id = IpfsPublishWorker.enqueue(requireContext()) // Publish my content
 
-                    refreshContent()
+                    WorkManager.getInstance(requireContext()).getWorkInfoById(id)
+                        .addListener(
+                            { // Runnable
+                                bwModel.viewModelScope.launch {
+                                    withContext(Dispatchers.Default) { refreshContent() }
+                                }
+                            },
+                            { it.run() }  // Executable
+                        )
                 }
             }
         }

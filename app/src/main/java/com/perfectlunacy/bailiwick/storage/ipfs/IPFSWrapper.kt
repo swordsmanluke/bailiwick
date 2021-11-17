@@ -21,7 +21,7 @@ import java.util.*
 import android.net.NetworkCapabilities
 import com.perfectlunacy.bailiwick.models.db.Sequence
 import com.perfectlunacy.bailiwick.models.db.SequenceDao
-import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
+import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 
 
 class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IPFS {
@@ -55,7 +55,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
                 ipfs.relays(threads.lite.IPFS.TIMEOUT_BOOTSTRAP.toLong())
                 Log.i(TAG, "Bootstrap completed.")
 
-                IpfsUploadWorker.enqueue(context, true)
+                IpfsPublishWorker.enqueue(context)
             }
         })
     }

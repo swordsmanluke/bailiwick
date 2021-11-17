@@ -8,10 +8,7 @@ import com.perfectlunacy.bailiwick.ValidatorFactory
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
-import com.perfectlunacy.bailiwick.models.db.ActionType
-import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.models.db.Post
-import com.perfectlunacy.bailiwick.models.db.PostFile
+import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.PeerId
@@ -22,8 +19,8 @@ import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.FileOutputStream
 import java.lang.Exception
+import java.util.*
 import kotlin.io.path.Path
-import kotlin.io.path.pathString
 
 class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
     companion object {
@@ -33,7 +30,7 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
     fun run() {
         // Wait for IPFS connection
         while(!ipfs.isConnected()) {
-            Log.i(UploadRunner.TAG, "Waiting for ipfs to connect")
+            Log.i(PublishRunner.TAG, "Waiting for ipfs to connect")
             Thread.sleep(500)
         }
 
@@ -49,7 +46,6 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
     private fun iteration(peerId: PeerId) {
         downloadIdentity(peerId)
-
         downloadManifest(peerId)
     }
 
@@ -124,6 +120,10 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
     }
 
     private fun downloadAction(actionCid: ContentId, peerId: PeerId, cipher: Encryptor) {
+        if(db.actionDao().actionExists(actionCid)) {
+            Log.i(TAG, "Already processed Action $actionCid")
+            return
+        }
         val actionPair = IpfsDeserializer.fromCid(cipher, ipfs, actionCid, IpfsAction::class.java) ?: return
         val action = actionPair.first
 
@@ -139,6 +139,16 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
             }
             ActionType.Introduce -> TODO()
         }
+
+        // Track that we have processed this Action
+        db.actionDao().insert(Action(
+            Calendar.getInstance().timeInMillis,
+            actionCid,
+            ipfs.peerID,
+            action.type,
+            "",
+            true
+        ))
     }
 
     private fun downloadFeedAndPosts(feedCid: ContentId, peerId: PeerId, cipher: Encryptor) {

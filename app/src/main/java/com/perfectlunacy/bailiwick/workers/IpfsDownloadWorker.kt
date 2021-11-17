@@ -6,7 +6,6 @@ import androidx.work.*
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
-import java.time.Duration
 import java.util.*
 
 class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): Worker(context, workerParameters) {
@@ -39,7 +38,8 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
             }
 
             Log.i(TAG, "Downloaded successfully from IPFS")
-            Thread.sleep(1000 * 60L * 5) // 5 minutes
+            val minutesBetweenRefresh = 15
+            Thread.sleep(1000L * 60 * minutesBetweenRefresh)
         }
 
         return Result.success()

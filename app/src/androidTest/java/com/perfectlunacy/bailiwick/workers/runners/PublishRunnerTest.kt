@@ -28,7 +28,7 @@ import javax.crypto.KeyGenerator
 
 
 @RunWith(AndroidJUnit4::class)
-class UploadRunnerTest {
+class PublishRunnerTest {
     private var context: Context = ApplicationProvider.getApplicationContext()
     private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
     private val testIpfs = TestEnv.getTestInstance(context)
@@ -39,11 +39,12 @@ class UploadRunnerTest {
     fun postsAndCirclesMakeIPFSManifest() {
         createAccountWithPost()
 
-        UploadRunner(context, db, ipfs).run()
+        PublishRunner(context, db, ipfs).run()
 
         val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(),
                                                           ipfs,
                                                           ipfs.peerID,
+                                                          db.sequenceDao(),
                                                           "manifest.json",
                                                           IpfsManifest::class.java)!!
 
@@ -54,15 +55,15 @@ class UploadRunnerTest {
     fun IPFSManifestContainsExpectedPost() {
         createAccountWithPost()
 
-        UploadRunner(context, db, ipfs).run()
+        PublishRunner(context, db, ipfs).run()
 
-        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, "manifest.json", IpfsManifest::class.java)!!
+        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, db.sequenceDao(), "manifest.json", IpfsManifest::class.java)!!.first
 
         assertEquals(1, manifest.feeds.size)
 
         val cipher = Keyring.encryptorForCircle(db.keyDao(), db.circleDao().all().first().id)
         manifest.feeds.forEach { feedCid ->
-            val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java)!!
+            val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java)!!.first
             assertEquals(1, feed.posts.size)
             feed.posts.forEach { postCid ->
                 IpfsDeserializer.fromCid(cipher, ipfs, postCid, Post::class.java)!!

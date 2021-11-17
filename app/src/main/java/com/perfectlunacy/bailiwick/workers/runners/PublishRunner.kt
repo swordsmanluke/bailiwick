@@ -18,7 +18,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 
-class UploadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
+class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
     companion object {
         const val TAG = "UploadRunner"
     }

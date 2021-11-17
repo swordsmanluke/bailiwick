@@ -7,15 +7,11 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.viewModelScope
-import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
-import com.perfectlunacy.bailiwick.workers.IpfsUploadWorker
-import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import kotlinx.coroutines.*
 import threads.lite.IPFS
 import java.security.KeyFactory
