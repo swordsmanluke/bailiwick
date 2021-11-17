@@ -11,6 +11,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import kotlin.io.path.Path
 
 @RunWith(AndroidJUnit4::class)
 class KeyringAndroidTest {
@@ -19,7 +20,7 @@ class KeyringAndroidTest {
 
     @After
     fun deleteKeyFile() {
-        val f = File("/tmp/bwcache/keystore.json")
+        val f = File("${context.filesDir.path}/tmp/bwcache/keystore.json")
         if(f.exists()) {
             f.delete()
         }
@@ -29,8 +30,8 @@ class KeyringAndroidTest {
     fun generatingACircleKeyAllowsItToBeLoaded() {
         val cipher = NoopEncryptor()
 
-        Keyring.generateAesKey(db.keyDao(), context.filesDir.toPath(), 0, cipher)
-        val k = Keyring.keyForCircle(db.keyDao(), context.filesDir.toPath(), 0, cipher)
+        Keyring.generateAesKey(db.keyDao(), Path(context.filesDir.path, "tmp"), 0, cipher)
+        val k = Keyring.keyForCircle(db.keyDao(), Path(context.filesDir.path, "tmp"), 0, cipher)
 
         assertNotNull(k)
     }
