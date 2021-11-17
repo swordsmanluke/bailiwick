@@ -60,6 +60,7 @@ class SplashFragment : BailiwickFragment() {
     private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
         launch {
             withContext(Dispatchers.Default) {
+                ipfs.bootstrap(requireContext())
                 startUploadJob()
                 startDownloadJob()
             }

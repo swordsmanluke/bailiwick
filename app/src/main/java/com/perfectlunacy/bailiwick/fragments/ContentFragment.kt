@@ -22,6 +22,8 @@ import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,10 +64,18 @@ class ContentFragment : BailiwickFragment() {
         binding.btnRefresh.setOnClickListener {
             bwModel.viewModelScope.launch {
                 withContext(Dispatchers.IO) {
+                    val db = Bailiwick.getInstance().db
+                    val ipfs = Bailiwick.getInstance().ipfs
+
+                    // Downloader classes which retrieve and store specific IPFS objects
+                    val fileDlr = FileDownloader(requireContext().filesDir.toPath(), db.postFileDao(), ipfs)
+                    val postDlr = PostDownloader(db.postDao(), ipfs, fileDlr)
+
                     DownloadRunner(
-                        requireContext(),
-                        Bailiwick.getInstance().db,
-                        Bailiwick.getInstance().ipfs
+                        requireContext().filesDir.toPath(),
+                        db,
+                        ipfs,
+                        postDlr
                     ).run()
                 }
             }
@@ -79,7 +89,8 @@ class ContentFragment : BailiwickFragment() {
 
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val sequence = Bailiwick.getInstance().db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
+                val db = Bailiwick.getInstance().db
+                val sequence = db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
                 Handler(requireContext().mainLooper).post {
                     binding.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"
                 }

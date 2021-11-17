@@ -15,14 +15,17 @@ import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.FileOutputStream
 import java.lang.Exception
+import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.Path
+import kotlin.io.path.pathString
 
-class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
+class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IPFS, val postDownloader: PostDownloader) {
     companion object {
         const val TAG = "DownloadRunner"
     }
@@ -74,7 +77,7 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
         val bw = Bailiwick.getInstance().bailiwick
         db.identityDao().identitiesFor(peerId).filterNot {
-            Path(context.filesDir.path, "bwcache", it.profilePicCid?:"nonexist").toFile().exists()
+            Path(filesDir.pathString, "bwcache", it.profilePicCid?:"nonexist").toFile().exists()
         }.mapNotNull { it.profilePicCid }
         .forEach { cid ->
             try {
@@ -172,61 +175,7 @@ class DownloadRunner(val context: Context, val db: BailiwickDatabase, val ipfs: 
 
         Log.i(TAG, "Trying ${feed.posts.count()} posts")
         for (postCid in feed.posts) {
-            downloadPost(postCid, identity, cipher)
-        }
-    }
-
-    private fun downloadPost(postCid: ContentId, identity: Identity, cipher: Encryptor) {
-        var post = db.postDao().findByCid(postCid)
-        if (post != null) {
-            Log.i(TAG, "Already downloaded post $postCid!")
-            return
-        }
-
-        val ipfsPostPair = try {
-            IpfsDeserializer.fromCid(cipher, ipfs, postCid, IpfsPost::class.java)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to download Post $postCid", e)
-            return
-        }
-
-        if (ipfsPostPair == null) {
-            Log.e(TAG, "Failed to process post $postCid")
-            return
-        }
-
-        val ipfsPost = ipfsPostPair.first
-
-        Log.i(TAG, "Downloaded post!")
-
-        post = Post(
-            identity.id,
-            postCid,
-            ipfsPost.timestamp,
-            ipfsPost.parent_cid,
-            ipfsPost.text,
-            ipfsPost.signature
-        )
-
-        post.id = db.postDao().insert(post)
-
-        ipfsPost.files.forEach {
-            db.postFileDao().insert(PostFile(post.id, it.cid, it.mimeType))
-        }
-
-        db.postFileDao().filesFor(post.id).forEach { postFile ->
-            val f = Path(context.filesDir.path, "bwcache", postFile.fileCid).toFile()
-            if (!f.exists()) {
-                // We need to download this file attachment
-                val data = ipfs.getData(
-                    postFile.fileCid,
-                    600
-                ) // TODO: InputStream to support larger files.
-                Log.i(TAG, "Downloaded post file! Saving to bwcache")
-                BufferedOutputStream(FileOutputStream(f)).use {
-                    it.write(data)
-                }
-            }
+            postDownloader.download(postCid, identity.id, cipher)
         }
     }
 }

@@ -87,5 +87,6 @@ class DownloadRunnerTest {
         db.ipnsCacheDao().insert(IpnsCache(peerId, "bw/${Bailiwick.VERSION}", verCid, seq + 1))
 
         ipfs.publishName(rootCid, seq + 1, 10)
+        listOf(rootCid, bwCid, verCid, manCid).forEach { ipfs.provide(it, 10) }
     }
 }

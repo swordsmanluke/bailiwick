@@ -15,5 +15,10 @@ class ValidatorFactory {
         fun jsonValidator(): (ByteArray) -> Boolean {
             return { data -> Gson().newJsonReader(InputStreamReader(ByteArrayInputStream(data))).hasNext() }
         }
+
+        fun mimeTypeValidator(mimeType: String): (ByteArray) -> Boolean {
+            // TODO: Validate that data matches the expected mime type.
+            return { _ -> true }
+        }
     }
 }

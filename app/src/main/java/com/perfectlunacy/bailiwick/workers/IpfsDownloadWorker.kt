@@ -6,6 +6,8 @@ import androidx.work.*
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import java.util.*
 
 class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): Worker(context, workerParameters) {
@@ -27,11 +29,18 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
 
             try {
                 val bw = Bailiwick.getInstance()
+                val db = bw.db
                 val ipfs = bw.ipfs
+
+                // Downloader classes which retrieve and store specific IPFS objects
+                val fileDlr = FileDownloader(applicationContext.filesDir.toPath(), db.postFileDao(), ipfs)
+                val postDlr = PostDownloader(db.postDao(), ipfs, fileDlr)
+
                 DownloadRunner(
-                    applicationContext,
-                    getBailiwickDb(applicationContext),
-                    ipfs
+                    applicationContext.filesDir.toPath(),
+                    db,
+                    ipfs,
+                    postDlr
                 ).run()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to Download from IPFS", e)
