@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Handler
@@ -19,16 +20,21 @@ import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Post
+import com.perfectlunacy.bailiwick.models.db.PostFile
+import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.IdentityDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.math.sign
 
 
 /**
@@ -70,12 +76,14 @@ class ContentFragment : BailiwickFragment() {
                     // Downloader classes which retrieve and store specific IPFS objects
                     val fileDlr = FileDownloader(requireContext().filesDir.toPath(), db.postFileDao(), ipfs)
                     val postDlr = PostDownloader(db.postDao(), ipfs, fileDlr)
+                    val identDlr = IdentityDownloader(db.identityDao(), ipfs)
+                    val feedDlr = FeedDownloader(db.keyDao(), identDlr, postDlr, ipfs)
 
                     DownloadRunner(
                         requireContext().filesDir.toPath(),
                         db,
                         ipfs,
-                        postDlr
+                        feedDlr
                     ).run()
                 }
             }
@@ -114,10 +122,14 @@ class ContentFragment : BailiwickFragment() {
                         ""
                     )
 
+                    val signer = RsaSignature(bwModel.ipfs.publicKey, bwModel.ipfs.privateKey)
+                    val files: List<PostFile> = emptyList()
+                    newPost.sign(signer, files)
                     val circId = bwModel.network.circles.first().id
                     bwModel.network.storePost(circId, newPost)
 
                     Log.i(TAG, "Saved new post. Refreshing...")
+
                     val id = IpfsPublishWorker.enqueue(requireContext()) // Publish my content
 
                     WorkManager.getInstance(requireContext()).getWorkInfoById(id)
@@ -158,6 +170,7 @@ class ContentFragment : BailiwickFragment() {
         messagesList.setAdapter(adapter.get())
     }
 
+    @SuppressLint("SetTextI18n")
     private fun refreshContent() {
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
@@ -165,7 +178,7 @@ class ContentFragment : BailiwickFragment() {
                 bwModel.refreshContent()
                 adapter.clear()
                 val posts = bwModel.content["everyone"] ?: emptySet()
-                adapter.addToEnd(posts.toList())
+                adapter.addToEnd(posts.toList().sortedByDescending { it.timestamp })
 
                 val sequence = Bailiwick.getInstance().db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
                 Handler(requireContext().mainLooper).post {

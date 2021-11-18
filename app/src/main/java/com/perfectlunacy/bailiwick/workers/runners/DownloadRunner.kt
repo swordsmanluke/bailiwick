@@ -15,6 +15,7 @@ import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
@@ -25,7 +26,7 @@ import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
-class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IPFS, val postDownloader: PostDownloader) {
+class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IPFS, val feedDownloader: FeedDownloader) {
     companion object {
         const val TAG = "DownloadRunner"
     }
@@ -118,7 +119,7 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
 
         Log.i(TAG, "Trying ${manifest.feeds.count()} feeds")
         manifest.feeds.forEach { feedCid ->
-            downloadFeedAndPosts(feedCid, peerId, cipher)
+            feedDownloader.download(feedCid, peerId, cipher)
         }
     }
 
@@ -152,30 +153,5 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
             "",
             true
         ))
-    }
-
-    private fun downloadFeedAndPosts(feedCid: ContentId, peerId: PeerId, cipher: Encryptor) {
-        val feedPair = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java) ?: return
-        val feed = feedPair.first
-
-        var identity = db.identityDao().findByCid(feed.identity)
-        if (identity == null) {
-            // Download the identity if we haven't already
-            val idCipher = Keyring.encryptorForPeer(
-                db.keyDao(),
-                peerId,
-                ValidatorFactory.jsonValidator(IpfsIdentity::class.java)
-            )
-
-            val ipfsIdentity = IpfsDeserializer.fromCid(idCipher, ipfs, feed.identity, IpfsIdentity::class.java)!!.first
-
-            identity = Identity(feed.identity, peerId, ipfsIdentity.name, ipfsIdentity.profilePicCid)
-            identity.id = db.identityDao().insert(identity)
-        }
-
-        Log.i(TAG, "Trying ${feed.posts.count()} posts")
-        for (postCid in feed.posts) {
-            postDownloader.download(postCid, identity.id, cipher)
-        }
     }
 }

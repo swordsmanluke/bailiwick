@@ -43,7 +43,7 @@ class IpfsDeserializer {
         }
 
         @JvmStatic
-        fun <T> fromCid(cipher: Encryptor, ipfs: IPFS, contentId: ContentId, clazz: Class<T>): Pair<T, ContentId>? {
+        fun <T> fromCid(cipher: Encryptor, ipfs: IpfsReader, contentId: ContentId, clazz: Class<T>): Pair<T, ContentId>? {
             var rawJson = ""
             try{
                 val data = ipfs.getData(contentId, ShortTimeout)

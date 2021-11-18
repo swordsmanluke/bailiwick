@@ -121,7 +121,7 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         var rootCid = cidForDir("", seq)
 
         verCid = ipfs.addLinkToDir(verCid, "manifest.json", manCid)!!
-        val idCid = db.identityDao().identitiesFor(ipfs.peerID).first().cid
+        val idCid = db.identityDao().identitiesFor(ipfs.peerID).firstOrNull()?.cid
         if(idCid != null) {
             verCid = ipfs.addLinkToDir(verCid, "identity.json", idCid)!!
         }

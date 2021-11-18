@@ -18,6 +18,7 @@ import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.IndexOutOfBoundsException
 
 class PostAdapter(private val db: BailiwickDatabase, private val bwModel: BailiwickViewModel, private val context: Context, private val list: ArrayList<Post>): BaseAdapter() {
     override fun getCount(): Int {
@@ -34,7 +35,7 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
 
     override fun getView(position: Int, itemView: View?, parent: ViewGroup?): View {
         val view = itemView ?: LayoutInflater.from(context).inflate(R.layout.post, parent, false)
-        val post = getItem(position) as Post
+        val post = try { getItem(position) } catch(_: IndexOutOfBoundsException) { null } as Post?
 
         val binding = if (itemView == null) {
             PostBinding.bind(view)
@@ -47,6 +48,9 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
 
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
+                // Don't blow up if we failed to find an item
+                if(post == null) { return@withContext }
+
                 val author = db.identityDao().find(post.authorId)
                 val avatar = author.avatar(context.filesDir.toPath()) ?: BitmapFactory.decodeStream(
                     context.assets.open("avatar.png")

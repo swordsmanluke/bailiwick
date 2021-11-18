@@ -1,7 +1,10 @@
 package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
+import com.perfectlunacy.bailiwick.signatures.Signer
 import com.perfectlunacy.bailiwick.storage.ContentId
+import java.lang.RuntimeException
+import java.util.*
 
 @Entity
 data class Post(
@@ -13,6 +16,30 @@ data class Post(
     var signature: String
 ) {
     @PrimaryKey(autoGenerate = true) var id: Long = 0
+
+    fun sign(signer: Signer, files: List<PostFile>) {
+        signature = Base64.getEncoder().encodeToString(signer.sign(signingBytes(files)))
+    }
+
+    private fun signingBytes(files: List<PostFile>): ByteArray {
+        val filenames = files.map { it.fileCid }.sorted().joinToString()
+        return "$timestamp:$parent:$text:$filenames".toByteArray()
+    }
+
+    override fun hashCode(): Int {
+        return signature.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Post
+
+        if (signature != other.signature) return false
+
+        return true
+    }
 }
 
 @Dao
