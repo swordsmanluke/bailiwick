@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.Keyring
-import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
@@ -14,6 +13,9 @@ import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
+import com.perfectlunacy.bailiwick.workers.runners.publishers.CirclePublisher
+import com.perfectlunacy.bailiwick.workers.runners.publishers.IdentityPublisher
+import com.perfectlunacy.bailiwick.workers.runners.publishers.PostPublisher
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
@@ -23,8 +25,6 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         const val TAG = "UploadRunner"
     }
 
-    private var dirty = false
-
     // TODO: LOTS of N+1 queries in here. Update our DAOs so we don't need so many.
     fun run() {
         // Wait for IPFS connection
@@ -33,15 +33,15 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
             Thread.sleep(500)
         }
 
-        val idsToSync = db.identityDao().all().filter { it.cid == null }
         val postsToSync = db.postDao().inNeedOfSync()
         val syncActions = db.actionDao().inNeedOfSync()
+
         if(syncActions.isNotEmpty()) {
             Log.i(TAG, "Uploading ${syncActions.count()} new action(s)")
-            dirty = true
-            uploadActionsToIpfs(syncActions)
+            publishActions(syncActions)
         }
 
+        // TODO: Separate publishing and providing _all_the_things_
         db.identityDao().identitiesFor(ipfs.peerID).mapNotNull {it.profilePicCid}
             .forEach { cid ->
                 Log.i(TAG, "Providing profile pic $cid")
@@ -49,35 +49,21 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
             }
 
         db.circleDao().all().forEach { circle ->
-            Log.i(TAG, "Syncing circle: '${circle.name}'")
             val cipher = Keyring.encryptorForCircle(db.keyDao(), circle.id)
             val postIds = db.circlePostDao().postsIn(circle.id)
-            val syncPosts = postsToSync.filter { postIds.contains(it.id) }
+            val postsForCircle = postsToSync.filter { postIds.contains(it.id) }
 
-            idsToSync.firstOrNull{it.id == circle.identityId}?.let { ident ->
-                Log.i(TAG, "Syncing identity ${ident.name}")
-                val cid = IpfsIdentity(ident.name, ident.profilePicCid ?: "").toIpfs(cipher, ipfs)
-                db.identityDao().updateCid(ident.id, cid)
-            }
-
-            // Sync any required posts
-            if(syncPosts.isNotEmpty()) {
-                Log.i(TAG, "Uploading ${syncPosts.count()} new post(s)!")
-                dirty = true
-                db.circleDao().clearCid(circle.id)
-                circle.cid = null
-                uploadPostsToIpfs(syncPosts, cipher)
-            }
-
-            // Sync the Circle
-            if(circle.cid == null) {
-                dirty = true
-                uploadCircleToIpfs(circle, cipher)
-            }
+            CirclePublisher(
+                db.circleDao(),
+                db.identityDao(),
+                IdentityPublisher(db.identityDao(), ipfs),
+                PostPublisher(db.postDao(), db.postFileDao(), ipfs),
+                ipfs
+            ).publish(circle, postsForCircle, cipher)
         }
 
         // Now publish a new manifest if we changed anything
-        if(dirty) {
+        if(postsToSync.isNotEmpty() || syncActions.isNotEmpty()) {
             Log.i(TAG, "Publishing a new manifest")
             publishNewManifest(false)
         } else {
@@ -90,7 +76,7 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         publishNewManifest(true)
     }
 
-    private fun uploadActionsToIpfs(syncActions: List<Action>) {
+    private fun publishActions(syncActions: List<Action>) {
         syncActions.forEach { action ->
             // Actions are encrypted with the key of their User
             val pubkey = Keyring.pubKeyFor(db.userDao(), action.toPeerId)
@@ -197,30 +183,5 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         val paths = db.ipnsCacheDao().pathsForPeer(ipfs.peerID, seq)
         val cid = paths.filter { p -> p.path == path }.firstOrNull()?.cid ?: ipfs.createEmptyDir()
         return cid!!
-    }
-
-    private fun uploadCircleToIpfs(circle: Circle, cipher: Encryptor) {
-        val postCids = db.circlePostDao().postsIn(circle.id).mapNotNull {
-            db.postDao().find(it).cid
-        }
-
-        // Feeds are Circles... from the other side. I don't know who you're posting to
-        // just that there's a list I can't read.
-        val identityCid = db.identityDao().find(circle.identityId).cid!!
-        val now = Calendar.getInstance().timeInMillis
-        val feed = IpfsFeed(now, postCids, listOf(), listOf(), identityCid)
-        val feedCid = feed.toIpfs(cipher, ipfs)
-        db.circleDao().storeCid(circle.id, feedCid)
-    }
-
-    private fun uploadPostsToIpfs(syncPosts: List<Post>, cipher: Encryptor) {
-        syncPosts.forEach { post ->
-            val fileDefs = db.postFileDao().filesFor(post.id).map { pf ->
-                IpfsFileDef(pf.mimeType, pf.fileCid)
-            }
-
-            val ipfsPost = IpfsPost(post.timestamp, post.parent, post.text, fileDefs, post.signature)
-            db.postDao().updateCid(post.id, ipfsPost.toIpfs(cipher, ipfs))
-        }
     }
 }
