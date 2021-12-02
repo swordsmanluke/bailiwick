@@ -138,7 +138,7 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
             ActionType.UpdateKey -> {
                 Log.i(TAG, "Processing UpdateKey action from $peerId")
                 Keyring.storeAesKey(db.keyDao(), peerId, action.metadata["key"]!!)
-                val cipher = Keyring.encryptorForPeer(db.keyDao(), peerId, {d -> true}) as MultiCipher
+                val cipher = Keyring.encryptorForPeer(db.keyDao(), peerId, {_ -> true}) as MultiCipher
                 Log.i(TAG, "I have ${cipher.ciphers.count()} keys for $peerId")
             }
             ActionType.Introduce -> TODO()

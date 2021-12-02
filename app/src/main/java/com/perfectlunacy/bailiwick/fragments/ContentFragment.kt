@@ -180,7 +180,7 @@ class ContentFragment : BailiwickFragment() {
                 val posts = bwModel.content["everyone"] ?: emptySet()
                 adapter.addToEnd(posts.toList().sortedByDescending { it.timestamp })
 
-                val sequence = Bailiwick.getInstance().db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
+                val sequence = Bailiwick.getInstance().db.ipnsCacheDao().sequenceFor(bwModel.ipfs.peerID) ?: 0
                 Handler(requireContext().mainLooper).post {
                     _binding?.let {
                         it.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"

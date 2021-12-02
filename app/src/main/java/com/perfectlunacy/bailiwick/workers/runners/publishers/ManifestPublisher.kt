@@ -39,7 +39,7 @@ class ManifestPublisher(private val manifestDao: ManifestDao,
                 FileType.Directory -> {
                     cid = ipfs.createEmptyDir()!!
                     children.forEach { child ->
-                        cid = ipfs.addLinkToDir(cid, child.name, child.cid)!!
+                        cid = ipfs.addLinkToDir(cid, child.name, child.cid(ipfs))!!
                     }
 
                     cid
