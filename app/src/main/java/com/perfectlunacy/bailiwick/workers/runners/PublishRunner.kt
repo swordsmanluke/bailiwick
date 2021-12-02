@@ -48,18 +48,33 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
                 ipfs.provide(cid, IpfsDeserializer.ShortTimeout)
             }
 
+        val idPub = IdentityPublisher(db.identityDao(), ipfs)
+        val postPub = PostPublisher(db.postDao(), db.postFileDao(), ipfs)
+        val circPub = CirclePublisher(db.circleDao(), ipfs)
+
         db.circleDao().all().forEach { circle ->
             val cipher = Keyring.encryptorForCircle(db.keyDao(), circle.id)
             val postIds = db.circlePostDao().postsIn(circle.id)
             val postsForCircle = postsToSync.filter { postIds.contains(it.id) }
 
-            CirclePublisher(
-                db.circleDao(),
-                db.identityDao(),
-                IdentityPublisher(db.identityDao(), ipfs),
-                PostPublisher(db.postDao(), db.postFileDao(), ipfs),
-                ipfs
-            ).publish(circle, postsForCircle, cipher)
+            idPub.publish(circle.identityId, cipher)
+            if(postsForCircle.isNotEmpty()) {
+                db.circleDao().clearCid(circle.id)
+                postsForCircle.forEach { post -> postPub.publish(post, cipher) }
+
+                // TODO: All of this lives in this 'if' block only because 'postsForCircle ! empty'
+                //       is the only check we currently need to determine if a circle needs updating.
+                //       Later, we'll need to check if there are any newly synced Interactions or
+                //       Actions. Possibly, we should just check if the Circle's DB CID is null.
+                val idCid = db.identityDao().find(circle.identityId).cid
+                if(idCid != null) {
+                    // TODO: AAAAH! N+1 Query - add a mass query for Posts
+                    val postCids = db.circlePostDao().postsIn(circle.id).mapNotNull {
+                        db.postDao().find(it).cid
+                    }
+                    circPub.publish(circle, idCid, postCids, emptyList(), emptyList(), cipher)
+                }
+            }
         }
 
         // Now publish a new manifest if we changed anything
@@ -85,7 +100,7 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
             val metadata = mutableMapOf<String, String>()
             when(ActionType.valueOf(action.actionType)) {
                 ActionType.Delete -> TODO()
-                ActionType.UpdateKey -> { metadata.put("key", action.data) }
+                ActionType.UpdateKey -> { metadata["key"] = action.data }
                 ActionType.Introduce -> TODO()
             }
 
@@ -181,7 +196,7 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
 
     private fun cidForDir(path: String, seq: Long): ContentId {
         val paths = db.ipnsCacheDao().pathsForPeer(ipfs.peerID, seq)
-        val cid = paths.filter { p -> p.path == path }.firstOrNull()?.cid ?: ipfs.createEmptyDir()
+        val cid = paths.firstOrNull { p -> p.path == path }?.cid ?: ipfs.createEmptyDir()
         return cid!!
     }
 }
