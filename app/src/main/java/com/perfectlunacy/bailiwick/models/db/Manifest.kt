@@ -2,7 +2,6 @@ package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
 import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.PeerId
 
 @Entity(indices = [Index(value = ["sequence"], unique = true)])
 data class Manifest(val cid: ContentId, val sequence: Long) {
@@ -16,6 +15,9 @@ interface ManifestDao {
 
     @Query("SELECT MAX(sequence) FROM manifest")
     fun currentSequence(): Long?
+
+    @Query("SELECT * FROM manifest ORDER BY sequence DESC LIMIT 1")
+    fun current(): Manifest?
 
     @Query("SELECT * FROM manifest WHERE sequence = :sequence LIMIT 1")
     fun find(sequence: Long): Manifest?

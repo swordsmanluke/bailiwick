@@ -34,7 +34,7 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
     fun run() {
         // Wait for IPFS connection
         while(!ipfs.isConnected()) {
-            Log.i(PublishRunner.TAG, "Waiting for ipfs to connect")
+            Log.i(TAG, "Waiting for ipfs to connect")
             Thread.sleep(500)
         }
 
