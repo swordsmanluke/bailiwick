@@ -6,13 +6,14 @@ import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.models.db.Action
+import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import com.perfectlunacy.bailiwick.workers.runners.publishers.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
 class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
     companion object {
@@ -99,6 +100,13 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
                 ipfs).
             provideRoot(root.cid, root.sequence)
         }
+        val cids = mutableListOf<ContentId>()
+        cids.addAll(db.postDao().all().mapNotNull{ it.cid })
+        cids.addAll(db.circleDao().all().mapNotNull { it.cid })
+        cids.addAll(db.actionDao().all().mapNotNull { it.cid })
+        cids.addAll(db.postFileDao().all().map { it.fileCid })
+
+        cids.forEach { GlobalScope.launch { ipfs.provide(it, 30) } }
 
     }
 

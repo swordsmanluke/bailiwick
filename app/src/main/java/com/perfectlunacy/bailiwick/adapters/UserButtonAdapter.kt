@@ -4,18 +4,19 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.BaseAdapter
 import androidx.annotation.NonNull
-import com.perfectlunacy.bailiwick.R
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.Adapter
 import com.perfectlunacy.bailiwick.databinding.UserButtonBinding
 import com.perfectlunacy.bailiwick.models.db.Identity
 
-class UserButtonAdapter(val context: Context, private val items: List<Identity>): BaseAdapter() {
-    override fun getCount(): Int {
-        return items.count()
-    }
+import android.R
 
-    override fun getItem(position: Int): Any {
+
+
+
+class UserButtonAdapter(val context: Context, private val items: List<Identity>): Adapter<UserButtonViewHolder>() {
+    private fun getItem(position: Int): Any {
         return items.get(position)
     }
 
@@ -23,20 +24,32 @@ class UserButtonAdapter(val context: Context, private val items: List<Identity>)
         return position.toLong()
     }
 
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-        val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.user_button, parent, false)
-        val user = getItem(position) as Identity
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserButtonViewHolder {
+        val itemView: View = LayoutInflater.from(context)
+            .inflate(com.perfectlunacy.bailiwick.R.layout.user_button, parent, false)
 
-        val binding = if(convertView == null) {
-            UserButtonBinding.bind(view)
+        val binding = if(itemView.tag is String) {
+            UserButtonBinding.bind(itemView)
         }  else {
-            view.tag as @NonNull UserButtonBinding
+            itemView.tag as @NonNull UserButtonBinding
         }
 
         binding.root.tag = binding
-        binding.btnAvatar.setImageBitmap(user.avatar(context.filesDir.toPath()))
 
-        return binding.root
+        return UserButtonViewHolder(itemView)
     }
+
+    override fun onBindViewHolder(holder: UserButtonViewHolder, position: Int) {
+        val user = getItem(position) as Identity
+        val binding = holder.itemView.tag as @NonNull UserButtonBinding
+        binding.btnAvatar.setImageBitmap(user.avatar(context.filesDir.toPath()))
+    }
+
+    override fun getItemCount(): Int {
+        return items.size
+    }
+}
+
+class UserButtonViewHolder(view: View): RecyclerView.ViewHolder(view) {
 
 }

@@ -10,6 +10,7 @@ import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.IdentityDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
+import java.time.Duration
 import java.util.*
 
 class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): Worker(context, workerParameters) {
@@ -21,6 +22,16 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
                 .build()
 
             WorkManager.getInstance(context).enqueueUniqueWork("ipfsdownload", ExistingWorkPolicy.REPLACE, request)
+
+            return request.id
+        }
+
+        @JvmStatic
+        fun enqueuePeriodicRefresh(context: Context): UUID {
+            val request = PeriodicWorkRequestBuilder<IpfsDownloadWorker>(Duration.ofMinutes(15))
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfsdownload-periodic", ExistingPeriodicWorkPolicy.REPLACE, request)
 
             return request.id
         }

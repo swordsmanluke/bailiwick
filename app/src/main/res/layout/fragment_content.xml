@@ -33,11 +33,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
         </LinearLayout>
+
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-                <ListView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/list_users"
                     android:background="@color/cardview_light_background"
                     android:layout_width="0dp"

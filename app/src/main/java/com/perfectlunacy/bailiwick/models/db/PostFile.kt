@@ -10,6 +10,9 @@ data class PostFile(val postId: Long, val fileCid: ContentId, @ColumnInfo(defaul
 
 @Dao
 interface PostFileDao {
+    @Query("SELECT * FROM postfile")
+    fun all(): List<PostFile>
+
     @Query("SELECT * FROM postfile WHERE postId = :postId")
     fun filesFor(postId: Long): List<PostFile>
 

@@ -14,23 +14,35 @@
         android:orientation="vertical">
         <!--  User header   -->
         <LinearLayout
-            android:orientation="horizontal"
-            android:layout_marginBottom="10dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <ImageView
-                android:id="@+id/avatar"
-                android:src="@drawable/avatar2"
-                android:layout_width="50dp"
-                android:layout_height="50dp"/>
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <ImageView
+                    android:id="@+id/avatar"
+                    android:src="@drawable/avatar2"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:contentDescription="@string/desc_user_avatar" />
+                <TextView
+                    android:id="@+id/txt_author"
+                    android:hint="@string/username"
+                    android:textColor="#000000"
+                    android:gravity="center_vertical"
+                    android:textSize="24sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"/>
+            </LinearLayout>
             <TextView
-                android:id="@+id/txt_author"
-                android:hint="@string/username"
-                android:textColor="#000000"
-                android:gravity="center_vertical"
-                android:textSize="24sp"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"/>
+                android:layout_height="wrap_content"
+                android:hint="12/20/2021 5:01PM"
+                android:text="@{post.timeStr}"/>
         </LinearLayout>
 
         <!--  Post Content  -->

@@ -13,6 +13,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
@@ -55,10 +56,11 @@ class ContentFragment : BailiwickFragment() {
             false
         )
 
-//        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-//        binding.listUsers.setLayoutManager(layoutManager)
-
         val binding = _binding!! // capture and assert not null to make the Kotlin compiler happy
+
+        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.listUsers.setLayoutManager(layoutManager)
+
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 val users = bwModel.getUsers()

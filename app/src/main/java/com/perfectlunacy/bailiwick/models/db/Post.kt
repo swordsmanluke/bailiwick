@@ -4,6 +4,9 @@ import androidx.room.*
 import com.perfectlunacy.bailiwick.signatures.Signer
 import com.perfectlunacy.bailiwick.storage.ContentId
 import java.lang.RuntimeException
+import java.sql.Time
+import java.text.DateFormat
+import java.time.Instant
 import java.util.*
 
 @Entity
@@ -16,6 +19,14 @@ data class Post(
     var signature: String
 ) {
     @PrimaryKey(autoGenerate = true) var id: Long = 0
+
+    val timeStr: String
+        get() {
+            val time = Time.from(Instant.ofEpochMilli(timestamp))
+            val formatter = DateFormat.getDateTimeInstance()
+
+            return formatter.format(time)
+        }
 
     fun sign(signer: Signer, files: List<PostFile>) {
         signature = Base64.getEncoder().encodeToString(signer.sign(signingBytes(files)))

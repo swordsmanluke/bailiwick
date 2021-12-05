@@ -1,17 +1,20 @@
 package com.perfectlunacy.bailiwick.fragments
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
+import com.perfectlunacy.bailiwick.services.IpfsService
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
@@ -42,6 +45,11 @@ class SplashFragment : BailiwickFragment() {
                 showSplashScreen()
                 launchIpfsJobs(bwModel.ipfs)
             }
+
+            Log.i(TAG, "Starting IpfsService")
+            val intent = Intent(context, IpfsService::class.java)
+            ContextCompat.startForegroundService(requireContext(), intent)
+            Log.i(TAG, "Started(?) IpfsService")
         }
     }
 
@@ -71,7 +79,7 @@ class SplashFragment : BailiwickFragment() {
     }
 
     private fun startDownloadJob() {
-        val refreshId = IpfsDownloadWorker.enqueue(requireContext())
+        val refreshId = IpfsDownloadWorker.enqueuePeriodicRefresh(requireContext())
 
         WorkManager.getInstance(requireContext()).getWorkInfoById(refreshId)
             .addListener(
