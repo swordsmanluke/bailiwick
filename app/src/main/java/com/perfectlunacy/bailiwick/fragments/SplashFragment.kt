@@ -15,6 +15,7 @@ import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.services.IpfsService
+import com.perfectlunacy.bailiwick.services.TestService
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
@@ -46,10 +47,7 @@ class SplashFragment : BailiwickFragment() {
                 launchIpfsJobs(bwModel.ipfs)
             }
 
-            Log.i(TAG, "Starting IpfsService")
-            val intent = Intent(context, IpfsService::class.java)
-            ContextCompat.startForegroundService(requireContext(), intent)
-            Log.i(TAG, "Started(?) IpfsService")
+            IpfsService.start(requireContext())
         }
     }
 
