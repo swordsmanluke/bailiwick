@@ -1,6 +1,5 @@
 package com.perfectlunacy.bailiwick.workers.runners
 
-import android.content.Context
 import android.util.Log
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.Keyring
@@ -16,10 +15,7 @@ import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
-import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
-import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
-import java.io.FileOutputStream
 import java.lang.Exception
 import java.nio.file.Path
 import java.util.*
@@ -49,8 +45,21 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
         get() = db.userDao().all().map { it.peerId }
 
     private fun iteration(peerId: PeerId) {
-        downloadIdentity(peerId)
-        downloadManifest(peerId)
+        if(downloadRequired(peerId)) {
+            downloadIdentity(peerId)
+            downloadManifest(peerId)
+        } else {
+            Log.i(TAG, "No download required - we're up to date")
+        }
+    }
+
+    private fun downloadRequired(peerId: PeerId): Boolean {
+        // If we found no record... we're done
+        val record = ipfs.resolveName(peerId, db.sequenceDao(), IpfsDeserializer.ShortTimeout) ?: return false
+
+        // If our current record is less than the new sequence - we need to update!
+        val lastSeq = db.sequenceDao().find(peerId)?.sequence ?: -1
+        return lastSeq < record.sequence
     }
 
     private fun downloadIdentity(peerId: PeerId) {
