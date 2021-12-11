@@ -14,9 +14,7 @@ class IpfsPublishWorker(val context: Context, workerParameters: WorkerParameters
 
         @JvmStatic
         fun enqueue(context: Context): UUID {
-            val data = workDataOf("refresh" to false)
             val request = OneTimeWorkRequestBuilder<IpfsPublishWorker>()
-                .setInputData(data)
                 .build()
 
             WorkManager.getInstance(context).enqueueUniqueWork("ipfs-upload", ExistingWorkPolicy.APPEND, request)
@@ -25,31 +23,32 @@ class IpfsPublishWorker(val context: Context, workerParameters: WorkerParameters
 
         @JvmStatic
         fun enqueuePeriodicRefresh(context: Context) {
-            val data = workDataOf("refresh" to true)
             val request = PeriodicWorkRequestBuilder<IpfsPublishWorker>(Duration.ofMinutes(20))
-                .setInputData(data)
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfs-refresh", ExistingPeriodicWorkPolicy.KEEP, request)
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfs-refresh", ExistingPeriodicWorkPolicy.REPLACE, request)
         }
     }
 
     override fun doWork(): Result {
         val ipfs = Bailiwick.getInstance().ipfs
         val db = Bailiwick.getInstance().db
-        val refresh = inputData.getBoolean("refresh", false)
+
+        val postsToPublish = db.postDao().inNeedOfSync().isNotEmpty()
         try {
-            if(refresh) {
-                PublishRunner(context, db, ipfs).refresh()
-            } else {
+            if(postsToPublish) {
+                Log.i(TAG, "Publishing new posts")
                 PublishRunner(context, db, ipfs).run()
+            } else {
+                Log.i(TAG, "Providing existing posts")
+                PublishRunner(context, db, ipfs).refresh()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to publish updates", e)
+            return Result.failure()
         }
 
         Log.i(TAG, "Successfully uploaded updates!")
-        Thread.sleep(1000 * 60L) // 1 minute
         return Result.success()
     }
 }

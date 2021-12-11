@@ -15,10 +15,10 @@ import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.services.IpfsService
-import com.perfectlunacy.bailiwick.services.TestService
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
+import com.perfectlunacy.bailiwick.workers.runners.PublishRunner
 import kotlinx.coroutines.*
 
 /**
@@ -66,7 +66,6 @@ class SplashFragment : BailiwickFragment() {
     private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
         launch {
             withContext(Dispatchers.Default) {
-                ipfs.bootstrap(requireContext())
                 startUploadJob()
                 startDownloadJob()
             }
@@ -74,6 +73,7 @@ class SplashFragment : BailiwickFragment() {
 
     private fun startUploadJob() {
         IpfsPublishWorker.enqueuePeriodicRefresh(requireContext())
+        IpfsPublishWorker.enqueue(requireContext()) // Run once on start up
     }
 
     private fun startDownloadJob() {

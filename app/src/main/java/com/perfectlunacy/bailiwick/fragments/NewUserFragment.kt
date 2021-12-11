@@ -36,7 +36,6 @@ import java.util.*
  * create an instance of this fragment.
  */
 class NewUserFragment : BailiwickFragment() {
-    @DelicateCoroutinesApi
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?

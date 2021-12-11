@@ -31,7 +31,7 @@ class UserButtonAdapter(val context: Context, private val items: List<Identity>)
         val binding = if(itemView.tag is String) {
             UserButtonBinding.bind(itemView)
         }  else {
-            itemView.tag as @NonNull UserButtonBinding
+            itemView.tag as UserButtonBinding
         }
 
         binding.root.tag = binding
@@ -41,7 +41,7 @@ class UserButtonAdapter(val context: Context, private val items: List<Identity>)
 
     override fun onBindViewHolder(holder: UserButtonViewHolder, position: Int) {
         val user = getItem(position) as Identity
-        val binding = holder.itemView.tag as @NonNull UserButtonBinding
+        val binding = holder.itemView.tag as UserButtonBinding
         binding.btnAvatar.setImageBitmap(user.avatar(context.filesDir.toPath()))
     }
 

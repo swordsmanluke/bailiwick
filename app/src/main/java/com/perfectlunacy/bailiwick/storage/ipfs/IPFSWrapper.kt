@@ -113,7 +113,7 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
         val seq = sequenceDao.find(peerId).let {
             if(it == null) {
                 val seq = Sequence(peerId, 0)
-                sequenceDao.insert(seq)
+                sequenceDao.insert(seq) // TODO: Make this update only after successful downloads
                 seq
             } else {
                 it
