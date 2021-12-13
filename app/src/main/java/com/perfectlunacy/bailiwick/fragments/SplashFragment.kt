@@ -15,6 +15,7 @@ import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.services.IpfsService
+import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
 import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
@@ -43,6 +44,7 @@ class SplashFragment : BailiwickFragment() {
         super.onStart()
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
+                bwModel.ipfs.bootstrap(requireContext())
                 showSplashScreen()
                 launchIpfsJobs(bwModel.ipfs)
             }
@@ -54,7 +56,6 @@ class SplashFragment : BailiwickFragment() {
     private suspend fun showSplashScreen() {
         Log.i(TAG, "Connected to IPFS network")
 
-        Thread.sleep(100)
         val nav = requireView().findNavController()
         if (bwModel.network.accountExists()) {
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_contentFragment) }
@@ -66,28 +67,12 @@ class SplashFragment : BailiwickFragment() {
     private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
         launch {
             withContext(Dispatchers.Default) {
-                startUploadJob()
                 startDownloadJob()
             }
         }
 
-    private fun startUploadJob() {
-        IpfsPublishWorker.enqueuePeriodicRefresh(requireContext())
-        IpfsPublishWorker.enqueue(requireContext()) // Run once on start up
-    }
-
     private fun startDownloadJob() {
-        val refreshId = IpfsDownloadWorker.enqueuePeriodicRefresh(requireContext())
-
-        WorkManager.getInstance(requireContext()).getWorkInfoById(refreshId)
-            .addListener(
-                { // Runnable
-                    bwModel.viewModelScope.launch {
-                        withContext(Dispatchers.Default) { bwModel.refreshContent() }
-                    }
-                },
-                { it.run() }  // Executable
-            )
+        IpfsDownloadWorker.enqueuePeriodicRefresh(requireContext())
     }
 
 

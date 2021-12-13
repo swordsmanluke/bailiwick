@@ -17,7 +17,7 @@ class IpfsPublishWorker(val context: Context, workerParameters: WorkerParameters
             val request = OneTimeWorkRequestBuilder<IpfsPublishWorker>()
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork("ipfs-upload", ExistingWorkPolicy.APPEND, request)
+            WorkManager.getInstance(context).enqueueUniqueWork("ipfsupload", ExistingWorkPolicy.APPEND, request)
             return request.id
         }
 
@@ -26,7 +26,7 @@ class IpfsPublishWorker(val context: Context, workerParameters: WorkerParameters
             val request = PeriodicWorkRequestBuilder<IpfsPublishWorker>(Duration.ofMinutes(20))
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfs-refresh", ExistingPeriodicWorkPolicy.REPLACE, request)
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfsupload-periodic", ExistingPeriodicWorkPolicy.REPLACE, request)
         }
     }
 

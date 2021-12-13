@@ -148,6 +148,7 @@ class IpfsService: Service() {
                 applicationContext.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
             networkCallback = object : NetworkCallback() {
                 override fun onAvailable(network: Network) {
+                    Log.i(TAG, "Connecting to IPFS")
                     ipfs?.bootstrap(applicationContext)
                 }
 

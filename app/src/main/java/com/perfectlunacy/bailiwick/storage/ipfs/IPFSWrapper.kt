@@ -54,8 +54,6 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
                 ipfs.bootstrap()
                 ipfs.relays(threads.lite.IPFS.TIMEOUT_BOOTSTRAP.toLong())
                 Log.i(TAG, "Bootstrap completed.")
-
-                IpfsPublishWorker.enqueue(context)
             }
         })
     }
@@ -112,8 +110,8 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
     override fun resolveName(peerId: PeerId, sequenceDao: SequenceDao, timeoutSeconds: Long): IPNSRecord? {
         val seq = sequenceDao.find(peerId).let {
             if(it == null) {
-                val seq = Sequence(peerId, 0)
-                sequenceDao.insert(seq) // TODO: Make this update only after successful downloads
+                val seq = Sequence(peerId, 0, false)
+                sequenceDao.insert(seq)
                 seq
             } else {
                 it

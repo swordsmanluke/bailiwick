@@ -45,6 +45,11 @@ class ContentFragment : BailiwickFragment() {
 
     private var _binding: FragmentContentBinding? = null
 
+    override fun onResume() {
+        super.onResume()
+        refreshContent()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -130,19 +135,9 @@ class ContentFragment : BailiwickFragment() {
                     val circId = bwModel.network.circles.first().id
                     bwModel.network.storePost(circId, newPost)
 
-                    Log.i(TAG, "Saved new post. Refreshing...")
+                    Log.i(TAG, "Saved new post. Publishing...")
 
-                    val id = IpfsPublishWorker.enqueue(requireContext()) // Publish my content
-
-                    WorkManager.getInstance(requireContext()).getWorkInfoById(id)
-                        .addListener(
-                            { // Runnable
-                                bwModel.viewModelScope.launch {
-                                    withContext(Dispatchers.Default) { refreshContent() }
-                                }
-                            },
-                            { it.run() }  // Executable
-                        )
+                    IpfsPublishWorker.enqueue(requireContext()) // Publish the new content
                 }
             }
         }

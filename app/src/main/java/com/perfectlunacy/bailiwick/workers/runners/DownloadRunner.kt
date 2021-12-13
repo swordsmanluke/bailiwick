@@ -45,21 +45,28 @@ class DownloadRunner(val filesDir: Path, val db: BailiwickDatabase, val ipfs: IP
         get() = db.userDao().all().map { it.peerId }
 
     private fun iteration(peerId: PeerId) {
-        if(downloadRequired(peerId)) {
+        val curSequence = ipfs.resolveName(peerId, db.sequenceDao(), IpfsDeserializer.ShortTimeout)?.sequence ?: -1
+
+        // FIXME: The downloadRequired logic works fine... but we
+        //        don't really know if download succeeded when
+        //        downloadManifest returned. Need to send a signal
+        //        back up the stack.
+        if(downloadRequired(peerId, curSequence) || true) {
             downloadIdentity(peerId)
             downloadManifest(peerId)
+
+            Log.i(TAG, "Marking sequence $curSequence as up to date")
+            db.sequenceDao().setUpToDate(peerId, curSequence)
         } else {
             Log.i(TAG, "No download required - we're up to date")
         }
     }
 
-    private fun downloadRequired(peerId: PeerId): Boolean {
-        // If we found no record... we're done
-        val record = ipfs.resolveName(peerId, db.sequenceDao(), IpfsDeserializer.ShortTimeout) ?: return false
-
+    private fun downloadRequired(peerId: PeerId, curSequence: Long): Boolean {
         // If our current record is less than the new sequence - we need to update!
-        val lastSeq = db.sequenceDao().find(peerId)?.sequence ?: -1
-        return lastSeq < record.sequence
+        val lastSeq = db.sequenceDao().upToDateSequence(peerId) ?: -1
+        Log.i(TAG, "last downloaded sequence $lastSeq. Current downloadable Sequence: $curSequence. Download required: ${lastSeq < curSequence}")
+        return lastSeq < curSequence
     }
 
     private fun downloadIdentity(peerId: PeerId) {

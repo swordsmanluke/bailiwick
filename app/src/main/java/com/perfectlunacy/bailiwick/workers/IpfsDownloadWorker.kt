@@ -28,7 +28,7 @@ class IpfsDownloadWorker(context: Context, workerParameters: WorkerParameters): 
 
         @JvmStatic
         fun enqueuePeriodicRefresh(context: Context): UUID {
-            val request = PeriodicWorkRequestBuilder<IpfsDownloadWorker>(Duration.ofMinutes(15))
+            val request = PeriodicWorkRequestBuilder<IpfsDownloadWorker>(Duration.ofMinutes(60))
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork("ipfsdownload-periodic", ExistingPeriodicWorkPolicy.REPLACE, request)

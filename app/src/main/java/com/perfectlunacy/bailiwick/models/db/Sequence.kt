@@ -7,7 +7,9 @@ import java.util.*
 
 @Entity
 data class Sequence(@PrimaryKey val peerId: PeerId,
-                  var sequence: Long)
+                    var sequence: Long,
+                    @ColumnInfo(defaultValue = "1")
+                    var upToDate: Boolean )
 
 @Dao
 interface SequenceDao{
@@ -22,4 +24,13 @@ interface SequenceDao{
 
     @Query("UPDATE sequence SET sequence = :sequence WHERE peerId = :peerId")
     fun updateSequence(peerId: PeerId, sequence: Long)
+
+    @Query("UPDATE sequence SET upToDate = 1 WHERE peerId = :peerId AND sequence = :sequence")
+    fun setUpToDate(peerId: PeerId, sequence: Long)
+
+    @Query("UPDATE sequence SET upToDate = 0 WHERE peerId = :peerId AND sequence = :sequence")
+    fun clearUpToDate(peerId: PeerId, sequence: Long)
+
+    @Query("SELECT MAX(sequence) FROM sequence WHERE peerId = :peerId AND upToDate = 1")
+    fun upToDateSequence(peerId: PeerId): Long?
 }
