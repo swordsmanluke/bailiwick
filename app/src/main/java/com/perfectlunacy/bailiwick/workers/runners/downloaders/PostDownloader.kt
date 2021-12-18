@@ -14,25 +14,28 @@ import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
 import java.lang.Exception
 
 class PostDownloader(private val postDao: PostDao, private val ipfs: IPFS, private val fileDownloader: FileDownloader) {
+    companion object {
+        const val TAG = "PostDownloader"
+    }
     fun download(cid: ContentId, identityId: Long, cipher: Encryptor) {
         if (postAlreadyDownloaded(cid)) {
-            Log.i(DownloadRunner.TAG, "Already downloaded post $cid!")
+            Log.i(TAG, "Already downloaded post $cid!")
         } else {
             val ipfsPostPair = try {
                 IpfsDeserializer.fromCid(cipher, ipfs, cid, IpfsPost::class.java)
             } catch (e: Exception) {
-                Log.e(DownloadRunner.TAG, "Failed to download Post $cid", e)
+                Log.e(TAG, "Failed to download Post $cid", e)
                 return
             }
 
             if (ipfsPostPair == null) {
-                Log.e(DownloadRunner.TAG, "Failed to parse Post $cid")
+                Log.e(TAG, "Failed to parse Post $cid")
                 return
             }
 
             val ipfsPost = ipfsPostPair.first
 
-            Log.i(DownloadRunner.TAG, "Downloaded post!")
+            Log.i(TAG, "Downloaded post!")
 
             val post = Post(
                 identityId,

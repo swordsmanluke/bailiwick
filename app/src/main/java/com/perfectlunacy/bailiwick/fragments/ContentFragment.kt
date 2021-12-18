@@ -24,7 +24,6 @@ import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
 import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
@@ -135,9 +134,7 @@ class ContentFragment : BailiwickFragment() {
                     val circId = bwModel.network.circles.first().id
                     bwModel.network.storePost(circId, newPost)
 
-                    Log.i(TAG, "Saved new post. Publishing...")
-
-                    IpfsPublishWorker.enqueue(requireContext()) // Publish the new content
+                    Log.i(TAG, "Saved new post.")
                 }
             }
         }

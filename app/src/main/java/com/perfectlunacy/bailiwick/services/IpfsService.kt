@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
-import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -16,6 +15,13 @@ import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
+import com.perfectlunacy.bailiwick.workers.runners.PublishRunner
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.IdentityDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
+import java.time.Duration
 
 class IpfsService: Service() {
     companion object {
@@ -34,6 +40,7 @@ class IpfsService: Service() {
     private var networkCallback: NetworkCallback? = null
     private var db: BailiwickDatabase? = null
     private var ipfs: IPFS? = null
+    private var thread: Thread? = null
 
     // Not a bound service
     override fun onBind(intent: Intent?): IBinder? {
@@ -68,7 +75,70 @@ class IpfsService: Service() {
     }
 
     private fun startup() {
-        val builder: NotificationCompat.Builder = NotificationCompat.Builder(applicationContext, CHANNEL)
+        // Launch a thread that runs the download/upload runners on a schedule
+        if(thread == null) {
+            thread = Thread {
+                Log.i(TAG, "Starting thread: ${Thread.currentThread().id}")
+                val napDuration = Duration.ofMinutes(5).toMillis()
+
+                // Assert that our var's are initialized - then use them.
+                val db = db!!
+                val ipfs = ipfs!!
+
+                var timeOfLastDownload = 0L
+
+                while (true) {
+                    if (needToPublish(db)) {
+                        Log.i(TAG, "${Thread.currentThread().id} Starting publish")
+                        PublishRunner(applicationContext, db, ipfs).run()
+                    }
+                    if (needToDownload(timeOfLastDownload)) {
+                        Log.i(TAG, "${Thread.currentThread().id} Starting download")
+
+                        DownloadRunner(applicationContext.filesDir.toPath(), db, ipfs, feedDownloader(db, ipfs)).run()
+                        timeOfLastDownload = System.currentTimeMillis()
+                    }
+                    Thread.sleep(napDuration)
+                }
+
+            }
+            thread?.start()
+        }
+
+        val notification = buildNotification()
+        startForeground(TAG.hashCode(), notification)
+        Log.i(TAG, "Started in foreground")
+    }
+
+    private fun feedDownloader(
+        db: BailiwickDatabase,
+        ipfs: IPFS
+    ): FeedDownloader {
+        // Downloader classes which retrieve and store specific IPFS objects
+        val fileDlr = FileDownloader(
+            applicationContext.filesDir.toPath(),
+            db.postFileDao(),
+            ipfs
+        )
+        val postDlr = PostDownloader(db.postDao(), ipfs, fileDlr)
+        val identDlr = IdentityDownloader(db.identityDao(), ipfs)
+        val feedDlr = FeedDownloader(db.keyDao(), identDlr, postDlr, ipfs)
+        return feedDlr
+    }
+
+    private fun needToDownload(timeOfLastDownload: Long): Boolean {
+        val elapsed = System.currentTimeMillis() - timeOfLastDownload
+        return elapsed > Duration.ofMinutes(20).toMillis()
+    }
+
+    private fun needToPublish(db: BailiwickDatabase): Boolean {
+        return db.postDao().inNeedOfSync().isNotEmpty() ||
+               db.actionDao().inNeedOfSync().isNotEmpty()
+    }
+
+    private fun buildNotification(): Notification {
+        val builder: NotificationCompat.Builder =
+            NotificationCompat.Builder(applicationContext, CHANNEL)
         val stopIntent = Intent(applicationContext, IpfsService::class.java)
         stopIntent.putExtra("run", false)
         val cancelIntent: PendingIntent = PendingIntent.getService(
@@ -95,7 +165,11 @@ class IpfsService: Service() {
             ContextCompat.getColor(applicationContext, R.color.cardview_light_background)
         builder.setCategory(Notification.CATEGORY_SERVICE)
 
-        val chan = NotificationChannel(CHANNEL, "ipfs channel", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        val chan = NotificationChannel(
+            CHANNEL,
+            "ipfs channel",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
             enableLights(true)
             lightColor = Color.YELLOW
             setShowBadge(true)
@@ -104,13 +178,13 @@ class IpfsService: Service() {
         }
         chan.setDescription("Dunno")
 
-        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(chan)
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
+            chan
+        )
 
         val notification = builder.build()
         Log.i(TAG, "Built notification")
-
-        startForeground(TAG.hashCode(), notification)
-        Log.i(TAG, "Started in foreground")
+        return notification
     }
 
     override fun onDestroy() {

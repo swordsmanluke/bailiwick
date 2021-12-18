@@ -31,7 +31,6 @@ import com.perfectlunacy.bailiwick.models.ipfs.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -199,7 +198,6 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                             rsa)
 
                         bwModel.network.storeAction(Action.updateKeyAction(intro.peerId, Base64.getEncoder().encodeToString(circKey)))
-                        IpfsPublishWorker.enqueue(requireContext()) // Publish the new Action
 
                         bwModel.acceptViewModel.request = intro
                         if (intro.isResponse) {

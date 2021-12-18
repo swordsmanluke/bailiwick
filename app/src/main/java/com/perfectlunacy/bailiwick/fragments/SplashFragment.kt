@@ -1,26 +1,22 @@
 package com.perfectlunacy.bailiwick.fragments
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
-import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
 import com.perfectlunacy.bailiwick.services.IpfsService
-import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
-import com.perfectlunacy.bailiwick.workers.IpfsDownloadWorker
-import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
-import com.perfectlunacy.bailiwick.workers.runners.PublishRunner
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Shows the branded splash screen and determines if we already have an account loaded or not.
@@ -46,7 +42,6 @@ class SplashFragment : BailiwickFragment() {
             withContext(Dispatchers.Default) {
                 bwModel.ipfs.bootstrap(requireContext())
                 showSplashScreen()
-                launchIpfsJobs(bwModel.ipfs)
             }
 
             IpfsService.start(requireContext())
@@ -63,18 +58,6 @@ class SplashFragment : BailiwickFragment() {
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_splashFragment_to_firstRunFragment) }
         }
     }
-
-    private fun CoroutineScope.launchIpfsJobs(ipfs: IPFS) =
-        launch {
-            withContext(Dispatchers.Default) {
-                startDownloadJob()
-            }
-        }
-
-    private fun startDownloadJob() {
-        IpfsDownloadWorker.enqueuePeriodicRefresh(requireContext())
-    }
-
 
     companion object {
         private const val TAG = "SplashFragment"

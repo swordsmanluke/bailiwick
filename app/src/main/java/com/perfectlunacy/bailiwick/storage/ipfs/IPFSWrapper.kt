@@ -21,7 +21,6 @@ import java.util.*
 import android.net.NetworkCapabilities
 import com.perfectlunacy.bailiwick.models.db.Sequence
 import com.perfectlunacy.bailiwick.models.db.SequenceDao
-import com.perfectlunacy.bailiwick.workers.IpfsPublishWorker
 
 
 class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IPFS {
@@ -135,6 +134,9 @@ class IPFSWrapper(private val ipfs: threads.lite.IPFS, val keyPair: KeyPair): IP
             Log.i(TAG, "Updating $peerId sequence to ${rec.sequence}")
             sequenceDao.updateSequence(peerId, rec.sequence)
         }
+
+        // Try getting into a swarm with this peer.
+        ipfs.swarmEnhance(threads.lite.cid.PeerId.decodeName(peerId))
 
         return IPNSRecord(Calendar.getInstance().timeInMillis, rec.hash, rec.sequence)
     }

@@ -84,7 +84,7 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
         tempPosts.addAll(posts)
         list.clear()
         list.addAll(tempPosts)
-        list.sortByDescending { it.timestamp }
+        list.sortByDescending { it.timestamp ?: System.currentTimeMillis() }
         Handler(Looper.getMainLooper()).post(Runnable { notifyDataSetChanged() })
     }
 

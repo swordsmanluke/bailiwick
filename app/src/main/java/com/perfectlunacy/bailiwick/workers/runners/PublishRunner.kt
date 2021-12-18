@@ -11,13 +11,15 @@ import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
 import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
 import com.perfectlunacy.bailiwick.workers.runners.publishers.*
-import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.util.*
 
 class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: IPFS) {
     companion object {
-        const val TAG = "UploadRunner"
+        const val TAG = "PublishRunner"
     }
 
     // TODO: LOTS of N+1 queries in here. Update our DAOs so we don't need so many.
@@ -29,11 +31,11 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         }
 
         val postsToSync = db.postDao().inNeedOfSync()
-        val syncActions = db.actionDao().inNeedOfSync()
+        val actionsToSync = db.actionDao().inNeedOfSync()
 
-        if (syncActions.isNotEmpty()) {
-            Log.i(TAG, "Uploading ${syncActions.count()} new action(s)")
-            publishActions(syncActions)
+        if (actionsToSync.isNotEmpty()) {
+            Log.i(TAG, "Uploading ${actionsToSync.count()} new action(s)")
+            publishActions(actionsToSync)
         }
 
         // TODO: Separate publishing and providing _all_the_things_
@@ -73,7 +75,7 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         }
 
         // Now publish a new manifest if we changed anything
-        if (postsToSync.isNotEmpty() || syncActions.isNotEmpty()) {
+        if (postsToSync.isNotEmpty() || actionsToSync.isNotEmpty()) {
             Log.i(TAG, "Publishing a new manifest")
 
             val publicIdentity = db.identityDao().identitiesFor(ipfs.peerID).first()
@@ -91,7 +93,6 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
 
     fun refresh() {
         Log.i(TAG, "Refreshing existing manifest")
-        // TODO: Reimplement this in terms of just Providing instead of Publishing
         db.ipnsCacheDao().getPath(ipfs.peerID, "")?.let { root ->
             ManifestPublisher(
                 db.manifestDao(),
@@ -107,7 +108,6 @@ class PublishRunner(val context: Context, val db: BailiwickDatabase, val ipfs: I
         cids.addAll(db.postFileDao().all().map { it.fileCid })
 
         cids.forEach { GlobalScope.launch { ipfs.provide(it, 30) } }
-
     }
 
     private fun publishActions(syncActions: List<Action>) {
