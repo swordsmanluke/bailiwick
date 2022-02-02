@@ -5,10 +5,12 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
@@ -16,6 +18,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import com.google.gson.Gson
+import com.google.zxing.FormatException
 import com.google.zxing.integration.android.IntentIntegrator
 import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.QRCode
@@ -24,10 +27,9 @@ import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
 import com.perfectlunacy.bailiwick.models.db.Action
-import com.perfectlunacy.bailiwick.models.db.Key
-import com.perfectlunacy.bailiwick.models.db.KeyType
 import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.ipfs.Introduction
+import com.perfectlunacy.bailiwick.qr.QREncoder
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.PeerId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
@@ -51,6 +53,21 @@ class AcceptIntroductionFragment : BailiwickFragment() {
         val mode: MutableLiveData<AcceptMode>,
         var request: Introduction?,
     )
+
+    private val getScannableImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+
+        val stream = requireContext().contentResolver.openInputStream(uri)
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                try {
+                    val decodedText = String(QREncoder().decode(stream!!))
+                    processIntroduction(decodedText)
+                } catch (e: FormatException) {
+                    Log.e("Accept Intro", "Error decoding barcode " + e.message, e)
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -77,9 +94,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
         }
 
         binding.btnImages.setOnClickListener {
-            // TODO pick image
-            // TODO and then use zxing to decode the barcode
-            TODO("Not yet implemented")
+            getScannableImage.launch("image/*")
         }
 
         binding.btnSend.setOnClickListener {
@@ -173,43 +188,65 @@ class AcceptIntroductionFragment : BailiwickFragment() {
             if (result.contents == null) {
                 Toast.makeText(requireContext(), "Cancelled", Toast.LENGTH_LONG).show()
             } else {
-                // TODO: Capture password
-                val key = Md5Signature().sign(byteArrayOf())
-                val aes = AESEncryptor(SecretKeySpec(key, "AES"))
-                val json = String(aes.decrypt(Base64.getDecoder().decode(result.contents)))
-                val intro = Gson().fromJson(json, Introduction::class.java)
-
-                // TODO: Display identity and ask for confirmation
-                // TODO: And which Circles to add them to. If any.
-                bwModel.viewModelScope.launch {
-                    withContext(Dispatchers.Default) {
-                        val db = getBailiwickDb(requireContext())
-
-                        // Store the new user and their key
-                        db.userDao().insert(User(intro.peerId, intro.publicKey))
-
-                        // Create an Action with our "everyone" key. It will be encrypted with their Public key
-                        val rsa = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
-                        val everyoneId = bwModel.network.circles.find{ it.name == "everyone" }?.id ?: 0
-                        val circKey = Keyring.keyForCircle(
-                            db.keyDao(),
-                            requireContext().filesDir.toPath(),
-                            everyoneId.toInt(),
-                            rsa)
-
-                        bwModel.network.storeAction(Action.updateKeyAction(intro.peerId, Base64.getEncoder().encodeToString(circKey)))
-
-                        bwModel.acceptViewModel.request = intro
-                        if (intro.isResponse) {
-                            bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
-                        } else {
-                            bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
-                        }
-                    }
-                }
+                processIntroduction(result.contents)
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    private fun processIntroduction(rawData: String) {
+        // TODO: Capture password
+        val key = Md5Signature().sign(byteArrayOf())
+        val aes = AESEncryptor(SecretKeySpec(key, "AES"))
+        val json = String(aes.decrypt(Base64.getDecoder().decode(rawData)))
+        val intro = Gson().fromJson(json, Introduction::class.java)
+
+        // TODO: Display identity and ask for confirmation
+        // TODO: And which Circles to add them to. If any.
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val db = getBailiwickDb(requireContext())
+
+                // Check to see if we already have this user
+                if (db.userDao().publicKeyFor(intro.peerId) != null) {
+                    Handler(requireContext().mainLooper).post {
+                        Toast.makeText(
+                            context,
+                            "You are already friends with this user!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@withContext
+                }
+
+                // Store the new user and their key
+                db.userDao().insert(User(intro.peerId, intro.publicKey))
+
+                // Create an Action with our "everyone" key. It will be encrypted with their Public key
+                val rsa = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
+                val everyoneId = bwModel.network.circles.find { it.name == "everyone" }?.id ?: 0
+                val circKey = Keyring.keyForCircle(
+                    db.keyDao(),
+                    requireContext().filesDir.toPath(),
+                    everyoneId.toInt(),
+                    rsa
+                )
+
+                bwModel.network.storeAction(
+                    Action.updateKeyAction(
+                        intro.peerId,
+                        Base64.getEncoder().encodeToString(circKey)
+                    )
+                )
+
+                bwModel.acceptViewModel.request = intro
+                if (intro.isResponse) {
+                    bwModel.acceptViewModel.mode.postValue(AcceptMode.NoResponseReqd)
+                } else {
+                    bwModel.acceptViewModel.mode.postValue(AcceptMode.SendResponse)
+                }
+            }
         }
     }
 }

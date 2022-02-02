@@ -13,6 +13,10 @@ import com.perfectlunacy.bailiwick.models.ipfs.*
 import com.perfectlunacy.bailiwick.storage.ContentId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.IdentityDownloader
+import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import io.bloco.faker.Faker
 import org.junit.Assert
 import org.junit.Test
@@ -61,7 +65,14 @@ class DownloadRunnerTest {
 
         Assert.assertEquals(0, db.postDao().all().count())
 
-        DownloadRunner(context, db, ipfs).run()
+        val feedDownloader = FeedDownloader(
+            db.keyDao(),
+            IdentityDownloader(db.identityDao(), ipfs),
+            PostDownloader(db.postDao(), ipfs,
+                FileDownloader(context.filesDir.toPath(), db.postFileDao(), ipfs)),
+            ipfs)
+
+        DownloadRunner(context.filesDir.toPath(), db, ipfs, feedDownloader).run()
 
         val validator = ValidatorFactory.jsonValidator()
 
