@@ -21,9 +21,9 @@ import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
-import com.perfectlunacy.bailiwick.models.ipfs.Introduction
+import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.NodeId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -88,7 +88,7 @@ class IntroduceSelfFragment : BailiwickFragment() {
                             val request =
                                 buildRequest(
                                     binding.txtName.text.toString(),
-                                    bwModel.network.peerId
+                                    bwModel.network.nodeId
                                 )
                             val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
 
@@ -131,8 +131,8 @@ class IntroduceSelfFragment : BailiwickFragment() {
         return binding.root
     }
 
-    fun buildRequest(name: String, peerId: PeerId): Introduction {
-        return Introduction(false, peerId, name, Base64.getEncoder().encodeToString(bwModel.ipfs.publicKey.encoded))
+    fun buildRequest(name: String, nodeId: NodeId): Introduction {
+        return Introduction(false, nodeId, name, Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded))
     }
 
     companion object {

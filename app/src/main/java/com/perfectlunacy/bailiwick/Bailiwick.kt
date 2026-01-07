@@ -2,11 +2,18 @@ package com.perfectlunacy.bailiwick
 
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
+import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
+import java.io.File
 
-class Bailiwick(val bailiwick: BailiwickNetwork, val ipfs: IPFS, val db: BailiwickDatabase) {
+class Bailiwick(
+    val bailiwick: BailiwickNetwork,
+    val iroh: IrohNode,
+    val db: BailiwickDatabase,
+    val keyring: DeviceKeyring,
+    val cacheDir: File
+) {
     companion object {
-        const val VERSION = "0.2"
+        const val VERSION = "0.3"  // Bumped for Iroh migration
 
         @JvmStatic
         private lateinit var bw: Bailiwick
@@ -17,8 +24,14 @@ class Bailiwick(val bailiwick: BailiwickNetwork, val ipfs: IPFS, val db: Bailiwi
         }
 
         @JvmStatic
-        fun init(bailiwick: BailiwickNetwork, ipfs: IPFS, db: BailiwickDatabase): Bailiwick {
-            bw = Bailiwick(bailiwick, ipfs, db)
+        fun init(
+            bailiwick: BailiwickNetwork,
+            iroh: IrohNode,
+            db: BailiwickDatabase,
+            keyring: DeviceKeyring,
+            cacheDir: File
+        ): Bailiwick {
+            bw = Bailiwick(bailiwick, iroh, db, keyring, cacheDir)
             return bw
         }
     }

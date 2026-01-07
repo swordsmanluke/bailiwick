@@ -1,10 +1,10 @@
 package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.NodeId
 
-@Entity(indices = [Index(value = ["peerId"], unique = true)])
-data class User(val peerId: PeerId, val publicKey: String) {
+@Entity(indices = [Index(value = ["nodeId"], unique = true)])
+data class User(val nodeId: NodeId, val publicKey: String) {
     @PrimaryKey(autoGenerate = true) var id: Long = 0
 }
 
@@ -13,8 +13,8 @@ interface UserDao {
     @Query("SELECT * FROM user")
     fun all(): List<User>
 
-    @Query("SELECT publicKey FROM user WHERE peerId = :peerId LIMIT 1")
-    fun publicKeyFor(peerId: PeerId): String?
+    @Query("SELECT publicKey FROM user WHERE nodeId = :nodeId LIMIT 1")
+    fun publicKeyFor(nodeId: NodeId): String?
 
     @Insert
     fun insert(user: User)

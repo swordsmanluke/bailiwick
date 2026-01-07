@@ -1,11 +1,23 @@
 package com.perfectlunacy.bailiwick.ciphers
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Assert.*
+import org.junit.BeforeClass
 import org.junit.Test
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
+import java.security.Security
 
 class RSAEncryptorTest {
+
+    companion object {
+        @JvmStatic
+        @BeforeClass
+        fun setUp() {
+            // Register Bouncy Castle for PKCS7PADDING support in JVM tests
+            Security.addProvider(BouncyCastleProvider())
+        }
+    }
 
     @Test
     fun testCipherWorks() {

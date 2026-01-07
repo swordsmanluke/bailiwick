@@ -9,7 +9,7 @@ import com.perfectlunacy.bailiwick.models.db.Key
 import com.perfectlunacy.bailiwick.models.db.KeyDao
 import com.perfectlunacy.bailiwick.models.db.KeyType
 import com.perfectlunacy.bailiwick.models.db.UserDao
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.NodeId
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.FileInputStream
@@ -30,8 +30,8 @@ class Keyring {
         const val TAG = "Keyring"
 
         @JvmStatic
-        fun encryptorForPeer(keyDao: KeyDao, peerId: PeerId, validator: (ByteArray) -> Boolean): Encryptor {
-            val ciphers: MutableList<Encryptor> = keyDao.keysFor(peerId).mapNotNull { key ->
+        fun encryptorForPeer(keyDao: KeyDao, nodeId: NodeId, validator: (ByteArray) -> Boolean): Encryptor {
+            val ciphers: MutableList<Encryptor> = keyDao.keysFor(nodeId).mapNotNull { key ->
                 key.secretKey?.let{ k -> AESEncryptor(k) }
             }.toMutableList()
             ciphers.add(NoopEncryptor())
@@ -85,7 +85,7 @@ class Keyring {
         }
 
         @JvmStatic
-        fun storeAesKey(keyDao: KeyDao, peerId: PeerId, key: String) {
+        fun storeAesKey(keyDao: KeyDao, nodeId: NodeId, key: String) {
             val pk = SecretKeySpec(Base64.getDecoder().decode(key), "AES")
             val ks = KeyStore.getInstance("AndroidKeyStore")
             ks.load(null)
@@ -98,20 +98,20 @@ class Keyring {
                 .build()
             ks.setEntry(alias, entry, protection)
 
-            keyDao.insert(Key(peerId, alias, "AES", KeyType.Secret))
+            keyDao.insert(Key(nodeId, alias, "AES", KeyType.Secret))
         }
 
         @JvmStatic
-        fun storePubKey(filesDir: Path, peerId: PeerId, publicKey: String, cipher: Encryptor) {
+        fun storePubKey(filesDir: Path, nodeId: NodeId, publicKey: String, cipher: Encryptor) {
             val keyFile = loadKeyFile(filesDir, cipher)
-            keyFile.keys.find { it.alias == "$peerId:public" }.also {
+            keyFile.keys.find { it.alias == "$nodeId:public" }.also {
                 if(it != null) {
-                    Log.w(TAG,"We already have a public key for peer $peerId")
+                    Log.w(TAG,"We already have a public key for node $nodeId")
                     return
                 }
             }
 
-            keyFile.keys.add(KeyStoreRecord("$peerId:public", publicKey, KeyType.Public.toString()))
+            keyFile.keys.add(KeyStoreRecord("$nodeId:public", publicKey, KeyType.Public.toString()))
             saveKeyFile(filesDir, keyFile, cipher)
         }
 
@@ -138,8 +138,8 @@ class Keyring {
             }
         }
 
-        fun pubKeyFor(userDao: UserDao, peerId: PeerId): PublicKey? {
-            val key = userDao.publicKeyFor(peerId) ?: return null
+        fun pubKeyFor(userDao: UserDao, nodeId: NodeId): PublicKey? {
+            val key = userDao.publicKeyFor(nodeId) ?: return null
             val publicKeyData = Base64.getDecoder().decode(key)
             return KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
         }

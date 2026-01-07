@@ -1,8 +1,8 @@
 package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
-import com.perfectlunacy.bailiwick.storage.ContentId
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.BlobHash
+import com.perfectlunacy.bailiwick.storage.NodeId
 import java.util.*
 
 enum class ActionType { Delete, UpdateKey, Introduce }
@@ -10,7 +10,7 @@ enum class ActionType { Delete, UpdateKey, Introduce }
 @Entity
 data class Action(
     val timestamp: Long,
-    val cid: ContentId?,
+    val blobHash: BlobHash?,
     val toPeerId: String,
     val actionType: String,
     val data: String,
@@ -20,12 +20,12 @@ data class Action(
 
     companion object {
         @JvmStatic
-        fun updateKeyAction(toPeerId: PeerId, key: String): Action {
+        fun updateKeyAction(toNodeId: NodeId, key: String): Action {
             val now = Calendar.getInstance().timeInMillis
             return Action(
                 now,
                 null,
-                toPeerId,
+                toNodeId,
                 ActionType.UpdateKey.toString(),
                 key,
                 true) // I don't need to process this Action, but someone else will
@@ -38,7 +38,7 @@ interface ActionDao {
     @Query("SELECT * FROM `action`")
     fun all(): List<Action>
 
-    @Query("SELECT * FROM `action` WHERE cid IS NULL")
+    @Query("SELECT * FROM `action` WHERE blobHash IS NULL")
     fun inNeedOfSync(): List<Action>
 
     @Query("SELECT * FROM `action` WHERE processed IS 0")
@@ -47,20 +47,20 @@ interface ActionDao {
     @Query("SELECT * FROM `action` WHERE id = :id LIMIT 1")
     fun find(id: Long): Action
 
-    @Query("SELECT * FROM `action` WHERE cid = :cid")
-    fun findByCid(cid: ContentId): Action?
+    @Query("SELECT * FROM `action` WHERE blobHash = :hash")
+    fun findByHash(hash: BlobHash): Action?
 
-    @Query("SELECT * FROM `action` WHERE toPeerId = :peerId")
-    fun actionsFor(peerId: String): List<Action>
+    @Query("SELECT * FROM `action` WHERE toPeerId = :nodeId")
+    fun actionsFor(nodeId: String): List<Action>
 
-    @Query("SELECT * FROM `action` WHERE toPeerId IN (:peerIds)")
-    fun actionsFor(peerIds: List<String>): List<Action>
+    @Query("SELECT * FROM `action` WHERE toPeerId IN (:nodeIds)")
+    fun actionsFor(nodeIds: List<String>): List<Action>
 
-    @Query("SELECT EXISTS( SELECT 1 FROM `action` WHERE cid = :cid)")
-    fun actionExists(cid: ContentId): Boolean
+    @Query("SELECT EXISTS( SELECT 1 FROM `action` WHERE blobHash = :hash)")
+    fun actionExists(hash: BlobHash): Boolean
 
-    @Query("UPDATE `action` SET cid = :cid WHERE id = :id")
-    fun updateCid(id: Long, cid: ContentId?)
+    @Query("UPDATE `action` SET blobHash = :hash WHERE id = :id")
+    fun updateHash(id: Long, hash: BlobHash?)
 
     @Insert
     fun insert(action: Action): Long

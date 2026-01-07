@@ -1,30 +1,31 @@
 package com.perfectlunacy.bailiwick.storage
 
 import com.perfectlunacy.bailiwick.models.db.*
-import com.perfectlunacy.bailiwick.models.ipfs.Interaction
+import com.perfectlunacy.bailiwick.models.Interaction
 import com.perfectlunacy.bailiwick.storage.bailiwick.BailiwickStoreReader
 import com.perfectlunacy.bailiwick.storage.bailiwick.BailiwickStoreWriter
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import java.io.*
 import java.nio.file.Path
-import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
-typealias PeerId=String
-typealias ContentId=String
-
 interface BailiwickNetwork : BailiwickStoreReader, BailiwickStoreWriter
 
-class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerId, private val filesDir: Path): BailiwickNetwork {
+class BailiwickNetworkImpl(
+    val db: BailiwickDatabase,
+    override val nodeId: NodeId,
+    private val filesDir: Path
+) : BailiwickNetwork {
+
     override val me: Identity
         get() = myIdentities.first()
 
     override val myIdentities: List<Identity>
-        get() = db.identityDao().identitiesFor(peerId)
+        get() = db.identityDao().identitiesFor(nodeId)
 
-    override val peers: List<PeerId>
-        get() = db.subscriptionDao().all().map { it.peerId }
+    override val peers: List<NodeId>
+        get() = db.peerDocDao().subscribedPeers().map { it.nodeId }
 
     override val users: List<Identity>
         get() = db.identityDao().all()
@@ -36,16 +37,16 @@ class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerI
         get() = db.postDao().all()
 
     override fun accountExists(): Boolean {
-        return db.identityDao().identitiesFor(peerId).count() > 0
+        return db.identityDao().identitiesFor(nodeId).isNotEmpty()
     }
 
     override fun circlePosts(circleId: Long): List<Post> {
-        val myIdentities = db.identityDao().identitiesFor(peerId).map { it.id }
+        val myIdentities = db.identityDao().identitiesFor(nodeId).map { it.id }
 
         // friends authors' but not mine - we'll get my posts separately
         val authors = db.circleMemberDao()
-                        .membersFor(circleId)
-                        .filterNot { myIdentities.contains(it) }
+            .membersFor(circleId)
+            .filterNot { myIdentities.contains(it) }
 
         val posts = db.postDao().postsFor(authors).toMutableList()
 
@@ -61,16 +62,16 @@ class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerI
         return posts
     }
 
-    override fun actions(peerId: PeerId): List<Action> {
+    override fun actions(nodeId: NodeId): List<Action> {
         TODO("Not yet implemented")
     }
 
-    override fun interactions(peerId: PeerId): List<Interaction> {
+    override fun interactions(nodeId: NodeId): List<Interaction> {
         TODO("Not yet implemented")
     }
 
-    override fun fileData(cid: ContentId): BufferedInputStream {
-        val f = Path(filesDir.pathString, "bwcache", cid).toFile()
+    override fun fileData(hash: BlobHash): BufferedInputStream {
+        val f = Path(filesDir.pathString, "blobs", hash).toFile()
         return BufferedInputStream(FileInputStream(f))
     }
 
@@ -85,22 +86,22 @@ class BailiwickNetworkImpl(val db: BailiwickDatabase, override val peerId: PeerI
         circlePostDao.insert(CirclePost(circleId, db.postDao().insert(post)))
 
         // Always add things to the 'everyone' circle - if it still exists
-        circles.find { it.name == "everyone"}?.also {
-            if(it.id == circleId) { return@also } // don't double insert
+        circles.find { it.name == "everyone" }?.also {
+            if (it.id == circleId) { return@also } // don't double insert
 
             circlePostDao.insert(CirclePost(it.id, db.postDao().insert(post)))
         }
     }
 
-    override fun storeFile(filename: String, input: InputStream) {
-        val f = Path(filesDir.pathString, "bwcache", filename).toFile()
+    override fun storeFile(hash: BlobHash, input: InputStream) {
+        val f = Path(filesDir.pathString, "blobs", hash).toFile()
         f.parentFile?.mkdirs() // Just in case
         val out = BufferedOutputStream(FileOutputStream(f))
         input.copyTo(out)
+        out.close()
     }
 
     override fun storeAction(action: Action) {
         db.actionDao().insert(action)
     }
-
 }

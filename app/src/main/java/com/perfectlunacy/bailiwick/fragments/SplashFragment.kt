@@ -11,9 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
-import com.perfectlunacy.bailiwick.services.IpfsService
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFS
-import kotlinx.coroutines.CoroutineScope
+import com.perfectlunacy.bailiwick.services.IrohService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,16 +38,17 @@ class SplashFragment : BailiwickFragment() {
         super.onStart()
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                bwModel.ipfs.bootstrap(requireContext())
+                // Iroh is already initialized and connected via BailiwickActivity
                 showSplashScreen()
             }
 
-            IpfsService.start(requireContext())
+            // Start background sync service
+            IrohService.start(requireContext())
         }
     }
 
     private suspend fun showSplashScreen() {
-        Log.i(TAG, "Connected to IPFS network")
+        Log.i(TAG, "Connected to Iroh network")
 
         val nav = requireView().findNavController()
         if (bwModel.network.accountExists()) {

@@ -28,10 +28,10 @@ import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.User
-import com.perfectlunacy.bailiwick.models.ipfs.Introduction
+import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.qr.QREncoder
 import com.perfectlunacy.bailiwick.signatures.Md5Signature
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,7 +142,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                             val key = Md5Signature().sign(password.toByteArray())
                             val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
 
-                            val response = buildResponse(bwModel.name, bwModel.network.peerId)
+                            val response = buildResponse(bwModel.name, bwModel.network.nodeId)
                             val ciphertext = cipher.encrypt(Gson().toJson(response).toByteArray())
                             Handler(requireContext().mainLooper).post {
                                 binding.imgResponseQr.setImageBitmap(
@@ -177,8 +177,8 @@ class AcceptIntroductionFragment : BailiwickFragment() {
         return binding.root
     }
 
-    fun buildResponse(name: String, peerId: PeerId): Introduction {
-        return Introduction(true, peerId, name, Base64.getEncoder().encodeToString(bwModel.ipfs.publicKey.encoded))
+    fun buildResponse(name: String, nodeId: NodeId): Introduction {
+        return Introduction(true, nodeId, name, Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded))
     }
 
     // TODO: Replace this with registerForActivityResult
@@ -224,7 +224,7 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 db.userDao().insert(User(intro.peerId, intro.publicKey))
 
                 // Create an Action with our "everyone" key. It will be encrypted with their Public key
-                val rsa = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
+                val rsa = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 val everyoneId = bwModel.network.circles.find { it.name == "everyone" }?.id ?: 0
                 val circKey = Keyring.keyForCircle(
                     db.keyDao(),

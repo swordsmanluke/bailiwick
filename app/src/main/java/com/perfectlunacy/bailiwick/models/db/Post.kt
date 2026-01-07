@@ -2,8 +2,7 @@ package com.perfectlunacy.bailiwick.models.db
 
 import androidx.room.*
 import com.perfectlunacy.bailiwick.signatures.Signer
-import com.perfectlunacy.bailiwick.storage.ContentId
-import java.lang.RuntimeException
+import com.perfectlunacy.bailiwick.storage.BlobHash
 import java.sql.Time
 import java.text.DateFormat
 import java.time.Instant
@@ -12,9 +11,9 @@ import java.util.*
 @Entity
 data class Post(
     val authorId: Long,
-    val cid: ContentId?,
+    val blobHash: BlobHash?,       // Iroh blob hash (was: cid)
     val timestamp: Long,
-    val parent: ContentId?,
+    val parentHash: BlobHash?,     // Parent post hash for threading (was: parent)
     val text: String,
     var signature: String
 ) {
@@ -33,8 +32,8 @@ data class Post(
     }
 
     private fun signingBytes(files: List<PostFile>): ByteArray {
-        val filenames = files.map { it.fileCid }.sorted().joinToString()
-        return "$timestamp:$parent:$text:$filenames".toByteArray()
+        val filenames = files.map { it.blobHash }.sorted().joinToString()
+        return "$timestamp:$parentHash:$text:$filenames".toByteArray()
     }
 
     override fun hashCode(): Int {
@@ -55,17 +54,17 @@ data class Post(
 
 @Dao
 interface PostDao {
-    @Query("SELECT * FROM post")
+    @Query("SELECT * FROM post ORDER BY timestamp DESC")
     fun all(): List<Post>
 
-    @Query("SELECT * FROM post WHERE cid IS NULL")
+    @Query("SELECT * FROM post WHERE blobHash IS NULL")
     fun inNeedOfSync(): List<Post>
 
     @Query("SELECT * FROM post WHERE id = :id LIMIT 1")
     fun find(id: Long): Post
 
-    @Query("SELECT * FROM post WHERE cid = :cid")
-    fun findByCid(cid: ContentId): Post?
+    @Query("SELECT * FROM post WHERE blobHash = :hash")
+    fun findByHash(hash: BlobHash): Post?
 
     @Query("SELECT * FROM post WHERE authorId = :authorId")
     fun postsFor(authorId: Long): List<Post>
@@ -73,13 +72,21 @@ interface PostDao {
     @Query("SELECT * FROM post WHERE authorId IN (:authorIds)")
     fun postsFor(authorIds: List<Long>): List<Post>
 
-    @Query("SELECT EXISTS( SELECT 1 FROM post WHERE cid = :cid)")
-    fun postExists(cid: ContentId): Boolean
+    @Query("SELECT EXISTS( SELECT 1 FROM post WHERE blobHash = :hash)")
+    fun postExists(hash: BlobHash): Boolean
 
-    @Query("UPDATE post SET cid = :cid WHERE id = :id")
-    fun updateCid(id: Long, cid: ContentId)
+    @Query("UPDATE post SET blobHash = :hash WHERE id = :id")
+    fun updateHash(id: Long, hash: BlobHash)
+
+    @Query("SELECT * FROM post WHERE parentHash = :parentHash ORDER BY timestamp ASC")
+    fun replies(parentHash: BlobHash): List<Post>
+
+    @Query("SELECT COUNT(*) FROM post WHERE parentHash = :parentHash")
+    fun replyCount(parentHash: BlobHash): Int
 
     @Insert
     fun insert(post: Post): Long
 
+    @Update
+    fun update(post: Post)
 }

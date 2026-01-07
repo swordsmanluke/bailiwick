@@ -14,7 +14,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.work.WorkManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
@@ -24,17 +23,11 @@ import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
-import com.perfectlunacy.bailiwick.workers.runners.DownloadRunner
-import com.perfectlunacy.bailiwick.workers.runners.downloaders.FeedDownloader
-import com.perfectlunacy.bailiwick.workers.runners.downloaders.FileDownloader
-import com.perfectlunacy.bailiwick.workers.runners.downloaders.IdentityDownloader
-import com.perfectlunacy.bailiwick.workers.runners.downloaders.PostDownloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.math.sign
 
 
 /**
@@ -74,25 +67,7 @@ class ContentFragment : BailiwickFragment() {
         }
 
         binding.btnRefresh.setOnClickListener {
-            bwModel.viewModelScope.launch {
-                withContext(Dispatchers.IO) {
-                    val db = Bailiwick.getInstance().db
-                    val ipfs = Bailiwick.getInstance().ipfs
-
-                    // Downloader classes which retrieve and store specific IPFS objects
-                    val fileDlr = FileDownloader(requireContext().filesDir.toPath(), db.postFileDao(), ipfs)
-                    val postDlr = PostDownloader(db.postDao(), ipfs, fileDlr)
-                    val identDlr = IdentityDownloader(db.identityDao(), ipfs)
-                    val feedDlr = FeedDownloader(db.keyDao(), identDlr, postDlr, ipfs)
-
-                    DownloadRunner(
-                        requireContext().filesDir.toPath(),
-                        db,
-                        ipfs,
-                        feedDlr
-                    ).run()
-                }
-            }
+            // TODO: Implement Iroh-based content sync
             refreshContent()
         }
 
@@ -103,10 +78,9 @@ class ContentFragment : BailiwickFragment() {
 
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val db = Bailiwick.getInstance().db
-                val sequence = db.sequenceDao().find(bwModel.ipfs.peerID)?.sequence ?: 0
+                val nodeId = Bailiwick.getInstance().iroh?.nodeId ?: "not initialized"
                 Handler(requireContext().mainLooper).post {
-                    binding.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"
+                    binding.txtPeer.text = nodeId
                 }
             }
         }
@@ -118,7 +92,7 @@ class ContentFragment : BailiwickFragment() {
 
             bwModel.viewModelScope.launch {
                 withContext(Dispatchers.Default) {
-                    // TODO: Signatures
+                    val keyring = Bailiwick.getInstance().keyring
                     val newPost = Post(
                         bwModel.network.me.id,
                         null,
@@ -128,7 +102,7 @@ class ContentFragment : BailiwickFragment() {
                         ""
                     )
 
-                    val signer = RsaSignature(bwModel.ipfs.publicKey, bwModel.ipfs.privateKey)
+                    val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
                     val files: List<PostFile> = emptyList()
                     newPost.sign(signer, files)
                     val circId = bwModel.network.circles.first().id
@@ -174,10 +148,10 @@ class ContentFragment : BailiwickFragment() {
                 val posts = bwModel.content["everyone"] ?: emptySet()
                 adapter.addToEnd(posts.toList().sortedByDescending { it.timestamp })
 
-                val sequence = Bailiwick.getInstance().db.ipnsCacheDao().sequenceFor(bwModel.ipfs.peerID) ?: 0
+                val nodeId = Bailiwick.getInstance().iroh?.nodeId ?: "not initialized"
                 Handler(requireContext().mainLooper).post {
                     _binding?.let {
-                        it.txtPeer.text = "${bwModel.ipfs.peerID}:${sequence}"
+                        it.txtPeer.text = nodeId
                     }
                 }
             }

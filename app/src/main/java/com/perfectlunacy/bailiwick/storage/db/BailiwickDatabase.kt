@@ -1,52 +1,46 @@
 package com.perfectlunacy.bailiwick.storage.db
 
 import android.content.Context
-import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.perfectlunacy.bailiwick.models.db.*
 
 @Database(
-    entities = [Account::class,
-                IpnsCache::class,
-                Identity::class,
-                User::class,
-                Circle::class,
-                CircleMember::class,
-                CirclePost::class,
-                Post::class,
-                PostFile::class,
-                Action::class,
-                Subscription::class,
-                Sequence::class,
-                Manifest::class,
-                Key::class],
-    version = 8,
-    autoMigrations = [AutoMigration(from = 1, to = 2),
-                      AutoMigration(from = 2, to = 3),
-                      AutoMigration(from = 3, to = 4),
-                      AutoMigration(from = 4, to = 5),
-                      AutoMigration(from = 5, to = 6),
-                      AutoMigration(from = 6, to = 7),
-                      AutoMigration(from = 7, to = 8)])
-abstract class BailiwickDatabase: RoomDatabase() {
+    entities = [
+        Account::class,
+        Identity::class,
+        Post::class,
+        PostFile::class,
+        Circle::class,
+        CircleMember::class,
+        CirclePost::class,
+        Key::class,
+        PeerDoc::class,
+        Action::class,
+        User::class,
+        Subscription::class
+    ],
+    version = 1,  // Reset to version 1 for Iroh migration
+    exportSchema = true
+)
+abstract class BailiwickDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
-    abstract fun ipnsCacheDao(): IpnsCacheDao
     abstract fun identityDao(): IdentityDao
-    abstract fun userDao(): UserDao
+    abstract fun postDao(): PostDao
+    abstract fun postFileDao(): PostFileDao
     abstract fun circleDao(): CircleDao
     abstract fun circleMemberDao(): CircleMemberDao
     abstract fun circlePostDao(): CirclePostDao
-    abstract fun postDao(): PostDao
-    abstract fun postFileDao(): PostFileDao
-    abstract fun actionDao(): ActionDao
-    abstract fun subscriptionDao(): SubscriptionDao
-    abstract fun sequenceDao(): SequenceDao
-    abstract fun manifestDao(): ManifestDao
     abstract fun keyDao(): KeyDao
+    abstract fun peerDocDao(): PeerDocDao
+    abstract fun actionDao(): ActionDao
+    abstract fun userDao(): UserDao
+    abstract fun subscriptionDao(): SubscriptionDao
 }
 
 fun getBailiwickDb(context: Context): BailiwickDatabase {
-    return Room.databaseBuilder(context, BailiwickDatabase::class.java, "bailiwick-db").build()
+    return Room.databaseBuilder(context, BailiwickDatabase::class.java, "bailiwick-db")
+        .fallbackToDestructiveMigration()  // OK since no users to migrate
+        .build()
 }

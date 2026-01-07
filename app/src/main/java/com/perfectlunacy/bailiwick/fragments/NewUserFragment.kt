@@ -22,7 +22,7 @@ import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Subscription
-import com.perfectlunacy.bailiwick.storage.PeerId
+import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import io.bloco.faker.Faker
 import kotlinx.coroutines.*
@@ -95,10 +95,10 @@ class NewUserFragment : BailiwickFragment() {
             GlobalScope.launch {
                 val out = ByteArrayOutputStream()
                 avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-                val peerId = bwModel.network.peerId
-                val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+                val nodeId = bwModel.network.nodeId
+                val avatarCid = bwModel.iroh.storeBlob(out.toByteArray())
                 bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
-                newAccount(peerId, binding.name ?: "", avatarCid)
+                newAccount(nodeId, binding.name ?: "", avatarCid)
 
                 val nav = requireView().findNavController()
                 Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -111,10 +111,10 @@ class NewUserFragment : BailiwickFragment() {
 
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-            val peerId = bwModel.network.peerId
-            val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+            val nodeId = bwModel.network.nodeId
+            val avatarCid = bwModel.iroh.storeBlob(out.toByteArray())
             bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
-            newAccount(peerId,"Lucas Taylor", avatarCid)
+            newAccount(nodeId, "Lucas Taylor", avatarCid)
 
             val nav = requireView().findNavController()
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -124,10 +124,10 @@ class NewUserFragment : BailiwickFragment() {
             Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
             val out = ByteArrayOutputStream()
             avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-            val peerId = bwModel.network.peerId
-            val avatarCid = bwModel.ipfs.storeData(out.toByteArray())
+            val nodeId = bwModel.network.nodeId
+            val avatarCid = bwModel.iroh.storeBlob(out.toByteArray())
             bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
-            newAccount(peerId, Faker().name.name(), avatarCid)
+            newAccount(nodeId, Faker().name.name(), avatarCid)
 
             val nav = requireView().findNavController()
             Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_newUserFragment_to_contentFragment) }
@@ -136,21 +136,21 @@ class NewUserFragment : BailiwickFragment() {
         return binding.root
     }
 
-    private fun newAccount(peerId: PeerId, name: String, avatarCid: String) {
+    private fun newAccount(nodeId: NodeId, name: String, avatarHash: String) {
         val db = getBailiwickDb(requireContext())
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val identity = Identity(null, peerId, name, avatarCid)
+                val identity = Identity(null, nodeId, name, avatarHash)
                 val identityId = db.identityDao().insert(identity)
 
                 db.subscriptionDao()
-                    .insert(Subscription(peerId, 0)) // Always subscribed to ourselves
+                    .insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
 
                 val circle = Circle("everyone", identityId, null)
                 val circleId = db.circleDao().insert(circle)
 
                 // Create a key for this circle
-                val rsaCipher = RsaWithAesEncryptor(bwModel.ipfs.privateKey, bwModel.ipfs.publicKey)
+                val rsaCipher = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 Keyring.generateAesKey(db.keyDao(), requireContext().filesDir.toPath(), circleId, rsaCipher)
 
                 // Add a new member to the circle

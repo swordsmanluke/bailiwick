@@ -10,7 +10,7 @@ import com.google.zxing.qrcode.QRCodeReader
 import com.perfectlunacy.bailiwick.QRCode
 import java.io.File
 import java.io.InputStream
-import java.util.*
+import java.util.Base64
 
 
 class QREncoder {
@@ -29,7 +29,8 @@ class QREncoder {
         bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
         val bitmap = BinaryBitmap(HybridBinarizer(RGBLuminanceSource(bmp.width, bmp.height, pixels)))
         val result = QRCodeReader().decode(bitmap, mutableMapOf(Pair(DecodeHintType.PURE_BARCODE, 1)))
-        return result.text.toByteArray()
+        // QRCode.create() Base64-encodes the data, so we need to decode it back
+        return Base64.getDecoder().decode(result.text)
     }
 
     fun encode(data: ByteArray): Bitmap {

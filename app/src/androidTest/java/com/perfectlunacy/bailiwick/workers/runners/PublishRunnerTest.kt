@@ -1,119 +1,209 @@
 package com.perfectlunacy.bailiwick.workers.runners
 
 import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.perfectlunacy.bailiwick.Keyring
+import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
-import com.perfectlunacy.bailiwick.models.ipfs.IpfsFeed
-import com.perfectlunacy.bailiwick.models.ipfs.IpfsManifest
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
+import com.perfectlunacy.bailiwick.models.iroh.IrohFeed
+import com.perfectlunacy.bailiwick.models.iroh.IrohIdentity
+import com.perfectlunacy.bailiwick.models.iroh.IrohPost
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.ipfs.IPFSWrapper
-import com.perfectlunacy.bailiwick.storage.ipfs.IpfsDeserializer
+import com.perfectlunacy.bailiwick.storage.iroh.InMemoryIrohNode
+import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import io.bloco.faker.Faker
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import threads.lite.TestEnv
-import java.security.KeyPairGenerator
-import java.security.KeyStore
 import java.util.*
-import javax.crypto.KeyGenerator
 
 
 @RunWith(AndroidJUnit4::class)
-class PublishRunnerTest {
-    private var context: Context = ApplicationProvider.getApplicationContext()
-    private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
-    private val testIpfs = TestEnv.getTestInstance(context)
-    private val keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair()
-    private val ipfs = IPFSWrapper(testIpfs, keyPair) // key doesn't really matter here, but this is the wrong key.
+class ContentPublisherTest {
+    private lateinit var context: Context
+    private lateinit var db: BailiwickDatabase
+    private lateinit var iroh: InMemoryIrohNode
+    private lateinit var publisher: ContentPublisher
+    private val gson = Gson()
+    private val cipher = NoopEncryptor()
 
-    @Test
-    fun postsAndCirclesMakeIPFSManifest() {
-        createAccountWithPost()
-
-        PublishRunner(context, db, ipfs).run()
-
-        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(),
-                                                          ipfs,
-                                                          ipfs.peerID,
-                                                          db.sequenceDao(),
-                                                          "manifest.json",
-                                                          IpfsManifest::class.java)!!
-
-        assertNotNull("Failed to locate manifest", manifest)
-    }
-
-    @Test
-    fun IPFSManifestContainsExpectedPost() {
-        createAccountWithPost()
-
-        PublishRunner(context, db, ipfs).run()
-
-        val manifest = IpfsDeserializer.fromBailiwickFile(NoopEncryptor(), ipfs, ipfs.peerID, db.sequenceDao(), "manifest.json", IpfsManifest::class.java)!!.first
-
-        assertEquals(1, manifest.feeds.size)
-
-        val cipher = Keyring.encryptorForCircle(db.keyDao(), db.circleDao().all().first().id)
-        manifest.feeds.forEach { feedCid ->
-            val feed = IpfsDeserializer.fromCid(cipher, ipfs, feedCid, IpfsFeed::class.java)!!.first
-            assertEquals(1, feed.posts.size)
-            feed.posts.forEach { postCid ->
-                IpfsDeserializer.fromCid(cipher, ipfs, postCid, Post::class.java)!!
-            }
-        }
-    }
-
-    private fun createAccountWithPost() {
-        val peerId = ipfs.peerID
-        val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        val ks = KeyStore.getInstance("AndroidKeyStore")
-        ks.load(null)
-
-        val identity = Identity(null, peerId, "StarBuck", null)
-        val identityId = db.identityDao().insert(identity)
-
-        // Create the "everyone" Circle
-        val everyone = Circle("everyone", identityId, null)
-        val circleId = db.circleDao().insert(everyone)
-        db.circleMemberDao().insert(CircleMember(circleId, identityId))
-
-        // Create a new encryption key for "everyone"
-        val alias = UUID.randomUUID().toString()
-
-        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-            alias,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        ).setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java)
+            .allowMainThreadQueries()
             .build()
-
-        keyGen.init(keyGenParameterSpec)
-        keyGen.generateKey()
-        db.keyDao().insert(Key("circle:$circleId", alias, "AES", KeyType.Secret))
-
-        val bw = BailiwickNetworkImpl(db, peerId, context.filesDir.toPath())
-        bw.storePost(circleId, buildPost(identity))
+        iroh = InMemoryIrohNode()
+        publisher = ContentPublisher(iroh, db)
     }
 
-    private fun buildPost(author: Identity): Post {
-        val now = Calendar.getInstance().timeInMillis
+    @Test
+    fun publishIdentityStoresBlobAndUpdatesDoc() {
+        val identity = createIdentity()
 
-        val myPost = Post(
-            author.id,
-            null,
-            now,
-            null,
-            Faker().lorem.sentence(),
-            ""
+        val hash = publisher.publishIdentity(identity)
+
+        // Verify blob was stored
+        assertNotNull(iroh.getBlob(hash))
+
+        // Verify doc was updated
+        val docValue = iroh.getMyDoc().get("identity")
+        assertNotNull(docValue)
+        assertEquals(hash, String(docValue!!))
+
+        // Verify blob content is correct
+        val storedJson = String(iroh.getBlob(hash)!!)
+        val storedIdentity = gson.fromJson(storedJson, IrohIdentity::class.java)
+        assertEquals(identity.name, storedIdentity.name)
+    }
+
+    @Test
+    fun publishPostStoresBlobAndUpdatesDb() {
+        val identity = createIdentity()
+        val post = createPost(identity.id)
+
+        val hash = publisher.publishPost(post, cipher)
+
+        // Verify blob was stored
+        assertNotNull(iroh.getBlob(hash))
+
+        // Verify content can be decrypted and parsed
+        val encrypted = iroh.getBlob(hash)!!
+        val decrypted = cipher.decrypt(encrypted)
+        val storedPost = gson.fromJson(String(decrypted), IrohPost::class.java)
+
+        assertEquals(post.text, storedPost.text)
+        assertEquals(post.timestamp, storedPost.timestamp)
+    }
+
+    @Test
+    fun publishFeedIncludesAllPosts() {
+        val identity = createIdentity()
+        val circle = createCircle(identity.id)
+
+        // Create and publish multiple posts
+        val post1 = createPost(identity.id)
+        val post2 = createPost(identity.id)
+
+        // Add posts to circle
+        db.circlePostDao().insert(CirclePost(circle.id, post1.id))
+        db.circlePostDao().insert(CirclePost(circle.id, post2.id))
+
+        // Publish posts first (so they have hashes)
+        publisher.publishPost(post1, cipher)
+        publisher.publishPost(post2, cipher)
+
+        // Now publish the feed
+        val feedHash = publisher.publishFeed(circle, cipher)
+
+        // Verify feed was stored
+        assertNotNull(iroh.getBlob(feedHash))
+
+        // Verify feed content
+        val encrypted = iroh.getBlob(feedHash)!!
+        val decrypted = cipher.decrypt(encrypted)
+        val feed = gson.fromJson(String(decrypted), IrohFeed::class.java)
+
+        assertEquals(2, feed.posts.size)
+    }
+
+    @Test
+    fun publishFeedUpdatesDocWithCirclePath() {
+        val identity = createIdentity()
+        val circle = createCircle(identity.id)
+
+        val feedHash = publisher.publishFeed(circle, cipher)
+
+        // Verify doc was updated with circle-specific path
+        val circleValue = iroh.getMyDoc().get("circles/${circle.id}")
+        assertNotNull(circleValue)
+        assertEquals(feedHash, String(circleValue!!))
+
+        // Verify latest feed pointer was updated
+        val latestValue = iroh.getMyDoc().get("feed/latest")
+        assertNotNull(latestValue)
+        assertEquals(feedHash, String(latestValue!!))
+    }
+
+    @Test
+    fun publishPendingPublishesUnpublishedPosts() {
+        val identity = createIdentity()
+        val circle = createCircle(identity.id)
+
+        // Create posts without blob hashes (pending)
+        val post1 = createPost(identity.id)
+        val post2 = createPost(identity.id)
+
+        // Add posts to circle
+        db.circlePostDao().insert(CirclePost(circle.id, post1.id))
+        db.circlePostDao().insert(CirclePost(circle.id, post2.id))
+
+        // Publish all pending content
+        publisher.publishPending(cipher)
+
+        // Verify posts now have hashes in DB
+        val updatedPost1 = db.postDao().find(post1.id)
+        val updatedPost2 = db.postDao().find(post2.id)
+
+        assertNotNull(updatedPost1.blobHash)
+        assertNotNull(updatedPost2.blobHash)
+
+        // Verify blobs exist
+        assertTrue(iroh.hasBlob(updatedPost1.blobHash!!))
+        assertTrue(iroh.hasBlob(updatedPost2.blobHash!!))
+    }
+
+    @Test
+    fun publishFileStoresEncryptedBlob() {
+        val fileData = "Test file content".toByteArray()
+
+        val hash = publisher.publishFile(fileData, cipher)
+
+        // Verify blob was stored
+        assertTrue(iroh.hasBlob(hash))
+
+        // Verify content can be decrypted
+        val encrypted = iroh.getBlob(hash)!!
+        val decrypted = cipher.decrypt(encrypted)
+        assertArrayEquals(fileData, decrypted)
+    }
+
+    // ===== Helper Methods =====
+
+    private fun createIdentity(): Identity {
+        val identity = Identity(
+            blobHash = null,
+            owner = iroh.nodeId,
+            name = Faker().name.name(),
+            profilePicHash = null
         )
-        return myPost
+        identity.id = db.identityDao().insert(identity)
+        return identity
+    }
+
+    private fun createCircle(identityId: Long): Circle {
+        val circle = Circle(
+            name = "Test Circle",
+            identityId = identityId,
+            blobHash = null
+        )
+        circle.id = db.circleDao().insert(circle)
+        return circle
+    }
+
+    private fun createPost(authorId: Long): Post {
+        val post = Post(
+            authorId = authorId,
+            blobHash = null,
+            timestamp = Calendar.getInstance().timeInMillis,
+            parentHash = null,
+            text = Faker().lorem.sentence(),
+            signature = ""
+        )
+        post.id = db.postDao().insert(post)
+        return post
     }
 }

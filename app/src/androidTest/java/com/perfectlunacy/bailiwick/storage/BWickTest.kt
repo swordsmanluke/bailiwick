@@ -5,18 +5,36 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.perfectlunacy.bailiwick.models.db.*
+import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import io.bloco.faker.Faker
-import junit.framework.Assert.*
+import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.KeyPairGenerator
 import java.util.*
 
 @RunWith(AndroidJUnit4::class)
 class BWickTest {
 
-    private var context: Context = ApplicationProvider.getApplicationContext()
-    private var db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java).build()
+    private lateinit var context: Context
+    private lateinit var db: BailiwickDatabase
+    private lateinit var signer: RsaSignature
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+
+        // Create RSA keypair for signing posts
+        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
+            initialize(2048)
+        }.genKeyPair()
+        signer = RsaSignature(keyPair.public, keyPair.private)
+    }
 
     @Test
     fun creatingAPostWorks() {
@@ -108,15 +126,15 @@ class BWickTest {
         assertFalse("Hugh's post is in BestFriends!", bw.circlePosts(friendCirc.id).contains(yourPost))
     }
 
-    fun newAccount(peerId: PeerId, name: String, avatarCid: String) {
-        val identity = Identity(null, peerId, name, avatarCid)
+    private fun newAccount(nodeId: NodeId, name: String, avatarHash: String) {
+        val identity = Identity(null, nodeId, name, avatarHash)
         val identityId = db.identityDao().insert(identity)
 
-        val user = User(peerId, "")
+        val user = User(nodeId, "")
         db.userDao().insert(user)
-        db.subscriptionDao().insert(Subscription(peerId,0)) // Always subscribed to ourselves
+        db.subscriptionDao().insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
 
-        val circle = Circle("everyone", identityId,null)
+        val circle = Circle("everyone", identityId, null)
         val circleId = db.circleDao().insert(circle)
 
         db.circleMemberDao().insert(CircleMember(circleId, identityId))
@@ -125,14 +143,16 @@ class BWickTest {
     private fun buildPost(author: Identity): Post {
         val now = Calendar.getInstance().timeInMillis
 
-        val myPost = Post(
+        val post = Post(
             author.id,
             null,
             now,
             null,
             Faker().lorem.sentence(),
-            ""
+            ""  // Will be signed below
         )
-        return myPost
+        // Sign the post with RSA - this creates a unique, verifiable signature
+        post.sign(signer, emptyList())
+        return post
     }
 }
