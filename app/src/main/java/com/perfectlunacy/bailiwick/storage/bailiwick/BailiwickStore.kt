@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.storage.bailiwick
 
+import androidx.lifecycle.LiveData
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
@@ -18,6 +19,7 @@ interface BailiwickStoreReader {
     val users: List<Identity>
     val circles: List<Circle>
     val posts: List<Post>
+    val postsLive: LiveData<List<Post>>
     fun accountExists(): Boolean
     fun circlePosts(circleId: Long): List<Post>
     fun actions(nodeId: NodeId): List<Action>      // Was: peerId

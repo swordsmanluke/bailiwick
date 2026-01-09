@@ -2,6 +2,7 @@ package com.perfectlunacy.bailiwick.viewmodels
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.perfectlunacy.bailiwick.DeviceKeyring
@@ -21,8 +22,10 @@ class BailiwickViewModel(
     val db: BailiwickDatabase
 ) : ViewModel() {
 
-    // Currently visible content from the network
-    // TODO: LiveData?
+    // Reactive posts from database - automatically updates when posts change
+    val postsLive: LiveData<List<Post>> = network.postsLive
+
+    // Legacy content map - kept for backward compatibility during transition
     val content = HashMap<String, MutableSet<Post>>()
 
     val acceptViewModel = AcceptIntroductionFragment.AcceptViewModel(
@@ -43,8 +46,12 @@ class BailiwickViewModel(
     }
 
     suspend fun refreshContent() {
-        Log.i(TAG, "Retrieved ${network.posts.size} posts")
-        content.getOrPut(EVERYONE_CIRCLE) { mutableSetOf() }.addAll(network.posts)
+        val posts = network.posts
+        Log.i(TAG, "Retrieved ${posts.size} posts from database")
+        posts.forEach { post ->
+            Log.d(TAG, "  Post ${post.id}: authorId=${post.authorId}, text=${post.text?.take(30)}...")
+        }
+        content.getOrPut(EVERYONE_CIRCLE) { mutableSetOf() }.addAll(posts)
 
 //        Log.i(TAG, "Retrieved ${sub.actions.count()} Actions")
 //        sub.actions.forEach { processAction(sub.peerId, it) }

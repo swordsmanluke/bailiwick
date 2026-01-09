@@ -201,10 +201,13 @@ class IrohWrapper private constructor(
             val publicKey = PublicKey.fromString(nodeId)
             val nodeAddr = NodeAddr(publicKey, null, listOf())
 
+            // Use a named tag based on the hash to ensure persistence
+            // Named tags prevent garbage collection and allow re-sharing
+            val tag = SetTagOption.named("blob-$hash".toByteArray())
             val options = BlobDownloadOptions(
                 BlobFormat.RAW,
                 listOf(nodeAddr),
-                SetTagOption.auto()
+                tag
             )
 
             // Track download result

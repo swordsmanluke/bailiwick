@@ -22,7 +22,6 @@ import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +37,9 @@ import kotlin.collections.ArrayList
 class ContentFragment : BailiwickFragment() {
 
     private var _binding: FragmentContentBinding? = null
+
+    // Currently selected user filter (null = show all posts)
+    private var filterByUserId: Long? = null
 
     override fun onResume() {
         super.onResume()
@@ -118,7 +120,16 @@ class ContentFragment : BailiwickFragment() {
         }
 
         buildAdapter(binding.listContent)
-        refreshContent()
+
+        // Observe LiveData for automatic UI updates when posts change
+        bwModel.postsLive.observe(viewLifecycleOwner) { posts ->
+            Log.d(TAG, "LiveData updated: ${posts.size} posts")
+            val filteredPosts = filterByUserId?.let { userId ->
+                posts.filter { it.authorId == userId }
+            } ?: posts
+            adapter.get().clear()
+            adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
+        }
 
         return binding.root
     }
@@ -141,36 +152,25 @@ class ContentFragment : BailiwickFragment() {
 
     @SuppressLint("SetTextI18n")
     private fun refreshContent() {
-        bwModel.viewModelScope.launch {
-            val nodeId = withContext(Dispatchers.Default) {
-                val adapter: PostAdapter = adapter.get()
-                bwModel.refreshContent()
-                adapter.clear()
-                val posts = bwModel.content[EVERYONE_CIRCLE] ?: emptySet()
-                adapter.addToEnd(posts.toList().sortedByDescending { it.timestamp })
-
-                Bailiwick.getInstance().iroh?.nodeId() ?: "not initialized"
-            }
-            _binding?.let {
-                it.txtPeer.text = nodeId
-            }
+        // Clear filter to show all posts
+        filterByUserId = null
+        // Trigger UI update from current LiveData value
+        bwModel.postsLive.value?.let { posts ->
+            Log.d(TAG, "Refreshing: showing all ${posts.size} posts")
+            adapter.get().clear()
+            adapter.get().addToEnd(posts.sortedByDescending { it.timestamp })
         }
     }
 
     private fun filterPostsByUser(user: Identity) {
         Log.d(TAG, "Filtering posts by user: ${user.name} (id=${user.id})")
-        bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val adapter: PostAdapter = adapter.get()
-                bwModel.refreshContent()
-                val allPosts = bwModel.content[EVERYONE_CIRCLE] ?: emptySet()
-                val filteredPosts = allPosts.filter { it.authorId == user.id }
-                Log.d(TAG, "Found ${filteredPosts.size} posts from ${user.name} (out of ${allPosts.size} total)")
-                withContext(Dispatchers.Main) {
-                    adapter.clear()
-                    adapter.addToEnd(filteredPosts.sortedByDescending { it.timestamp })
-                }
-            }
+        filterByUserId = user.id
+        // Apply filter to current LiveData value
+        bwModel.postsLive.value?.let { posts ->
+            val filteredPosts = posts.filter { it.authorId == user.id }
+            Log.d(TAG, "Found ${filteredPosts.size} posts from ${user.name} (out of ${posts.size} total)")
+            adapter.get().clear()
+            adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
         }
     }
 

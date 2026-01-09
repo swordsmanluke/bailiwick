@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick.models.db
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.perfectlunacy.bailiwick.signatures.Signer
 import com.perfectlunacy.bailiwick.storage.BlobHash
@@ -68,6 +69,9 @@ data class Post(
 interface PostDao {
     @Query("SELECT * FROM post ORDER BY timestamp DESC")
     fun all(): List<Post>
+
+    @Query("SELECT * FROM post ORDER BY timestamp DESC")
+    fun allLive(): LiveData<List<Post>>
 
     @Query("SELECT * FROM post WHERE blobHash IS NULL")
     fun inNeedOfSync(): List<Post>

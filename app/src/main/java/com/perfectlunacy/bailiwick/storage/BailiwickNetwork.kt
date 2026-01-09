@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.storage
 
 import android.util.Log
+import androidx.lifecycle.LiveData
 import com.perfectlunacy.bailiwick.models.Interaction
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.Circle
@@ -51,6 +52,9 @@ class BailiwickNetworkImpl(
 
     override val posts: List<Post>
         get() = db.postDao().all()
+
+    override val postsLive: LiveData<List<Post>>
+        get() = db.postDao().allLive()
 
     override fun accountExists(): Boolean {
         val identities = db.identityDao().identitiesFor(nodeId)
