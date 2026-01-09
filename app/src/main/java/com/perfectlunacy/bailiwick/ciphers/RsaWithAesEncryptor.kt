@@ -14,7 +14,7 @@ class RsaWithAesEncryptor(private val privateKey: PrivateKey?, private val publi
         val key = KeyGenerator.getInstance("AES").generateKey()
         val aes = AESEncryptor(key)
 
-        val rsa = Cipher.getInstance("RSA")
+        val rsa = Cipher.getInstance("RSA/ECB/PKCS1Padding")
         rsa.init(Cipher.ENCRYPT_MODE, publicKey)
 
         val encKey = rsa.doFinal(key.encoded)
@@ -29,7 +29,7 @@ class RsaWithAesEncryptor(private val privateKey: PrivateKey?, private val publi
             Log.d(TAG, "Provided block is too small for RSA + AES.")
             return byteArrayOf()
         }
-        val rsa = Cipher.getInstance("RSA")
+        val rsa = Cipher.getInstance("RSA/ECB/PKCS1Padding")
         rsa.init(Cipher.DECRYPT_MODE, privateKey)
         val aesKey = data.sliceArray(0..255)
         val key = SecretKeySpec(rsa.doFinal(aesKey), "AES")

@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.perfectlunacy.bailiwick.models.db.*
 
+@TypeConverters(ActionTypeConverters::class)
 @Database(
     entities = [
         Account::class,
@@ -21,7 +23,7 @@ import com.perfectlunacy.bailiwick.models.db.*
         User::class,
         Subscription::class
     ],
-    version = 1,  // Reset to version 1 for Iroh migration
+    version = 3,  // Added docTicket field to PeerDoc entity
     exportSchema = true
 )
 abstract class BailiwickDatabase : RoomDatabase() {

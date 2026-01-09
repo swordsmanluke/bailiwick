@@ -6,6 +6,11 @@ package com.perfectlunacy.bailiwick.storage
  * Iroh uses BLAKE3 hashes instead of IPFS's SHA-256 multihash.
  * These aliases provide type safety and documentation for the different
  * identifier types used throughout the application.
+ *
+ * Note: These are type aliases rather than value classes due to Room/KAPT
+ * limitations. KAPT's Java stub generation doesn't properly handle Kotlin
+ * value classes, causing "Cannot find getter/setter for field" errors.
+ * Consider migrating to value classes when the project adopts KSP.
  */
 
 // Content hash - BLAKE3 (32 bytes, hex-encoded)

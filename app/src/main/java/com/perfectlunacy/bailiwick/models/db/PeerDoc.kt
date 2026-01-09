@@ -8,13 +8,14 @@ import com.perfectlunacy.bailiwick.storage.NodeId
  * Maps a peer's NodeId to their Iroh Doc namespace.
  * This replaces IPNS - we subscribe to their Doc to get updates.
  */
-@Entity(indices = [Index(value = ["nodeId"], unique = true)])
+@Entity
 data class PeerDoc(
     @PrimaryKey val nodeId: NodeId,
     val docNamespaceId: DocNamespaceId,
     val displayName: String?,
     val lastSyncedAt: Long = 0,
-    val isSubscribed: Boolean = true
+    val isSubscribed: Boolean = true,
+    val docTicket: String? = null  // Full ticket for reconnecting after app restart
 )
 
 @Dao

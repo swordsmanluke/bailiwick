@@ -1,151 +1,108 @@
 package com.perfectlunacy.bailiwick
 
-import android.security.keystore.KeyProperties
-import android.security.keystore.KeyProtection
-import android.util.Log
-import com.google.gson.Gson
-import com.perfectlunacy.bailiwick.ciphers.*
-import com.perfectlunacy.bailiwick.models.db.Key
+import com.perfectlunacy.bailiwick.ciphers.Encryptor
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
+import com.perfectlunacy.bailiwick.crypto.KeyGenerator
+import com.perfectlunacy.bailiwick.crypto.KeyRetrieval
+import com.perfectlunacy.bailiwick.crypto.KeyStorage
 import com.perfectlunacy.bailiwick.models.db.KeyDao
-import com.perfectlunacy.bailiwick.models.db.KeyType
 import com.perfectlunacy.bailiwick.models.db.UserDao
 import com.perfectlunacy.bailiwick.storage.NodeId
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.nio.file.Path
-import java.security.KeyFactory
-import java.security.KeyStore
 import java.security.PublicKey
-import java.security.spec.X509EncodedKeySpec
-import java.util.*
-import javax.crypto.KeyGenerator
-import javax.crypto.spec.SecretKeySpec
-import kotlin.io.path.Path
-import kotlin.io.path.pathString
 
+/**
+ * Facade class for cryptographic key operations.
+ *
+ * This class delegates to focused utility classes for different responsibilities:
+ * - [EncryptorFactory]: Creates Encryptor instances from stored keys
+ * - [KeyGenerator]: Generates new cryptographic keys
+ * - [KeyStorage]: Stores and persists keys
+ * - [KeyRetrieval]: Retrieves keys from storage
+ *
+ * The static methods are maintained for backward compatibility.
+ * New code should prefer using the focused classes directly for
+ * better testability and clearer dependency management.
+ */
 class Keyring {
     companion object {
         const val TAG = "Keyring"
 
+        // ===== Encryptor Factory Methods =====
+
+        /**
+         * Create an encryptor for decrypting content from a peer.
+         * @see EncryptorFactory.forPeer
+         */
         @JvmStatic
         fun encryptorForPeer(keyDao: KeyDao, nodeId: NodeId, validator: (ByteArray) -> Boolean): Encryptor {
-            val ciphers: MutableList<Encryptor> = keyDao.keysFor(nodeId).mapNotNull { key ->
-                key.secretKey?.let{ k -> AESEncryptor(k) }
-            }.toMutableList()
-            ciphers.add(NoopEncryptor())
-
-            return MultiCipher(ciphers, validator)
+            return EncryptorFactory.forPeer(keyDao, nodeId, validator)
         }
 
+        /**
+         * Create an encryptor for a specific circle.
+         * @see EncryptorFactory.forCircle
+         */
         @JvmStatic
         fun encryptorForCircle(keyDao: KeyDao, circleId: Long): Encryptor {
-            val curKey = keyDao.keysFor("circle:$circleId").first()
-            return AESEncryptor(curKey.secretKey!!)
+            return EncryptorFactory.forCircle(keyDao, circleId)
         }
 
-        @JvmStatic
-        fun keyForCircle(keyDao: KeyDao, filesDir: Path, circleId: Int, cipher: Encryptor): ByteArray {
-            val alias = keyDao.keysFor("circle:$circleId").last().alias
+        // ===== Key Generation Methods =====
 
-            val f = Path(filesDir.pathString, "bwcache", "keystore.json").toFile()
-            val input = BufferedInputStream(FileInputStream(f))
-            val rawJson = String(cipher.decrypt(input.readBytes()))
-            val store = Gson().fromJson(rawJson, KeyFile::class.java)
-
-            val keyRec = store.keys.find { it.alias == alias }
-            return Base64.getDecoder().decode(keyRec!!.encKey)
-        }
-
+        /**
+         * Generate a new AES key for a circle.
+         * @see KeyGenerator.generateAesKeyForCircle
+         */
         @JvmStatic
         fun generateAesKey(keyDao: KeyDao, filesDir: Path, circleId: Long, cipher: Encryptor): String {
-            val alias = UUID.randomUUID().toString()
-            val keyGen = KeyGenerator.getInstance("AES")
-            val key = keyGen.generateKey()
-
-            val keyFile = loadKeyFile(filesDir, cipher)
-            keyFile.keys.add(KeyStoreRecord(alias, Base64.getEncoder().encodeToString(key.encoded), "Secret"))
-            saveKeyFile(filesDir, keyFile, cipher)
-
-            // Add key to AndroidKeyStore
-            val ks = KeyStore.getInstance("AndroidKeyStore")
-            ks.load(null)
-
-            val entry = KeyStore.SecretKeyEntry(key)
-            val protection = KeyProtection.Builder(KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-                .build()
-            ks.setEntry(alias, entry, protection)
-
-            keyDao.insert(Key("circle:$circleId", alias, "AES", KeyType.Secret))
-
-            return alias
+            return KeyGenerator.generateAesKeyForCircle(keyDao, filesDir, circleId, cipher)
         }
 
+        // ===== Key Storage Methods =====
+
+        /**
+         * Store an AES key received from a peer.
+         * @see KeyStorage.storeAesKey
+         */
         @JvmStatic
         fun storeAesKey(keyDao: KeyDao, nodeId: NodeId, key: String) {
-            val pk = SecretKeySpec(Base64.getDecoder().decode(key), "AES")
-            val ks = KeyStore.getInstance("AndroidKeyStore")
-            ks.load(null)
-
-            val entry = KeyStore.SecretKeyEntry(pk)
-            val alias = UUID.randomUUID().toString()
-            val protection = KeyProtection.Builder(KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-                .build()
-            ks.setEntry(alias, entry, protection)
-
-            keyDao.insert(Key(nodeId, alias, "AES", KeyType.Secret))
+            KeyStorage.storeAesKey(keyDao, nodeId, key)
         }
 
+        /**
+         * Store a peer's public key.
+         * @see KeyStorage.storePublicKey
+         */
         @JvmStatic
         fun storePubKey(filesDir: Path, nodeId: NodeId, publicKey: String, cipher: Encryptor) {
-            val keyFile = loadKeyFile(filesDir, cipher)
-            keyFile.keys.find { it.alias == "$nodeId:public" }.also {
-                if(it != null) {
-                    Log.w(TAG,"We already have a public key for node $nodeId")
-                    return
-                }
-            }
-
-            keyFile.keys.add(KeyStoreRecord("$nodeId:public", publicKey, KeyType.Public.toString()))
-            saveKeyFile(filesDir, keyFile, cipher)
+            KeyStorage.storePublicKey(filesDir, nodeId, publicKey, cipher)
         }
 
-        private fun loadKeyFile(filesDir: Path, cipher: Encryptor): KeyFile {
-            val f = Path(filesDir.pathString, "bwcache", "keystore.json").toFile()
-            val rawJson = if (f.exists()) {
-                val input = BufferedInputStream(FileInputStream(f))
-                val readString = String(cipher.decrypt(input.readBytes()))
-                if(readString.isBlank()) { "{keys: []}" } else { readString }
-            } else {
-                "{keys: []}"
-            }
+        // ===== Key Retrieval Methods =====
 
-            return Gson().fromJson(rawJson, KeyFile::class.java)
+        /**
+         * Get the raw AES key bytes for a circle.
+         * @see KeyRetrieval.getKeyBytesForCircle
+         */
+        @JvmStatic
+        fun keyForCircle(keyDao: KeyDao, filesDir: Path, circleId: Int, cipher: Encryptor): ByteArray {
+            return KeyRetrieval.getKeyBytesForCircle(keyDao, filesDir, circleId, cipher)
         }
 
-        private fun saveKeyFile(filesDir: Path, keyFile: KeyFile, cipher: Encryptor) {
-            val f = Path(filesDir.pathString, "bwcache", "keystore.json").toFile()
-            f.parentFile?.mkdirs()
-
-            val encryptedFile = cipher.encrypt(Gson().toJson(keyFile).toByteArray())
-            BufferedOutputStream(FileOutputStream(f)).use { file ->
-                file.write(encryptedFile)
-            }
-        }
-
+        /**
+         * Get a peer's public key.
+         * @see KeyRetrieval.getPublicKeyForPeer
+         */
         fun pubKeyFor(userDao: UserDao, nodeId: NodeId): PublicKey? {
-            val key = userDao.publicKeyFor(nodeId) ?: return null
-            val publicKeyData = Base64.getDecoder().decode(key)
-            return KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(publicKeyData))
+            return KeyRetrieval.getPublicKeyForPeer(userDao, nodeId)
         }
-
     }
+
+    // Legacy data classes maintained for backward compatibility with existing keystore files
+    @Deprecated("Use KeyStorage.KeyFile instead", ReplaceWith("KeyStorage.KeyFile"))
     data class KeyFile(val keys: MutableList<KeyStoreRecord>)
+
+    @Deprecated("Use KeyStorage.KeyStoreRecord instead", ReplaceWith("KeyStorage.KeyStoreRecord"))
     data class KeyStoreRecord(val alias: String, val encKey: String, val type: String)
 }
-

@@ -1,15 +1,21 @@
 package com.perfectlunacy.bailiwick.workers
 
 import android.util.Log
-import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.db.*
+import com.perfectlunacy.bailiwick.models.db.ActionType as DbActionType
 import com.perfectlunacy.bailiwick.models.iroh.*
+import com.perfectlunacy.bailiwick.storage.BlobCache
 import com.perfectlunacy.bailiwick.storage.BlobHash
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
+import com.perfectlunacy.bailiwick.crypto.KeyStorage
+import com.perfectlunacy.bailiwick.storage.iroh.IrohDoc
+import com.perfectlunacy.bailiwick.storage.iroh.IrohDocKeys
 import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
+import com.perfectlunacy.bailiwick.util.GsonProvider
 import java.io.File
 
 /**
@@ -27,16 +33,51 @@ class ContentDownloader(
 ) {
     companion object {
         private const val TAG = "ContentDownloader"
-        private const val KEY_IDENTITY = "identity"
-        private const val KEY_FEED_LATEST = "feed/latest"
     }
 
-    private val gson = Gson()
+    private val gson = GsonProvider.gson
+    private val blobCache = BlobCache(cacheDir)
+
+    /**
+     * Downloads a blob from a peer and logs a warning if not found.
+     * @param hash The blob hash to download
+     * @param nodeId The peer to download from
+     * @param contentType Description for logging
+     * @return The blob data, or null if not found.
+     */
+    private suspend fun downloadBlobOrLog(hash: BlobHash, nodeId: NodeId, contentType: String): ByteArray? {
+        return iroh.downloadBlob(hash, nodeId) ?: run {
+            Log.w(TAG, "Could not download $contentType blob $hash from $nodeId")
+            null
+        }
+    }
+
+    /**
+     * Downloads an encrypted blob from a peer, decrypts it, and deserializes to the specified type.
+     * @return The deserialized object, or null if download/decrypt/parse failed.
+     */
+    private suspend inline fun <reified T> downloadAndDecrypt(hash: BlobHash, nodeId: NodeId, cipher: Encryptor, contentType: String): T? {
+        val encrypted = downloadBlobOrLog(hash, nodeId, contentType) ?: return null
+
+        val data = try {
+            cipher.decrypt(encrypted)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to decrypt $contentType $hash: ${e.message}")
+            return null
+        }
+
+        return try {
+            gson.fromJson(String(data), T::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse $contentType $hash: ${e.message}")
+            null
+        }
+    }
 
     /**
      * Sync with all subscribed peers.
      */
-    fun syncAll() {
+    suspend fun syncAll() {
         val peers = db.peerDocDao().subscribedPeers()
         Log.i(TAG, "Syncing with ${peers.size} peers")
 
@@ -53,37 +94,79 @@ class ContentDownloader(
     /**
      * Sync with a specific peer.
      */
-    fun syncPeer(peer: PeerDoc) {
-        Log.i(TAG, "Syncing with peer ${peer.nodeId}")
+    suspend fun syncPeer(peer: PeerDoc) {
+        Log.d(TAG, "Syncing with peer ${peer.nodeId}")
 
-        val doc = iroh.openDoc(peer.docNamespaceId) ?: run {
+        // Use the stored ticket to re-join the doc if available
+        // This ensures we have the peer's relay addresses for syncing
+        val doc = if (peer.docTicket != null) {
+            Log.d(TAG, "Re-joining doc using stored ticket for ${peer.nodeId}")
+            iroh.joinDoc(peer.docTicket) ?: run {
+                Log.w(TAG, "Could not join doc for ${peer.nodeId}, trying openDoc")
+                iroh.openDoc(peer.docNamespaceId)
+            }
+        } else {
+            Log.d(TAG, "No ticket stored, opening doc by namespace for ${peer.nodeId}")
+            iroh.openDoc(peer.docNamespaceId)
+        }
+
+        if (doc == null) {
             Log.w(TAG, "Could not open doc for ${peer.nodeId}")
             return
         }
 
-        // Trigger sync
-        doc.syncWith(peer.nodeId)
+        // Trigger sync with peer
+        try {
+            doc.syncWith(peer.nodeId)
+        } catch (e: Exception) {
+            Log.w(TAG, "syncWith failed for ${peer.nodeId}: ${e.message}")
+        }
+
+        // Wait a moment for sync to propagate
+        // Note: This is a workaround until we implement proper sync completion detection
+        kotlinx.coroutines.delay(3000)
+        Log.d(TAG, "Sync wait complete for peer ${peer.nodeId}")
 
         // Download identity (not encrypted)
-        doc.get(KEY_IDENTITY)?.let { identityHashBytes ->
+        doc.get(IrohDocKeys.KEY_IDENTITY)?.let { identityHashBytes ->
             val hash = String(identityHashBytes)
             downloadIdentity(hash, peer.nodeId)
         }
 
-        // Download latest feed (need cipher for decryption)
-        // Note: In a real implementation, we'd get the cipher from the circle membership
-        // For now, we just log that we found a feed
-        doc.get(KEY_FEED_LATEST)?.let { feedHashBytes ->
+        // Download actions meant for us
+        downloadActions(doc, peer.nodeId)
+
+        // Log all keys in the doc to understand what's available
+        val allKeys = doc.keys()
+        Log.d(TAG, "Peer doc has ${allKeys.size} keys: ${allKeys.take(10)}")
+
+        // Download latest feed using cipher from stored keys
+        val feedHashBytes = doc.get(IrohDocKeys.KEY_FEED_LATEST)
+        Log.d(TAG, "Feed hash bytes: ${feedHashBytes?.let { String(it) } ?: "null"}")
+
+        feedHashBytes?.let {
             val hash = String(feedHashBytes)
-            Log.i(TAG, "Found feed at $hash for peer ${peer.nodeId}")
-            // downloadFeed(hash, peer.nodeId, cipher)
+            Log.d(TAG, "Found feed at $hash for peer ${peer.nodeId}")
+
+            // Create cipher using any keys we have for this peer
+            val cipher = EncryptorFactory.forPeer(db.keyDao(), peer.nodeId) { data ->
+                // Validator: check if decrypted data is valid JSON
+                try {
+                    gson.fromJson(String(data), IrohFeed::class.java)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            downloadFeed(hash, peer.nodeId, cipher)
         }
     }
 
     /**
      * Download and save an identity.
      */
-    private fun downloadIdentity(hash: BlobHash, nodeId: NodeId) {
+    private suspend fun downloadIdentity(hash: BlobHash, nodeId: NodeId) {
         // Check if we already have it
         val existing = db.identityDao().findByHash(hash)
         if (existing != null) {
@@ -91,10 +174,7 @@ class ContentDownloader(
             return
         }
 
-        val data = iroh.getBlob(hash) ?: run {
-            Log.w(TAG, "Could not download identity blob $hash")
-            return
-        }
+        val data = downloadBlobOrLog(hash, nodeId, "identity") ?: return
 
         val irohIdentity = try {
             gson.fromJson(String(data), IrohIdentity::class.java)
@@ -104,7 +184,7 @@ class ContentDownloader(
         }
 
         // Create or update identity in DB
-        val existingByOwner = db.identityDao().identitiesFor(nodeId).firstOrNull()
+        val existingByOwner = db.identityDao().findByOwner(nodeId)
         if (existingByOwner != null) {
             existingByOwner.name = irohIdentity.name
             existingByOwner.profilePicHash = irohIdentity.profilePicHash
@@ -124,34 +204,17 @@ class ContentDownloader(
 
         // Download profile picture if present
         irohIdentity.profilePicHash?.let { picHash ->
-            downloadBlob(picHash)
+            downloadPublicBlob(picHash, nodeId)
         }
     }
 
     /**
      * Download a feed and its posts.
      */
-    fun downloadFeed(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
-        val encrypted = iroh.getBlob(hash) ?: run {
-            Log.w(TAG, "Could not download feed blob $hash")
-            return
-        }
+    suspend fun downloadFeed(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
+        val feed = downloadAndDecrypt<IrohFeed>(hash, nodeId, cipher, "feed") ?: return
 
-        val data = try {
-            cipher.decrypt(encrypted)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to decrypt feed $hash: ${e.message}")
-            return
-        }
-
-        val feed = try {
-            gson.fromJson(String(data), IrohFeed::class.java)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse feed $hash: ${e.message}")
-            return
-        }
-
-        Log.i(TAG, "Downloaded feed with ${feed.posts.size} posts")
+        Log.d(TAG, "Downloaded feed with ${feed.posts.size} posts")
 
         // Download each post
         for (postHash in feed.posts) {
@@ -166,31 +229,14 @@ class ContentDownloader(
     /**
      * Download a post and its files.
      */
-    fun downloadPost(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
+    suspend fun downloadPost(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
         // Skip if already have it
         if (db.postDao().findByHash(hash) != null) {
             Log.d(TAG, "Already have post $hash")
             return
         }
 
-        val encrypted = iroh.getBlob(hash) ?: run {
-            Log.w(TAG, "Could not download post blob $hash")
-            return
-        }
-
-        val data = try {
-            cipher.decrypt(encrypted)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to decrypt post $hash: ${e.message}")
-            return
-        }
-
-        val irohPost = try {
-            gson.fromJson(String(data), IrohPost::class.java)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse post $hash: ${e.message}")
-            return
-        }
+        val irohPost = downloadAndDecrypt<IrohPost>(hash, nodeId, cipher, "post") ?: return
 
         // Find or create identity for this author
         val identity = findOrCreateIdentity(nodeId)
@@ -209,23 +255,20 @@ class ContentDownloader(
         // Download files
         for (file in irohPost.files) {
             try {
-                downloadFile(file.blobHash, postId, file.mimeType, cipher)
+                downloadFile(file.blobHash, nodeId, postId, file.mimeType, cipher)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to download file ${file.blobHash}: ${e.message}")
             }
         }
 
-        Log.i(TAG, "Downloaded post $hash with ${irohPost.files.size} files")
+        Log.d(TAG, "Downloaded post $hash with ${irohPost.files.size} files")
     }
 
     /**
      * Download a file and save to cache.
      */
-    private fun downloadFile(hash: BlobHash, postId: Long, mimeType: String, cipher: Encryptor) {
-        val encrypted = iroh.getBlob(hash) ?: run {
-            Log.w(TAG, "Could not download file blob $hash")
-            return
-        }
+    private suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor) {
+        val encrypted = downloadBlobOrLog(hash, nodeId, "file") ?: return
 
         val data = try {
             cipher.decrypt(encrypted)
@@ -235,8 +278,9 @@ class ContentDownloader(
         }
 
         // Store in local file cache
-        val cacheFile = File(cacheDir, hash)
-        cacheFile.writeBytes(data)
+        if (!blobCache.store(hash, data)) {
+            return
+        }
 
         // Record in DB
         db.postFileDao().insert(PostFile(postId, hash, mimeType))
@@ -245,31 +289,24 @@ class ContentDownloader(
     }
 
     /**
-     * Download a blob to cache without decryption.
+     * Download a public blob to cache without decryption.
      * Used for public content like profile pictures.
      */
-    private fun downloadBlob(hash: BlobHash) {
-        if (File(cacheDir, hash).exists()) {
+    private suspend fun downloadPublicBlob(hash: BlobHash, nodeId: NodeId) {
+        if (blobCache.exists(hash)) {
             Log.d(TAG, "Already have blob $hash in cache")
             return
         }
 
-        val data = iroh.getBlob(hash) ?: run {
-            Log.w(TAG, "Could not download blob $hash")
-            return
-        }
-
-        val cacheFile = File(cacheDir, hash)
-        cacheFile.writeBytes(data)
-
-        Log.d(TAG, "Downloaded blob $hash (${data.size} bytes)")
+        val data = downloadBlobOrLog(hash, nodeId, "blob") ?: return
+        blobCache.store(hash, data)
     }
 
     /**
      * Find or create an identity for a node ID.
      */
     private fun findOrCreateIdentity(nodeId: NodeId): Identity {
-        val existing = db.identityDao().identitiesFor(nodeId).firstOrNull()
+        val existing = db.identityDao().findByOwner(nodeId)
         if (existing != null) {
             return existing
         }
@@ -284,4 +321,124 @@ class ContentDownloader(
         val id = db.identityDao().insert(identity)
         return db.identityDao().find(id)
     }
+
+    /**
+     * Download actions meant for us from a peer's doc.
+     * Actions are stored at: actions/{ourNodeId}/{timestamp}
+     */
+    suspend fun downloadActions(doc: IrohDoc, peerNodeId: NodeId) {
+        val myNodeId = iroh.nodeId()
+        val prefix = "${IrohDocKeys.KEY_ACTIONS_PREFIX}$myNodeId/"
+
+        // Get all keys and filter for actions meant for us
+        val allKeys = doc.keys()
+        val actionKeys = allKeys.filter { it.startsWith(prefix) }
+
+        if (actionKeys.isEmpty()) {
+            return
+        }
+
+        Log.d(TAG, "Found ${actionKeys.size} action keys for us from $peerNodeId")
+
+        for (key in actionKeys) {
+            try {
+                // Get the blob hash stored at this key
+                val hashBytes = doc.get(key) ?: continue
+                val hash = String(hashBytes)
+
+                // Check if we already have this action
+                if (db.actionDao().actionExists(hash)) {
+                    Log.d(TAG, "Already have action $hash")
+                    continue
+                }
+
+                // Download the action blob
+                val data = downloadBlobOrLog(hash, peerNodeId, "action") ?: continue
+
+                // Parse the network action
+                val networkAction = try {
+                    gson.fromJson(String(data), NetworkAction::class.java)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse action $hash: ${e.message}")
+                    continue
+                }
+
+                // Convert to DB action
+                val actionType = try {
+                    DbActionType.valueOf(networkAction.type)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Unknown action type: ${networkAction.type}")
+                    continue
+                }
+
+                val action = Action(
+                    timestamp = networkAction.timestamp,
+                    blobHash = hash,
+                    fromPeerId = peerNodeId,  // The peer who sent us this action
+                    toPeerId = myNodeId,       // It's meant for us
+                    actionType = actionType,
+                    data = networkAction.data,
+                    processed = false  // We need to process this
+                )
+
+                db.actionDao().insert(action)
+                Log.d(TAG, "Downloaded action $hash from $peerNodeId: ${action.actionType}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to download action from key $key: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Process all unprocessed actions.
+     * For UpdateKey actions, stores the received key for future use.
+     */
+    fun processActions() {
+        val pending = db.actionDao().inNeedOfProcessing()
+        if (pending.isEmpty()) {
+            return
+        }
+
+        Log.i(TAG, "Processing ${pending.size} pending actions")
+
+        for (action in pending) {
+            try {
+                when (action.actionType) {
+                    DbActionType.UpdateKey -> processUpdateKeyAction(action)
+                    DbActionType.Delete -> Log.d(TAG, "Delete action not yet implemented")
+                    DbActionType.Introduce -> Log.d(TAG, "Introduce action not yet implemented")
+                }
+                db.actionDao().markProcessed(action.id)
+                Log.d(TAG, "Processed action ${action.id}: ${action.actionType}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to process action ${action.id}: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Process an UpdateKey action.
+     * Stores the received AES key for the sender, allowing us to decrypt their content.
+     */
+    private fun processUpdateKeyAction(action: Action) {
+        val fromPeerId = action.fromPeerId
+        if (fromPeerId == null) {
+            Log.w(TAG, "UpdateKey action has no fromPeerId, cannot store key")
+            return
+        }
+
+        // The data is a Base64-encoded AES key
+        KeyStorage.storeAesKey(db.keyDao(), fromPeerId, action.data)
+        Log.i(TAG, "Stored key from $fromPeerId")
+    }
+
+    /**
+     * Data class for deserializing actions from Iroh.
+     * Matches the format used by ContentPublisher.
+     */
+    private data class NetworkAction(
+        val type: String,
+        val data: String,
+        val timestamp: Long
+    )
 }

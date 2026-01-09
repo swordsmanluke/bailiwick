@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.os.Handler
 import android.os.StrictMode
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,22 +14,21 @@ import android.widget.ArrayAdapter
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
+import androidx.lifecycle.lifecycleScope
 import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
 import com.perfectlunacy.bailiwick.models.Introduction
-import com.perfectlunacy.bailiwick.signatures.Md5Signature
 import com.perfectlunacy.bailiwick.storage.NodeId
+import com.perfectlunacy.bailiwick.util.AvatarLoader
+import com.perfectlunacy.bailiwick.util.GsonProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
-import javax.crypto.spec.SecretKeySpec
 
 
 class IntroduceSelfFragment : BailiwickFragment() {
@@ -55,47 +53,40 @@ class IntroduceSelfFragment : BailiwickFragment() {
 
         // TODO: Manage multiple feeds with names etc. Manifest needs a facade
         //  Also, these files need their CIDs readily available.
-        bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val identities = bwModel.network.myIdentities.map { it.name }
-
-                Handler(requireContext().mainLooper).post {
-                    binding.spnIdentities.adapter = ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_dropdown_item,
-                        listOf("Identity") + identities
-                    )
-                }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val identities = withContext(Dispatchers.Default) {
+                bwModel.network.myIdentities.map { it.name }
             }
+            val ctx = context ?: return@launch
+            binding.spnIdentities.adapter = ArrayAdapter(
+                ctx,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Identity") + identities
+            )
         }
 
         binding.spnIdentities.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?,view: View?,position: Int,id: Long) {
-                bwModel.viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        val identity = bwModel.network.myIdentities.getOrNull(position - 1)
-                        Handler(context!!.mainLooper).post {
-                            binding.txtName.text = identity?.name ?: ""
-                            binding.avatar.setImageBitmap(identity?.avatar(requireContext().filesDir.toPath()))
-                        }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val identity = withContext(Dispatchers.IO) {
+                        bwModel.network.myIdentities.getOrNull(position - 1)
+                    }
+                    val ctx = context ?: return@launch
+                    binding.txtName.text = identity?.name ?: ""
+                    binding.avatar.setImageBitmap(
+                        identity?.let { AvatarLoader.loadAvatar(it, ctx.filesDir.toPath()) }
+                    )
 
-                        if (identity != null) {
-                            val key =
-                                Md5Signature().sign(
-                                    binding.txtPassword.text.toString().toByteArray()
-                                )
-                            val cipher = AESEncryptor(SecretKeySpec(key, "AES"))
-                            val request =
-                                buildRequest(
-                                    binding.txtName.text.toString(),
-                                    bwModel.network.nodeId
-                                )
-                            val ciphertext = cipher.encrypt(Gson().toJson(request).toByteArray())
-
-                            Handler(context!!.mainLooper).post {
-                                binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
-                            }
+                    if (identity != null) {
+                        val ciphertext = withContext(Dispatchers.IO) {
+                            val cipher = AESEncryptor.fromPassword(binding.txtPassword.text.toString())
+                            val request = buildRequest(
+                                binding.txtName.text.toString(),
+                                bwModel.network.nodeId
+                            )
+                            cipher.encrypt(GsonProvider.gson.toJson(request).toByteArray())
                         }
+                        binding.imgQrCode.setImageBitmap(QRCode.create(ciphertext))
                     }
                 }
             }
@@ -122,7 +113,7 @@ class IntroduceSelfFragment : BailiwickFragment() {
             sendIntent.putExtra(Intent.EXTRA_TEXT,
                 "Hi! Let's connect on Bailiwick: the pro-user social network!\n" +
                         "You can find out more here: https://bailiwick.space")
-            Log.i(TAG, "Attaching ${f.path}")
+            Log.d(TAG, "Attaching ${f.path}")
             sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
             sendIntent.type = "image/png"
             startActivity(sendIntent)
@@ -131,8 +122,15 @@ class IntroduceSelfFragment : BailiwickFragment() {
         return binding.root
     }
 
-    fun buildRequest(name: String, nodeId: NodeId): Introduction {
-        return Introduction(false, nodeId, name, Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded))
+    suspend fun buildRequest(name: String, nodeId: NodeId): Introduction {
+        val docTicket = bwModel.iroh.myDocTicket()
+        return Introduction(
+            isResponse = false,
+            peerId = nodeId,
+            name = name,
+            publicKey = Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded),
+            docTicket = docTicket
+        )
     }
 
     companion object {

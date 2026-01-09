@@ -9,13 +9,18 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import com.perfectlunacy.bailiwick.databinding.UserButtonBinding
 import com.perfectlunacy.bailiwick.models.db.Identity
+import com.perfectlunacy.bailiwick.util.AvatarLoader
 
 import android.R
 
 
 
 
-class UserButtonAdapter(val context: Context, private val items: List<Identity>): Adapter<UserButtonViewHolder>() {
+class UserButtonAdapter(
+    val context: Context,
+    private val items: List<Identity>,
+    private val onUserClick: ((Identity) -> Unit)? = null
+): Adapter<UserButtonViewHolder>() {
     private fun getItem(position: Int): Any {
         return items.get(position)
     }
@@ -42,7 +47,12 @@ class UserButtonAdapter(val context: Context, private val items: List<Identity>)
     override fun onBindViewHolder(holder: UserButtonViewHolder, position: Int) {
         val user = getItem(position) as Identity
         val binding = holder.itemView.tag as UserButtonBinding
-        binding.btnAvatar.setImageBitmap(user.avatar(context.filesDir.toPath()))
+        binding.btnAvatar.setImageBitmap(AvatarLoader.loadAvatar(user, context.filesDir.toPath()))
+
+        // Set click listener to filter posts by this user
+        binding.btnAvatar.setOnClickListener {
+            onUserClick?.invoke(user)
+        }
     }
 
     override fun getItemCount(): Int {

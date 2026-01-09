@@ -82,6 +82,35 @@ class BWickTest {
     }
 
     @Test
+    fun storePost_toNonEveryoneCircle_insertsPostOnlyOnce() {
+        // BEAD-002: Verify that storing a post to a circle other than "everyone"
+        // does not insert the post twice into the database
+        val myPeerId = "myPeerId"
+        newAccount(myPeerId, "Test User", "")
+        val me = db.identityDao().identitiesFor(myPeerId).first()
+
+        val bw = BailiwickNetworkImpl(db, myPeerId, context.filesDir.toPath())
+        val friendsCircle = bw.createCircle("friends", me)
+        val everyoneCircle = bw.circles.find { it.name == "everyone" }!!
+
+        // Precondition: no posts exist
+        assertEquals("Precondition failed: posts should be empty", 0, bw.posts.count())
+
+        // Store a post to the "friends" circle (not "everyone")
+        val post = buildPost(me)
+        bw.storePost(friendsCircle.id, post)
+
+        // The post should exist exactly once in the database
+        assertEquals("Post was inserted multiple times!", 1, bw.posts.count())
+
+        // The post should be accessible from both circles
+        assertTrue("Post should be in friends circle",
+            bw.circlePosts(friendsCircle.id).any { it.signature == post.signature })
+        assertTrue("Post should also be in everyone circle",
+            bw.circlePosts(everyoneCircle.id).any { it.signature == post.signature })
+    }
+
+    @Test
     fun postsAreInTheirExpectedCircles() {
         val yourPeerId = "yourPeerId"
         val you = Identity(null, yourPeerId, "Hugh", null)

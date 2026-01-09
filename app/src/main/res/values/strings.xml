@@ -30,4 +30,7 @@
     <string name="from_images">From Images</string>
     <string name="send_response">Send Response</string>
     <string name="ok">Ok</string>
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
+    <string name="error">Error</string>
 </resources>

@@ -2,8 +2,6 @@ package com.perfectlunacy.bailiwick.adapters
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -14,8 +12,10 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.PostBinding
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
+import com.perfectlunacy.bailiwick.util.AvatarLoader
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.IndexOutOfBoundsException
@@ -47,27 +47,26 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
         binding.root.tag = binding
 
         bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                // Don't blow up if we failed to find an item
-                if(post == null) { return@withContext }
+            // Don't blow up if we failed to find an item
+            if(post == null) { return@launch }
 
+            val (author, avatar) = withContext(Dispatchers.Default) {
                 val author = db.identityDao().find(post.authorId)
-                val avatar = author.avatar(context.filesDir.toPath()) ?: BitmapFactory.decodeStream(
-                    context.assets.open("avatar.png")
-                )
-
-                Handler(context.mainLooper).post {
-                    binding.avatar.setImageBitmap(avatar)
-                    binding.txtAuthor.text = author.name
-                    // TODO: Examine Files and add images if necessary
-                    // for f in post.files.select{f -> f.is_image}
-                    //   img_content.setImageDrawable(Drawable.createFromPath(post.imageUrl()))
-                    val img_content = binding.imgSocialContent
-                    img_content.visibility = View.GONE
-
-                    notifyDataSetChanged()
-                }
+                val avatar = AvatarLoader.loadAvatar(author, context.filesDir.toPath())
+                    ?: BitmapFactory.decodeStream(context.assets.open("avatar.png"))
+                author to avatar
             }
+
+            // Back on main thread - update UI
+            binding.avatar.setImageBitmap(avatar)
+            binding.txtAuthor.text = author.name
+            // TODO: Examine Files and add images if necessary
+            // for f in post.files.select{f -> f.is_image}
+            //   img_content.setImageDrawable(Drawable.createFromPath(post.imageUrl()))
+            val img_content = binding.imgSocialContent
+            img_content.visibility = View.GONE
+
+            notifyDataSetChanged()
         }
 
         return binding.root
@@ -78,14 +77,14 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
     }
 
     fun addToEnd(posts: List<Post>) {
-        Log.i(TAG, "Adding ${posts.count()} posts with text: ${posts.map{it.text}}")
+        Log.d(TAG, "Adding ${posts.count()} posts with text: ${posts.map{it.text}}")
         val tempPosts: MutableSet<Post> = mutableSetOf()
         tempPosts.addAll(list)
         tempPosts.addAll(posts)
         list.clear()
         list.addAll(tempPosts)
         list.sortByDescending { it.timestamp ?: System.currentTimeMillis() }
-        Handler(Looper.getMainLooper()).post(Runnable { notifyDataSetChanged() })
+        MainScope().launch { notifyDataSetChanged() }
     }
 
     companion object {

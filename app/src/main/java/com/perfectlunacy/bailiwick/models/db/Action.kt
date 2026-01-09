@@ -7,12 +7,25 @@ import java.util.*
 
 enum class ActionType { Delete, UpdateKey, Introduce }
 
+/**
+ * Room TypeConverters for ActionType enum.
+ */
+class ActionTypeConverters {
+    @TypeConverter
+    fun fromActionType(value: ActionType): String = value.name
+
+    @TypeConverter
+    fun toActionType(value: String): ActionType = ActionType.valueOf(value)
+}
+
 @Entity
+@TypeConverters(ActionTypeConverters::class)
 data class Action(
     val timestamp: Long,
     val blobHash: BlobHash?,
-    val toPeerId: String,
-    val actionType: String,
+    val fromPeerId: String?,  // Source peer who created this action (null for our own actions)
+    val toPeerId: String,      // Target peer who should process this action
+    val actionType: ActionType,
     val data: String,
     val processed: Boolean
 ) {
@@ -23,12 +36,14 @@ data class Action(
         fun updateKeyAction(toNodeId: NodeId, key: String): Action {
             val now = Calendar.getInstance().timeInMillis
             return Action(
-                now,
-                null,
-                toNodeId,
-                ActionType.UpdateKey.toString(),
-                key,
-                true) // I don't need to process this Action, but someone else will
+                timestamp = now,
+                blobHash = null,
+                fromPeerId = null,  // Our own action, fromPeerId will be set by receiver
+                toPeerId = toNodeId,
+                actionType = ActionType.UpdateKey,
+                data = key,
+                processed = true  // We don't need to process this, recipient will
+            )
         }
     }
 }
@@ -65,4 +80,9 @@ interface ActionDao {
     @Insert
     fun insert(action: Action): Long
 
+    @Update
+    fun update(action: Action)
+
+    @Query("UPDATE `action` SET processed = 1 WHERE id = :id")
+    fun markProcessed(id: Long)
 }

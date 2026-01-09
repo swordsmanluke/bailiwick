@@ -1,7 +1,6 @@
 package com.perfectlunacy.bailiwick.fragments
 
 import android.os.Bundle
-import android.os.Handler
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -24,13 +23,11 @@ class ConnectFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_connect, container, false)
 
         view.findViewById<Button>(R.id.btn_conn_request).setOnClickListener {
-            val nav = requireView().findNavController()
-            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_connectFragment_to_subscribeFragment) }
+            requireView().findNavController().navigate(R.id.action_connectFragment_to_subscribeFragment)
         }
 
         view.findViewById<Button>(R.id.btn_conn_accept).setOnClickListener {
-            val nav = requireView().findNavController()
-            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_connectFragment_to_acceptSubscriptionFragment) }
+            requireView().findNavController().navigate(R.id.action_connectFragment_to_acceptSubscriptionFragment)
         }
 
         return view

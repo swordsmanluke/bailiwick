@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "747347f93a436281d50162c6c374a8e7",
+    "identityHash": "cb0eb637117796ece0258dd16dfabe5d",
     "entities": [
       {
         "tableName": "Account",
@@ -400,17 +400,7 @@
             "nodeId"
           ]
         },
-        "indices": [
-          {
-            "name": "index_PeerDoc_nodeId",
-            "unique": true,
-            "columnNames": [
-              "nodeId"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_PeerDoc_nodeId` ON `${TABLE_NAME}` (`nodeId`)"
-          }
-        ],
+        "indices": [],
         "foreignKeys": []
       },
       {
@@ -557,7 +547,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '747347f93a436281d50162c6c374a8e7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cb0eb637117796ece0258dd16dfabe5d')"
     ]
   }
 }

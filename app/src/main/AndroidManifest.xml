@@ -6,11 +6,14 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- Note: External storage permissions removed - app uses internal storage only
+         (filesDir, cacheDir) which doesn't require permissions. FileProvider is configured
+         with cache-path for sharing QR code images. -->
 
     <application
+        android:name=".BailiwickApplication"
         android:usesCleartextTraffic="true"
         android:extractNativeLibs = "true"
         android:hardwareAccelerated="true"
@@ -34,9 +37,16 @@
             android:resource="@xml/paths" />
         </provider>
 
+        <!-- Legacy IPFS service - being phased out -->
         <service android:name=".services.IpfsService"
             android:enabled="true"
             android:exported="false"/>
+
+        <!-- Iroh sync service - replaces IpfsService -->
+        <service android:name=".services.IrohService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
 
         <activity android:name=".BailiwickActivity"
             android:exported="true">

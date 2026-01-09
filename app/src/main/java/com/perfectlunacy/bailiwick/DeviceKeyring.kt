@@ -32,8 +32,11 @@ class DeviceKeyring private constructor(
 
             val keyPair = if (keyStore.containsAlias(KEY_ALIAS)) {
                 Log.i(TAG, "Loading existing device keypair")
-                val privateKey = keyStore.getKey(KEY_ALIAS, null) as PrivateKey
-                val publicKey = keyStore.getCertificate(KEY_ALIAS).publicKey
+                val privateKey = keyStore.getKey(KEY_ALIAS, null) as? PrivateKey
+                    ?: throw IllegalStateException("Device key exists but could not be loaded as PrivateKey")
+                val certificate = keyStore.getCertificate(KEY_ALIAS)
+                    ?: throw IllegalStateException("Device key exists but certificate could not be loaded")
+                val publicKey = certificate.publicKey
                 KeyPair(publicKey, privateKey)
             } else {
                 Log.i(TAG, "Generating new device keypair")

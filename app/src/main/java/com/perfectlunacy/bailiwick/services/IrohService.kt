@@ -9,10 +9,15 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.BailiwickActivity
+import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.R
+import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.workers.ContentDownloader
 import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import kotlinx.coroutines.*
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Background service for syncing with Iroh network.
@@ -58,6 +63,14 @@ class IrohService : Service() {
     }
 
     private fun startSyncLoop() {
+        // Cancel existing job if running to prevent duplicate sync loops
+        syncJob?.let { existingJob ->
+            if (existingJob.isActive) {
+                Log.w(TAG, "Sync loop already running, cancelling and restarting")
+                existingJob.cancel()
+            }
+        }
+
         syncJob = scope.launch {
             while (isActive) {
                 try {
@@ -89,14 +102,61 @@ class IrohService : Service() {
 
         updateNotification("Syncing...")
 
-        // Publish local changes
+        // Publish local changes including actions
         val publisher = ContentPublisher(iroh, db)
-        // TODO: Get cipher from keyring
-        // publisher.publishPending(cipher)
+        try {
+            // Publish identity so others can see who we are
+            val myIdentity = db.identityDao().findByOwner(iroh.nodeId())
+            if (myIdentity != null) {
+                try {
+                    publisher.publishIdentity(myIdentity)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not publish identity: ${e.message}")
+                }
+            }
+
+            // Publish actions first (keys for new peers)
+            publisher.publishActions()
+
+            // Get cipher for the "everyone" circle to publish posts/feeds
+            val everyoneCircle = db.circleDao().all().find { it.name == BailiwickNetworkImpl.EVERYONE_CIRCLE }
+            if (everyoneCircle != null) {
+                try {
+                    val filesDir = applicationContext.filesDir.toPath()
+                    val rsaCipher = RsaWithAesEncryptor(bw.keyring.privateKey, bw.keyring.publicKey)
+                    val keyBytes = Keyring.keyForCircle(db.keyDao(), filesDir, everyoneCircle.id.toInt(), rsaCipher)
+                    val secretKey = SecretKeySpec(keyBytes, "AES")
+                    val cipher = AESEncryptor(secretKey)
+
+                    publisher.publishPending(cipher)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not get circle cipher for publishing: ${e.message}")
+                }
+            } else {
+                Log.w(TAG, "No 'everyone' circle found, skipping post publishing")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to publish: ${e.message}")
+        }
+
+        // Log my doc keys for debugging
+        try {
+            val myDocKeys = iroh.getMyDoc().keys()
+            Log.d(TAG, "My doc has ${myDocKeys.size} keys: ${myDocKeys.take(10)}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not get my doc keys: ${e.message}")
+        }
 
         // Download from peers
         val downloader = ContentDownloader(iroh, db, bw.cacheDir)
         downloader.syncAll()
+
+        // Process any downloaded actions (stores keys, etc.)
+        try {
+            downloader.processActions()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to process actions: ${e.message}")
+        }
 
         val peerCount = db.peerDocDao().subscribedPeers().size
         updateNotification("Connected to $peerCount peers")
@@ -127,11 +187,16 @@ class IrohService : Service() {
     }
 
     private fun createNotification(status: String): Notification {
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
             Intent(this, BailiwickActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            flags
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)

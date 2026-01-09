@@ -3,7 +3,6 @@ package com.perfectlunacy.bailiwick.fragments
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -19,10 +18,13 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
+import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
+import com.perfectlunacy.bailiwick.util.AvatarLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,7 +63,12 @@ class ContentFragment : BailiwickFragment() {
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 val users = bwModel.getUsers()
-                binding.listUsers.adapter = UserButtonAdapter(requireContext(), users)
+                withContext(Dispatchers.Main) {
+                    binding.listUsers.adapter = UserButtonAdapter(requireContext(), users) { selectedUser ->
+                        // Filter posts by selected user
+                        filterPostsByUser(selectedUser)
+                    }
+                }
                 displayAvatar(binding)
             }
         }
@@ -72,17 +79,14 @@ class ContentFragment : BailiwickFragment() {
         }
 
         binding.btnAddSubscription.setOnClickListener {
-            val nav = requireView().findNavController()
-            Handler(requireContext().mainLooper).post { nav.navigate(R.id.action_contentFragment_to_connectFragment) }
+            requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
         }
 
         bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val nodeId = Bailiwick.getInstance().iroh?.nodeId ?: "not initialized"
-                Handler(requireContext().mainLooper).post {
-                    binding.txtPeer.text = nodeId
-                }
+            val nodeId = withContext(Dispatchers.Default) {
+                Bailiwick.getInstance().iroh?.nodeId() ?: "not initialized"
             }
+            binding.txtPeer.text = nodeId
         }
 
 
@@ -121,14 +125,11 @@ class ContentFragment : BailiwickFragment() {
 
     private fun displayAvatar(binding: FragmentContentBinding) {
         bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val avatar = bwModel.network.me.avatar(requireContext().filesDir.toPath())
+            val avatar = withContext(Dispatchers.Default) {
+                AvatarLoader.loadAvatar(bwModel.network.me, requireContext().filesDir.toPath())
                     ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
-
-                Handler(requireContext().mainLooper).post {
-                    binding.imgMyAvatar.setImageBitmap(avatar)
-                }
             }
+            binding.imgMyAvatar.setImageBitmap(avatar)
         }
     }
 
@@ -141,18 +142,33 @@ class ContentFragment : BailiwickFragment() {
     @SuppressLint("SetTextI18n")
     private fun refreshContent() {
         bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
+            val nodeId = withContext(Dispatchers.Default) {
                 val adapter: PostAdapter = adapter.get()
                 bwModel.refreshContent()
                 adapter.clear()
-                val posts = bwModel.content["everyone"] ?: emptySet()
+                val posts = bwModel.content[EVERYONE_CIRCLE] ?: emptySet()
                 adapter.addToEnd(posts.toList().sortedByDescending { it.timestamp })
 
-                val nodeId = Bailiwick.getInstance().iroh?.nodeId ?: "not initialized"
-                Handler(requireContext().mainLooper).post {
-                    _binding?.let {
-                        it.txtPeer.text = nodeId
-                    }
+                Bailiwick.getInstance().iroh?.nodeId() ?: "not initialized"
+            }
+            _binding?.let {
+                it.txtPeer.text = nodeId
+            }
+        }
+    }
+
+    private fun filterPostsByUser(user: Identity) {
+        Log.d(TAG, "Filtering posts by user: ${user.name} (id=${user.id})")
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val adapter: PostAdapter = adapter.get()
+                bwModel.refreshContent()
+                val allPosts = bwModel.content[EVERYONE_CIRCLE] ?: emptySet()
+                val filteredPosts = allPosts.filter { it.authorId == user.id }
+                Log.d(TAG, "Found ${filteredPosts.size} posts from ${user.name} (out of ${allPosts.size} total)")
+                withContext(Dispatchers.Main) {
+                    adapter.clear()
+                    adapter.addToEnd(filteredPosts.sortedByDescending { it.timestamp })
                 }
             }
         }
@@ -166,6 +182,11 @@ class ContentFragment : BailiwickFragment() {
             ArrayList()
         )
         return adapter
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

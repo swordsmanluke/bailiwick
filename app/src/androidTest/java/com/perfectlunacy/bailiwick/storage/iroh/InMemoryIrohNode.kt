@@ -6,14 +6,15 @@ import com.perfectlunacy.bailiwick.storage.NodeId
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * In-memory implementation of IrohNode for unit testing.
+ * In-memory implementation of IrohNode for instrumentation testing.
  * Uses HashMaps to simulate blob storage and documents.
  */
 class InMemoryIrohNode(
-    override val nodeId: NodeId = generateNodeId(),
-    override val myDocNamespaceId: DocNamespaceId = generateDocId()
+    private val cachedNodeId: NodeId = generateNodeId(),
+    private val cachedMyDocNamespaceId: DocNamespaceId = generateDocId()
 ) : IrohNode {
 
     companion object {
@@ -41,31 +42,40 @@ class InMemoryIrohNode(
     private val docs = ConcurrentHashMap<DocNamespaceId, InMemoryIrohDoc>()
 
     // My primary document
-    private val myDoc = InMemoryIrohDoc(myDocNamespaceId)
+    private val myDoc = InMemoryIrohDoc(cachedMyDocNamespaceId)
 
     init {
-        docs[myDocNamespaceId] = myDoc
+        docs[cachedMyDocNamespaceId] = myDoc
+    }
+
+    override suspend fun nodeId(): NodeId = cachedNodeId
+
+    override suspend fun myDocNamespaceId(): DocNamespaceId = cachedMyDocNamespaceId
+
+    override suspend fun myDocTicket(): String {
+        // In-memory mock: return a fake ticket string based on namespace
+        return "ticket:$cachedMyDocNamespaceId"
     }
 
     // ===== Blob Operations =====
 
-    override fun storeBlob(data: ByteArray): BlobHash {
+    override suspend fun storeBlob(data: ByteArray): BlobHash {
         val hash = computeHash(data)
         blobs[hash] = data.copyOf()
         return hash
     }
 
-    override fun getBlob(hash: BlobHash): ByteArray? {
+    override suspend fun getBlob(hash: BlobHash): ByteArray? {
         return blobs[hash]?.copyOf()
     }
 
-    override fun hasBlob(hash: BlobHash): Boolean {
+    override suspend fun hasBlob(hash: BlobHash): Boolean {
         return blobs.containsKey(hash)
     }
 
     // ===== Collection Operations =====
 
-    override fun createCollection(entries: Map<String, BlobHash>): BlobHash {
+    override suspend fun createCollection(entries: Map<String, BlobHash>): BlobHash {
         // Serialize collection to create a deterministic hash
         val serialized = entries.entries
             .sortedBy { it.key }
@@ -76,31 +86,37 @@ class InMemoryIrohNode(
         return hash
     }
 
-    override fun getCollection(hash: BlobHash): Map<String, BlobHash>? {
+    override suspend fun getCollection(hash: BlobHash): Map<String, BlobHash>? {
         return collections[hash]?.toMap()
     }
 
     // ===== Doc Operations =====
 
-    override fun createDoc(): DocNamespaceId {
+    override suspend fun createDoc(): DocNamespaceId {
         val id = generateDocId()
         docs[id] = InMemoryIrohDoc(id)
         return id
     }
 
-    override fun openDoc(namespaceId: DocNamespaceId): IrohDoc? {
+    override suspend fun openDoc(namespaceId: DocNamespaceId): IrohDoc? {
         return docs[namespaceId]
     }
 
-    override fun getMyDoc(): IrohDoc {
+    override suspend fun joinDoc(ticket: String): IrohDoc? {
+        // In-memory mock: parse ticket and create/return doc
+        val namespaceId = ticket.removePrefix("ticket:")
+        return docs.getOrPut(namespaceId) { InMemoryIrohDoc(namespaceId) }
+    }
+
+    override suspend fun getMyDoc(): IrohDoc {
         return myDoc
     }
 
     // ===== Network =====
 
-    override fun isConnected(): Boolean = true
+    override suspend fun isConnected(): Boolean = true
 
-    override fun shutdown() {
+    override suspend fun shutdown() {
         // No-op for in-memory implementation
     }
 
@@ -123,44 +139,57 @@ class InMemoryIrohNode(
         blobs.clear()
         collections.clear()
         docs.clear()
-        docs[myDocNamespaceId] = myDoc
+        docs[cachedMyDocNamespaceId] = myDoc
         myDoc.clear()
     }
 }
 
 /**
- * In-memory implementation of IrohDoc for unit testing.
+ * In-memory implementation of IrohDoc for instrumentation testing.
  */
 class InMemoryIrohDoc(
-    override val namespaceId: DocNamespaceId
+    private val cachedNamespaceId: DocNamespaceId
 ) : IrohDoc {
 
     private val data = ConcurrentHashMap<String, ByteArray>()
-    private val subscribers = mutableListOf<(String, ByteArray) -> Unit>()
+    private val subscribers = CopyOnWriteArrayList<(String, ByteArray) -> Unit>()
 
-    override fun set(key: String, value: ByteArray) {
+    override suspend fun namespaceId(): DocNamespaceId = cachedNamespaceId
+
+    override suspend fun set(key: String, value: ByteArray) {
         data[key] = value.copyOf()
-        // Notify subscribers
-        subscribers.forEach { it(key, value) }
+        // Notify subscribers - wrap in try-catch to prevent subscriber exceptions from breaking set()
+        subscribers.forEach { subscriber ->
+            try {
+                subscriber(key, value)
+            } catch (e: Exception) {
+                // Log but don't propagate subscriber exceptions
+            }
+        }
     }
 
-    override fun get(key: String): ByteArray? {
+    override suspend fun get(key: String): ByteArray? {
         return data[key]?.copyOf()
     }
 
-    override fun delete(key: String) {
+    override suspend fun delete(key: String) {
         data.remove(key)
     }
 
-    override fun keys(): List<String> {
+    override suspend fun keys(): List<String> {
         return data.keys.toList()
     }
 
-    override fun subscribe(onUpdate: (key: String, value: ByteArray) -> Unit) {
+    override suspend fun subscribe(onUpdate: (key: String, value: ByteArray) -> Unit): Subscription {
         subscribers.add(onUpdate)
+        return object : Subscription {
+            override fun unsubscribe() {
+                subscribers.remove(onUpdate)
+            }
+        }
     }
 
-    override fun syncWith(nodeId: NodeId) {
+    override suspend fun syncWith(nodeId: NodeId) {
         // No-op for in-memory implementation - can't sync without network
     }
 

@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.ciphers
 
 import android.util.Log
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
@@ -33,5 +34,19 @@ class AESEncryptor(private val key: SecretKey): Encryptor {
 
     companion object {
         const val TAG = "AESEncryptor"
+
+        /**
+         * Creates an AESEncryptor from a password string.
+         * Uses MD5 to derive a 128-bit key from the password.
+         *
+         * Note: MD5 is used for backwards compatibility. For new implementations,
+         * consider using a proper key derivation function like PBKDF2.
+         */
+        fun fromPassword(password: String): AESEncryptor {
+            val md = MessageDigest.getInstance("MD5")
+            md.update(password.toByteArray())
+            val key = SecretKeySpec(md.digest(), "AES")
+            return AESEncryptor(key)
+        }
     }
 }

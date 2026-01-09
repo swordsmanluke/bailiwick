@@ -3,11 +3,18 @@ package com.perfectlunacy.bailiwick.models.db
 import androidx.room.*
 import com.perfectlunacy.bailiwick.signatures.Signer
 import com.perfectlunacy.bailiwick.storage.BlobHash
-import java.sql.Time
-import java.text.DateFormat
-import java.time.Instant
 import java.util.*
 
+/**
+ * A social post entity.
+ *
+ * **Equality Note:** Posts are compared by [signature] only, not by all fields.
+ * This is intentional because the signature cryptographically identifies the post content.
+ * Two posts with the same signature represent the same content, regardless of database ID.
+ *
+ * **Important:** Posts must be signed via [sign] before being used in Sets or as Map keys,
+ * otherwise all unsigned posts (with empty signature) would be considered equal.
+ */
 @Entity
 data class Post(
     val authorId: Long,
@@ -19,14 +26,11 @@ data class Post(
 ) {
     @PrimaryKey(autoGenerate = true) var id: Long = 0
 
-    val timeStr: String
-        get() {
-            val time = Time.from(Instant.ofEpochMilli(timestamp))
-            val formatter = DateFormat.getDateTimeInstance()
-
-            return formatter.format(time)
-        }
-
+    /**
+     * Sign this post using the provided signer.
+     * The signature covers: timestamp, parentHash, text, and file hashes.
+     * Must be called before using this post in collections (Set, Map keys).
+     */
     fun sign(signer: Signer, files: List<PostFile>) {
         signature = Base64.getEncoder().encodeToString(signer.sign(signingBytes(files)))
     }
@@ -36,10 +40,18 @@ data class Post(
         return "$timestamp:$parentHash:$text:$filenames".toByteArray()
     }
 
+    /**
+     * Hash code based on signature only.
+     * See class documentation for rationale.
+     */
     override fun hashCode(): Int {
         return signature.hashCode()
     }
 
+    /**
+     * Equality based on signature only.
+     * See class documentation for rationale.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -71,6 +83,9 @@ interface PostDao {
 
     @Query("SELECT * FROM post WHERE authorId IN (:authorIds)")
     fun postsFor(authorIds: List<Long>): List<Post>
+
+    @Query("SELECT * FROM post WHERE id IN (:ids)")
+    fun findAll(ids: List<Long>): List<Post>
 
     @Query("SELECT EXISTS( SELECT 1 FROM post WHERE blobHash = :hash)")
     fun postExists(hash: BlobHash): Boolean

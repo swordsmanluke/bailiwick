@@ -2,6 +2,7 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
+        <import type="com.perfectlunacy.bailiwick.util.PostFormatter"/>
         <variable
             name="post"
             type="com.perfectlunacy.bailiwick.models.db.Post"/>
@@ -42,7 +43,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:hint="12/20/2021 5:01PM"
-                android:text="@{post.timeStr}"/>
+                android:text="@{PostFormatter.formatTime(post.timestamp)}"/>
         </LinearLayout>
 
         <!--  Post Content  -->
