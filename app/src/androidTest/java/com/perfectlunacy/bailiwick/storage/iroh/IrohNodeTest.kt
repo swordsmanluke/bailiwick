@@ -3,6 +3,7 @@ package com.perfectlunacy.bailiwick.storage.iroh
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -25,13 +26,13 @@ class IrohNodeTest {
     }
 
     @Test
-    fun nodeIdIs64Characters() {
+    fun nodeIdIs64Characters() = runBlocking {
         // Iroh node IDs are 64 hex characters (32 bytes Ed25519 public key)
-        assertEquals(64, iroh.nodeId.length)
+        assertEquals(64, iroh.nodeId().length)
     }
 
     @Test
-    fun storeAndRetrieveBlob() {
+    fun storeAndRetrieveBlob() = runBlocking {
         val content = "Some test content"
         val data = content.toByteArray()
 
@@ -47,7 +48,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun documentStructureForBailiwick() {
+    fun documentStructureForBailiwick() = runBlocking {
         // Simulate the Bailiwick directory structure using Iroh docs
 
         // Store identity content
@@ -81,7 +82,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun collectionsMaintainStructure() {
+    fun collectionsMaintainStructure() = runBlocking {
         // Store some blobs
         val file1Hash = iroh.storeBlob("File 1 content".toByteArray())
         val file2Hash = iroh.storeBlob("File 2 content".toByteArray())
@@ -109,7 +110,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun hasBlobWorksCorrectly() {
+    fun hasBlobWorksCorrectly() = runBlocking {
         val hash = iroh.storeBlob("test data".toByteArray())
 
         assertTrue(iroh.hasBlob(hash))
@@ -117,7 +118,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun multipleDocsAreIndependent() {
+    fun multipleDocsAreIndependent() = runBlocking {
         val doc1Id = iroh.createDoc()
         val doc2Id = iroh.createDoc()
 
@@ -134,7 +135,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun docKeysListsAllKeys() {
+    fun docKeysListsAllKeys() = runBlocking {
         val doc = iroh.getMyDoc()
 
         doc.set("alpha", "1".toByteArray())
@@ -149,7 +150,7 @@ class IrohNodeTest {
     }
 
     @Test
-    fun docDeleteRemovesKey() {
+    fun docDeleteRemovesKey() = runBlocking {
         val doc = iroh.getMyDoc()
         doc.set("temporary", "data".toByteArray())
 
@@ -161,8 +162,27 @@ class IrohNodeTest {
     }
 
     @Test
-    fun isConnectedReturnsTrue() {
+    fun isConnectedReturnsTrue() = runBlocking {
         // InMemoryIrohNode is always "connected"
         assertTrue(iroh.isConnected())
+    }
+
+    @Test
+    fun keysWithPrefixFiltersCorrectly() = runBlocking {
+        val doc = iroh.getMyDoc()
+
+        doc.set("posts/1/100", "post1".toByteArray())
+        doc.set("posts/1/200", "post2".toByteArray())
+        doc.set("posts/2/100", "post3".toByteArray())
+        doc.set("identity", "identity".toByteArray())
+
+        val allPosts = doc.keysWithPrefix("posts/")
+        assertEquals(3, allPosts.size)
+
+        val circle1Posts = doc.keysWithPrefix("posts/1/")
+        assertEquals(2, circle1Posts.size)
+
+        val circle2Posts = doc.keysWithPrefix("posts/2/")
+        assertEquals(1, circle2Posts.size)
     }
 }

@@ -73,6 +73,11 @@ class InMemoryIrohNode(
         return blobs.containsKey(hash)
     }
 
+    override suspend fun downloadBlob(hash: BlobHash, nodeId: NodeId): ByteArray? {
+        // In-memory mock: just return from local storage
+        return getBlob(hash)
+    }
+
     // ===== Collection Operations =====
 
     override suspend fun createCollection(entries: Map<String, BlobHash>): BlobHash {
@@ -106,6 +111,10 @@ class InMemoryIrohNode(
         // In-memory mock: parse ticket and create/return doc
         val namespaceId = ticket.removePrefix("ticket:")
         return docs.getOrPut(namespaceId) { InMemoryIrohDoc(namespaceId) }
+    }
+
+    override suspend fun dropDoc(namespaceId: DocNamespaceId) {
+        docs.remove(namespaceId)
     }
 
     override suspend fun getMyDoc(): IrohDoc {
@@ -180,6 +189,10 @@ class InMemoryIrohDoc(
         return data.keys.toList()
     }
 
+    override suspend fun keysWithPrefix(prefix: String): List<String> {
+        return data.keys.filter { it.startsWith(prefix) }
+    }
+
     override suspend fun subscribe(onUpdate: (key: String, value: ByteArray) -> Unit): Subscription {
         subscribers.add(onUpdate)
         return object : Subscription {
@@ -191,6 +204,22 @@ class InMemoryIrohDoc(
 
     override suspend fun syncWith(nodeId: NodeId) {
         // No-op for in-memory implementation - can't sync without network
+    }
+
+    override suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long): Boolean {
+        // In-memory mock: always return success (nothing to sync)
+        return true
+    }
+
+    override suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>> {
+        // In-memory mock: return single entry if exists
+        val value = data[key] ?: return emptyList()
+        return listOf(Pair("mock-author", String(value)))
+    }
+
+    override suspend fun leave() {
+        // In-memory mock: clear data to simulate leaving
+        data.clear()
     }
 
     // ===== Test Utilities =====

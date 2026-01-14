@@ -73,6 +73,12 @@ class InMemoryIrohNode(
         return blobs.containsKey(hash)
     }
 
+    override suspend fun downloadBlob(hash: BlobHash, nodeId: NodeId): ByteArray? {
+        // In-memory mock: just return local blob if available
+        // In real implementation, this would download from the peer
+        return blobs[hash]?.copyOf()
+    }
+
     // ===== Collection Operations =====
 
     override suspend fun createCollection(entries: Map<String, BlobHash>): BlobHash {
@@ -106,6 +112,10 @@ class InMemoryIrohNode(
         // In-memory mock: parse ticket and create/return doc
         val namespaceId = ticket.removePrefix("ticket:")
         return docs.getOrPut(namespaceId) { InMemoryIrohDoc(namespaceId) }
+    }
+
+    override suspend fun dropDoc(namespaceId: DocNamespaceId) {
+        docs.remove(namespaceId)
     }
 
     override suspend fun getMyDoc(): IrohDoc {
@@ -191,6 +201,23 @@ class InMemoryIrohDoc(
 
     override suspend fun syncWith(nodeId: NodeId) {
         // No-op for in-memory implementation - can't sync without network
+    }
+
+    override suspend fun keysWithPrefix(prefix: String): List<String> {
+        return data.keys.filter { it.startsWith(prefix) }
+    }
+
+    override suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long): Boolean {
+        return true  // In-memory mock
+    }
+
+    override suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>> {
+        val value = data[key] ?: return emptyList()
+        return listOf(Pair("mock-author", String(value)))
+    }
+
+    override suspend fun leave() {
+        data.clear()
     }
 
     // ===== Test Utilities =====
