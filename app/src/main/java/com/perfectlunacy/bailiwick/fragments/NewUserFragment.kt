@@ -23,119 +23,194 @@ import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Subscription
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.NodeId
-import io.bloco.faker.Faker
-import kotlinx.coroutines.*
-import java.io.*
-import java.net.URL
-import java.util.*
+import com.perfectlunacy.bailiwick.util.PhotoPicker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 /**
- * A simple [Fragment] subclass.
- * Use the [NewUserFragment.newInstance] factory method to
- * create an instance of this fragment.
+ * Account creation fragment with profile photo selection.
  */
 class NewUserFragment : BailiwickFragment() {
+
+    private var _binding: FragmentNewUserBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var photoPicker: PhotoPicker
+    private var selectedAvatar: Bitmap? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        photoPicker = PhotoPicker(this)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inflate the layout for this fragment
-        val binding = DataBindingUtil.inflate<FragmentNewUserBinding>(inflater, R.layout.fragment_new_user, container, false)
-        var avatar = BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+        _binding = DataBindingUtil.inflate(
+            inflater,
+            R.layout.fragment_new_user,
+            container,
+            false
+        )
 
-        binding.newUserName.doOnTextChanged { text, start, before, count ->
-            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
-                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
-                    binding.newPassword.text.toString().length > 8
+        // Load default avatar
+        selectedAvatar = BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
 
-            Log.d(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
-
-            binding.newUserBtnGo.isEnabled = goIsEnabled
-        }
-
-        binding.avatar.setOnClickListener {
-            // TODO: Instead of using Faker, build this URL myself. Maybe some radio buttons?
-            viewLifecycleOwner.lifecycleScope.launch {
-                val downloadedAvatar = withContext(Dispatchers.IO) {
-                    val imgUrl = URL(Faker().avatar.image(Calendar.getInstance().timeInMillis.toString()))
-                    BitmapFactory.decodeStream(imgUrl.openConnection().getInputStream())
-                }
-                avatar = downloadedAvatar
-                binding.avatar.setImageBitmap(avatar)
-            }
-        }
-
-        // Make
-        // sure new and confirmed password fields are the same
-        binding.newPassword.doOnTextChanged { text, start, before, count ->
-            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
-                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
-                    binding.newPassword.text.toString().length > 8
-
-            Log.d(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
-            binding.newUserBtnGo.isEnabled = goIsEnabled
-        }
-
-        binding.confirmPassword.doOnTextChanged { text, start, before, count ->
-            val goIsEnabled = binding.newUserName.text.toString().length > 3 &&
-                    binding.confirmPassword.text.toString() == binding.newPassword.text.toString() &&
-                    binding.newPassword.text.toString().length > 8
-
-            Log.d(TAG, "Go Enabled: $goIsEnabled, pass eq: ${binding.confirmPassword.text.toString() == binding.newPassword.text.toString()}, passLen: ${binding.newPassword.text.length}, userlen: ${binding.newUserName.text.length}")
-            binding.newUserBtnGo.isEnabled = goIsEnabled
-        }
-
-        binding.newUserBtnGo.setOnClickListener {
-            binding.newUserBtnGo.isEnabled = false
-            binding.newPassword.isEnabled = false
-            binding.confirmPassword.isEnabled = false
-            binding.newUserName.isEnabled = false
-
-            Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
-
-            // TODO: Show Spinner until this completes
-            viewLifecycleOwner.lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    val out = ByteArrayOutputStream()
-                    avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-                    val nodeId = bwModel.network.nodeId
-                    val avatarCid = bwModel.iroh.storeBlob(out.toByteArray())
-                    bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
-                    // Use public name for display, fall back to username if empty
-                    val displayName = binding.newPublicName.text.toString().ifEmpty {
-                        binding.newUserName.text.toString()
-                    }
-                    newAccount(nodeId, displayName, avatarCid)
-                }
-                view?.findNavController()?.navigate(R.id.action_newUserFragment_to_contentFragment)
-            }
-        }
-
-        binding.btnRando.setOnClickListener {
-            Toast.makeText(this.context, "Creating account, please wait...", Toast.LENGTH_LONG).show()
-            viewLifecycleOwner.lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    val out = ByteArrayOutputStream()
-                    avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
-                    val nodeId = bwModel.network.nodeId
-                    val avatarCid = bwModel.iroh.storeBlob(out.toByteArray())
-                    bwModel.network.storeFile(avatarCid, ByteArrayInputStream(out.toByteArray()))
-                    newAccount(nodeId, Faker().name.name(), avatarCid)
-                }
-                view?.findNavController()?.navigate(R.id.action_newUserFragment_to_contentFragment)
-            }
-        }
+        setupFormValidation()
+        setupAvatarPicker()
+        setupSubmitButton()
 
         return binding.root
     }
 
+    private fun setupFormValidation() {
+        val validateForm = {
+            val usernameValid = binding.newUserName.text.toString().length >= 4
+            val passwordValid = binding.newPassword.text.toString().length >= 8
+            val passwordsMatch = binding.confirmPassword.text.toString() == binding.newPassword.text.toString()
+
+            // Show/hide error message
+            when {
+                binding.newPassword.text.toString().isNotEmpty() &&
+                        binding.confirmPassword.text.toString().isNotEmpty() &&
+                        !passwordsMatch -> {
+                    binding.txtError.visibility = View.VISIBLE
+                    binding.txtError.text = getString(R.string.passwords_dont_match)
+                }
+                binding.newPassword.text.toString().isNotEmpty() &&
+                        binding.newPassword.text.toString().length < 8 -> {
+                    binding.txtError.visibility = View.VISIBLE
+                    binding.txtError.text = getString(R.string.password_too_short)
+                }
+                else -> {
+                    binding.txtError.visibility = View.GONE
+                }
+            }
+
+            binding.newUserBtnGo.isEnabled = usernameValid && passwordValid && passwordsMatch
+
+            Log.d(TAG, "Form validation: username=$usernameValid, password=$passwordValid, match=$passwordsMatch")
+        }
+
+        binding.newUserName.doOnTextChanged { _, _, _, _ -> validateForm() }
+        binding.newPassword.doOnTextChanged { _, _, _, _ -> validateForm() }
+        binding.confirmPassword.doOnTextChanged { _, _, _, _ -> validateForm() }
+    }
+
+    private fun setupAvatarPicker() {
+        binding.avatar.setOnClickListener {
+            showPhotoOptions()
+        }
+    }
+
+    private fun showPhotoOptions() {
+        // Show dialog with options: Camera or Gallery
+        val options = arrayOf(
+            getString(R.string.take_photo),
+            getString(R.string.choose_photo)
+        )
+
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.profile_picture))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> takePhoto()
+                    1 -> pickFromGallery()
+                }
+            }
+            .show()
+    }
+
+    private fun takePhoto() {
+        photoPicker.takePhoto(
+            onSelected = { bitmap ->
+                selectedAvatar = bitmap
+                binding.avatar.setImageBitmap(bitmap)
+            },
+            onError = { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun pickFromGallery() {
+        photoPicker.pickPhoto(
+            onSelected = { bitmap ->
+                selectedAvatar = bitmap
+                binding.avatar.setImageBitmap(bitmap)
+            },
+            onError = { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun setupSubmitButton() {
+        binding.newUserBtnGo.setOnClickListener {
+            createAccount()
+        }
+    }
+
+    private fun createAccount() {
+        // Disable form during creation
+        setFormEnabled(false)
+        binding.progressLoading.visibility = View.VISIBLE
+
+        val displayName = binding.newPublicName.text.toString().ifEmpty {
+            binding.newUserName.text.toString()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val avatar = selectedAvatar ?: BitmapFactory.decodeStream(
+                        requireContext().assets.open("avatar.png")
+                    )
+
+                    val out = ByteArrayOutputStream()
+                    avatar.compress(Bitmap.CompressFormat.PNG, 100, out)
+
+                    val nodeId = bwModel.network.nodeId
+                    val avatarHash = bwModel.iroh.storeBlob(out.toByteArray())
+                    bwModel.network.storeFile(avatarHash, java.io.ByteArrayInputStream(out.toByteArray()))
+
+                    newAccount(nodeId, displayName, avatarHash)
+                }
+
+                // Navigate to main content
+                view?.findNavController()?.navigate(R.id.action_newUserFragment_to_contentFragment)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Account creation failed", e)
+                withContext(Dispatchers.Main) {
+                    binding.txtError.visibility = View.VISIBLE
+                    binding.txtError.text = "Account creation failed: ${e.message}"
+                    setFormEnabled(true)
+                    binding.progressLoading.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun setFormEnabled(enabled: Boolean) {
+        binding.newUserName.isEnabled = enabled
+        binding.newPublicName.isEnabled = enabled
+        binding.newPassword.isEnabled = enabled
+        binding.confirmPassword.isEnabled = enabled
+        binding.newUserBtnGo.isEnabled = enabled
+        binding.avatar.isEnabled = enabled
+    }
+
     private fun newAccount(nodeId: NodeId, name: String, avatarHash: String) {
         val ctx = context ?: return
-        // Use the same database instance from the ViewModel to ensure consistency
         val db = bwModel.db
         val filesDir = ctx.filesDir.toPath()
 
         Log.d(TAG, "Creating new account: nodeId=$nodeId, name=$name")
+
         val identity = Identity(null, nodeId, name, avatarHash)
         val identityId = db.identityDao().insert(identity)
         Log.d(TAG, "Inserted identity with id=$identityId")
@@ -144,8 +219,7 @@ class NewUserFragment : BailiwickFragment() {
         val saved = db.identityDao().find(identityId)
         Log.d(TAG, "Verified saved identity: id=${saved.id}, owner=${saved.owner}, name=${saved.name}")
 
-        db.subscriptionDao()
-            .insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
+        db.subscriptionDao().insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
 
         val circle = Circle(EVERYONE_CIRCLE, identityId, null)
         val circleId = db.circleDao().insert(circle)
@@ -158,15 +232,12 @@ class NewUserFragment : BailiwickFragment() {
         db.circleMemberDao().insert(CircleMember(circleId, identityId))
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment NewUserFragment.
-         */
         @JvmStatic
         fun newInstance() = NewUserFragment()
 

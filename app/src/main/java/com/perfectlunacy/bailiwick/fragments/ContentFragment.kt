@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.fragments
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
@@ -8,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ListView
+import android.widget.Toast
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
@@ -15,20 +17,26 @@ import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
+import com.perfectlunacy.bailiwick.adapters.CircleFilterAdapter
+import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
+import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
+import com.perfectlunacy.bailiwick.storage.FilterPreferences
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.util.AvatarLoader
+import com.perfectlunacy.bailiwick.util.PhotoPicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.*
-import kotlin.collections.ArrayList
 
 
 /**
@@ -38,8 +46,23 @@ class ContentFragment : BailiwickFragment() {
 
     private var _binding: FragmentContentBinding? = null
 
-    // Currently selected user filter (null = show all posts)
+    // Filter state
+    private lateinit var filterPrefs: FilterPreferences
     private var filterByUserId: Long? = null
+    private var filterByCircleId: Long? = null
+
+    // Photo handling
+    private lateinit var photoPicker: PhotoPicker
+    private val selectedPhotos = mutableListOf<Bitmap>()
+
+    // Circle filter adapter
+    private var circleFilterAdapter: CircleFilterAdapter? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        photoPicker = PhotoPicker(this)
+        filterPrefs = FilterPreferences(requireContext())
+    }
 
     override fun onResume() {
         super.onResume()
@@ -57,32 +80,15 @@ class ContentFragment : BailiwickFragment() {
             false
         )
 
-        val binding = _binding!! // capture and assert not null to make the Kotlin compiler happy
+        val binding = _binding!!
 
-        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        binding.listUsers.setLayoutManager(layoutManager)
+        // Restore filter state
+        restoreFilterState()
 
-        bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val users = bwModel.getUsers()
-                withContext(Dispatchers.Main) {
-                    binding.listUsers.adapter = UserButtonAdapter(requireContext(), users) { selectedUser ->
-                        // Filter posts by selected user
-                        filterPostsByUser(selectedUser)
-                    }
-                }
-                displayAvatar(binding)
-            }
-        }
-
-        binding.btnRefresh.setOnClickListener {
-            // TODO: Implement Iroh-based content sync
-            refreshContent()
-        }
-
-        binding.btnAddSubscription.setOnClickListener {
-            requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
-        }
+        setupCircleFilter(binding)
+        setupUserFilter(binding)
+        setupPostComposer(binding)
+        setupPostList(binding)
 
         bwModel.viewModelScope.launch {
             val nodeId = withContext(Dispatchers.Default) {
@@ -91,47 +97,175 @@ class ContentFragment : BailiwickFragment() {
             binding.txtPeer.text = nodeId
         }
 
+        return binding.root
+    }
 
-        binding.btnPost.setOnClickListener {
-            val text = binding.txtPostText.text.toString()
-            binding.txtPostText.text.clear()
-
-            bwModel.viewModelScope.launch {
-                withContext(Dispatchers.Default) {
-                    val keyring = Bailiwick.getInstance().keyring
-                    val newPost = Post(
-                        bwModel.network.me.id,
-                        null,
-                        Calendar.getInstance().timeInMillis,
-                        null,
-                        text,
-                        ""
-                    )
-
-                    val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
-                    val files: List<PostFile> = emptyList()
-                    newPost.sign(signer, files)
-                    val circId = bwModel.network.circles.first().id
-                    bwModel.network.storePost(circId, newPost)
-
-                    Log.i(TAG, "Saved new post.")
-                }
+    private fun restoreFilterState() {
+        when (filterPrefs.filterMode) {
+            FilterPreferences.FilterMode.CIRCLE -> {
+                filterByCircleId = filterPrefs.selectedCircleId.takeIf { it >= 0 }
+            }
+            FilterPreferences.FilterMode.PERSON -> {
+                filterByUserId = filterPrefs.selectedUserId.takeIf { it >= 0 }
+            }
+            else -> {
+                filterByCircleId = null
+                filterByUserId = null
             }
         }
+    }
 
+    private fun setupCircleFilter(binding: FragmentContentBinding) {
+        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.listCircles.layoutManager = layoutManager
+
+        bwModel.viewModelScope.launch {
+            val circles = withContext(Dispatchers.Default) {
+                bwModel.network.circles
+            }
+
+            circleFilterAdapter = CircleFilterAdapter(
+                requireContext(),
+                circles,
+                filterByCircleId
+            ) { selectedCircle ->
+                filterByCircle(selectedCircle)
+            }
+            binding.listCircles.adapter = circleFilterAdapter
+        }
+    }
+
+    private fun setupUserFilter(binding: FragmentContentBinding) {
+        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.listUsers.layoutManager = layoutManager
+
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val users = bwModel.getUsers()
+                withContext(Dispatchers.Main) {
+                    binding.listUsers.adapter = UserButtonAdapter(requireContext(), users) { selectedUser ->
+                        filterPostsByUser(selectedUser)
+                    }
+                }
+                displayAvatar(binding)
+            }
+        }
+    }
+
+    private fun setupPostComposer(binding: FragmentContentBinding) {
+        binding.btnRefresh.setOnClickListener {
+            refreshContent()
+        }
+
+        binding.btnAddSubscription.setOnClickListener {
+            requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
+        }
+
+        binding.btnAddImage.setOnClickListener {
+            showPhotoOptions()
+        }
+
+        binding.btnPost.setOnClickListener {
+            submitPost(binding)
+        }
+    }
+
+    private fun showPhotoOptions() {
+        // For now, directly open photo picker. Could show a dialog with camera/gallery options.
+        photoPicker.pickPhoto(
+            onSelected = { bitmap ->
+                selectedPhotos.add(bitmap)
+                updatePhotoPreview()
+            },
+            onError = { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun updatePhotoPreview() {
+        val binding = _binding ?: return
+        if (selectedPhotos.isEmpty()) {
+            binding.listPhotoPreviews.visibility = View.GONE
+        } else {
+            binding.listPhotoPreviews.visibility = View.VISIBLE
+            // Set up horizontal layout manager if not already set
+            if (binding.listPhotoPreviews.layoutManager == null) {
+                binding.listPhotoPreviews.layoutManager = LinearLayoutManager(
+                    requireContext(),
+                    LinearLayoutManager.HORIZONTAL,
+                    false
+                )
+            }
+            binding.listPhotoPreviews.adapter = PhotoPreviewAdapter(selectedPhotos) { position ->
+                // Remove photo on click
+                selectedPhotos.removeAt(position)
+                updatePhotoPreview()
+            }
+        }
+    }
+
+    private fun submitPost(binding: FragmentContentBinding) {
+        val text = binding.txtPostText.text.toString()
+        if (text.isBlank() && selectedPhotos.isEmpty()) {
+            return
+        }
+
+        binding.txtPostText.text.clear()
+        binding.btnPost.isEnabled = false
+
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val keyring = Bailiwick.getInstance().keyring
+
+                // Store photos as blobs
+                val postFiles = mutableListOf<PostFile>()
+                for ((index, photo) in selectedPhotos.withIndex()) {
+                    val bytes = photoPicker.compressBitmap(photo)
+                    val hash = bwModel.iroh.storeBlob(bytes)
+                    bwModel.network.storeFile(hash, ByteArrayInputStream(bytes))
+                    Log.d(TAG, "Stored photo $index with hash: $hash, size: ${bytes.size}")
+                    postFiles.add(PostFile(0, hash, "image/jpeg"))
+                }
+
+                val newPost = Post(
+                    bwModel.network.me.id,
+                    null,
+                    Calendar.getInstance().timeInMillis,
+                    null,
+                    text,
+                    ""
+                )
+
+                val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
+                newPost.sign(signer, postFiles)
+                val circId = bwModel.network.circles.first().id
+                bwModel.network.storePost(circId, newPost)
+
+                // Insert PostFiles into database with the post ID
+                val db = bwModel.db
+                for (postFile in postFiles) {
+                    val fileWithPostId = PostFile(newPost.id, postFile.blobHash, postFile.mimeType)
+                    db.postFileDao().insert(fileWithPostId)
+                }
+
+                Log.i(TAG, "Saved new post with ${postFiles.size} photos")
+            }
+
+            selectedPhotos.clear()
+            updatePhotoPreview()
+            binding.btnPost.isEnabled = true
+        }
+    }
+
+    private fun setupPostList(binding: FragmentContentBinding) {
         buildAdapter(binding.listContent)
 
         // Observe LiveData for automatic UI updates when posts change
         bwModel.postsLive.observe(viewLifecycleOwner) { posts ->
             Log.d(TAG, "LiveData updated: ${posts.size} posts")
-            val filteredPosts = filterByUserId?.let { userId ->
-                posts.filter { it.authorId == userId }
-            } ?: posts
-            adapter.get().clear()
-            adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
+            applyFilters(posts)
         }
-
-        return binding.root
     }
 
     private fun displayAvatar(binding: FragmentContentBinding) {
@@ -147,41 +281,87 @@ class ContentFragment : BailiwickFragment() {
     private var adapter: Optional<PostAdapter> = Optional.empty()
     private fun buildAdapter(messagesList: ListView) {
         adapter = Optional.of(buildListAdapter())
-        messagesList.setAdapter(adapter.get())
+        messagesList.adapter = adapter.get()
     }
 
     @SuppressLint("SetTextI18n")
     private fun refreshContent() {
-        // Clear filter to show all posts
+        // Clear all filters
         filterByUserId = null
+        filterByCircleId = null
+        filterPrefs.clearFilters()
+        circleFilterAdapter?.setSelectedCircle(null)
+
         // Trigger UI update from current LiveData value
         bwModel.postsLive.value?.let { posts ->
-            Log.d(TAG, "Refreshing: showing all ${posts.size} posts")
-            adapter.get().clear()
-            adapter.get().addToEnd(posts.sortedByDescending { it.timestamp })
+            applyFilters(posts)
+        }
+    }
+
+    private fun filterByCircle(circle: Circle?) {
+        Log.d(TAG, "Filtering by circle: ${circle?.name}")
+        filterByCircleId = circle?.id
+        filterByUserId = null  // Clear user filter when circle filter is applied
+
+        if (circle != null) {
+            filterPrefs.setCircleFilter(circle.id)
+        } else {
+            filterPrefs.clearFilters()
+        }
+
+        bwModel.postsLive.value?.let { posts ->
+            applyFilters(posts)
         }
     }
 
     private fun filterPostsByUser(user: Identity) {
         Log.d(TAG, "Filtering posts by user: ${user.name} (id=${user.id})")
         filterByUserId = user.id
-        // Apply filter to current LiveData value
+        filterByCircleId = null  // Clear circle filter when user filter is applied
+        circleFilterAdapter?.setSelectedCircle(null)
+
+        filterPrefs.setPersonFilter(user.id)
+
         bwModel.postsLive.value?.let { posts ->
-            val filteredPosts = posts.filter { it.authorId == user.id }
-            Log.d(TAG, "Found ${filteredPosts.size} posts from ${user.name} (out of ${posts.size} total)")
-            adapter.get().clear()
-            adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
+            applyFilters(posts)
         }
     }
 
+    private fun applyFilters(posts: List<Post>) {
+        var filteredPosts = posts
+
+        // Apply circle filter
+        filterByCircleId?.let { circleId ->
+            bwModel.viewModelScope.launch {
+                val circlePosts = withContext(Dispatchers.Default) {
+                    bwModel.network.circlePosts(circleId)
+                }
+                val circlePostIds = circlePosts.map { it.id }.toSet()
+                val filtered = posts.filter { it.id in circlePostIds }
+                Log.d(TAG, "Circle filter: ${filtered.size} posts from circle $circleId")
+                adapter.get().clear()
+                adapter.get().addToEnd(filtered.sortedByDescending { it.timestamp })
+            }
+            return
+        }
+
+        // Apply user filter
+        filterByUserId?.let { userId ->
+            filteredPosts = posts.filter { it.authorId == userId }
+            Log.d(TAG, "User filter: ${filteredPosts.size} posts from user $userId")
+        }
+
+        adapter.get().clear()
+        adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
+    }
+
     private fun buildListAdapter(): PostAdapter {
-        val adapter = PostAdapter(
+        return PostAdapter(
             getBailiwickDb(requireContext()),
             bwModel,
             requireContext(),
             ArrayList()
         )
-        return adapter
     }
 
     override fun onDestroyView() {
@@ -190,6 +370,6 @@ class ContentFragment : BailiwickFragment() {
     }
 
     companion object {
-        const val TAG="ContentFragment"
+        const val TAG = "ContentFragment"
     }
 }

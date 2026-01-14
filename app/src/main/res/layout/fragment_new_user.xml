@@ -1,106 +1,200 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".fragments.NewUserFragment">
+
     <data>
-        <variable name="name" type="String"/>
+        <variable
+            name="name"
+            type="String" />
     </data>
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingTop="15dp"
-                android:paddingBottom="10dp"
-                android:text="@string/public_name"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingTop="15dp"
-                android:paddingBottom="10dp"
-                android:text="@string/new_user_name"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingTop="15dp"
-                android:paddingBottom="10dp"
-                android:text="@string/password"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingTop="15dp"
-                android:paddingBottom="10dp"
-                android:text="@string/confirm"/>
-        </LinearLayout>
+        android:background="@color/colorBackground"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_lg">
 
-            <EditText
-                android:id="@+id/new_public_name"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:hint="@string/blank_for_anonymous"
-                android:inputType="text"
-                android:text="@{name}"
-                android:autofillHints="@string/new_user_name_hint" />
-            <EditText
-                android:id="@+id/new_user_name"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:hint="@string/new_user_name_hint"
-                android:inputType="text"
-                android:text="@{name}"
-                android:autofillHints="@string/new_user_name_hint" />
-            <EditText
-                android:id="@+id/new_password"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:autofillHints="Password"
-                android:hint="@string/password"
-                android:inputType="textPassword"
-                android:text="@{name}" />
-            <EditText
-                android:id="@+id/confirm_password"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:hint="@string/confirm_password"
-                android:inputType="textPassword"
-                android:text="@{name}"
-                android:autofillHints="Password" />
-            <Button
-                android:id="@+id/new_user_btn_go"
+            <!-- Header -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:enabled="false"
-                android:text="@string/new_user_btn_go"/>
-            <Button
-                android:id="@+id/btn_rando"
+                android:layout_marginBottom="@dimen/spacing_lg"
+                android:text="@string/first_run_sign_up"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
+
+            <!-- Avatar Section -->
+            <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:text="some rando"/>
+                android:layout_marginBottom="@dimen/spacing_lg">
+
+                <ImageButton
+                    android:id="@+id/avatar"
+                    android:layout_width="@dimen/avatar_profile"
+                    android:layout_height="@dimen/avatar_profile"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:clipToOutline="true"
+                    android:contentDescription="@string/desc_user_avatar"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/avatar" />
+
+                <!-- Camera overlay icon -->
+                <ImageView
+                    android:layout_width="@dimen/icon_lg"
+                    android:layout_height="@dimen/icon_lg"
+                    android:layout_gravity="bottom|end"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:padding="@dimen/spacing_xs"
+                    android:src="@drawable/ic_camera"
+                    app:tint="@color/colorTextSecondary" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_lg"
+                android:text="@string/choose_photo"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                android:textColor="@color/colorTextHint" />
+
+            <!-- Form Card -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Bailiwick.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <!-- Public Name -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Bailiwick.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md"
+                        android:hint="@string/public_name"
+                        app:helperText="@string/blank_for_anonymous"
+                        app:helperTextEnabled="true">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/new_public_name"
+                            style="@style/Widget.Bailiwick.TextInputEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Username -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Bailiwick.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md"
+                        android:hint="@string/username">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/new_user_name"
+                            style="@style/Widget.Bailiwick.TextInputEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Password -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Bailiwick.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md"
+                        android:hint="@string/password"
+                        app:endIconMode="password_toggle">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/new_password"
+                            style="@style/Widget.Bailiwick.TextInputEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Confirm Password -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Bailiwick.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/confirm_password"
+                        app:endIconMode="password_toggle">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/confirm_password"
+                            style="@style/Widget.Bailiwick.TextInputEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Validation Error -->
+                    <TextView
+                        android:id="@+id/txt_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                        android:textColor="@color/colorError"
+                        android:visibility="gone"
+                        tools:text="Passwords don't match"
+                        tools:visibility="visible" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Loading Indicator -->
+            <ProgressBar
+                android:id="@+id/progress_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="@dimen/spacing_md"
+                android:indeterminateTint="@color/colorPrimary"
+                android:visibility="gone" />
+
+            <!-- Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/new_user_btn_go"
+                    style="@style/Widget.Bailiwick.Button.Primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:enabled="false"
+                    android:text="@string/first_run_sign_up" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_rando"
+                    style="@style/Widget.Bailiwick.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/first_run_use_my_key"
+                    android:visibility="gone" />
+            </LinearLayout>
+
         </LinearLayout>
+    </ScrollView>
 
-        <ImageButton
-            android:id="@+id/avatar"
-            android:src="@drawable/avatar"
-            android:background="@drawable/border"
-            android:scaleType="fitCenter"
-            android:layout_marginStart="25dp"
-            android:layout_width="100dip"
-            android:layout_height="100dip"
-            android:contentDescription="@string/desc_user_avatar" />
-    </LinearLayout>
 </layout>
