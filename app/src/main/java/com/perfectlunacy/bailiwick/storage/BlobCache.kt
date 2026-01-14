@@ -49,10 +49,12 @@ class BlobCache(private val cacheDir: File) {
     }
 
     /**
-     * Checks if a blob exists in the cache.
+     * Checks if a blob exists in the cache with valid content.
+     * Returns false for missing files or 0-byte files (which indicate failed downloads).
      */
     fun exists(hash: BlobHash): Boolean {
-        return File(cacheDir, hash).exists()
+        val file = File(cacheDir, hash)
+        return file.exists() && file.length() > 0
     }
 
     /**

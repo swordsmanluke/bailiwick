@@ -89,6 +89,14 @@ class ContentDownloader(
                 Log.e(TAG, "Failed to sync with ${peer.nodeId}: ${e.message}")
             }
         }
+        
+        // After syncing with all peers, retry downloading any missing files
+        // for recent posts (< 30 days old)
+        try {
+            retryMissingFiles()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to retry missing files: ${e.message}")
+        }
     }
 
     /**
@@ -97,35 +105,25 @@ class ContentDownloader(
     suspend fun syncPeer(peer: PeerDoc) {
         Log.d(TAG, "Syncing with peer ${peer.nodeId}")
 
-        // Use the stored ticket to re-join the doc if available
-        // This ensures we have the peer's relay addresses for syncing
-        val doc = if (peer.docTicket != null) {
-            Log.d(TAG, "Re-joining doc using stored ticket for ${peer.nodeId}")
-            iroh.joinDoc(peer.docTicket) ?: run {
-                Log.w(TAG, "Could not join doc for ${peer.nodeId}, trying openDoc")
-                iroh.openDoc(peer.docNamespaceId)
-            }
+        // Try to open existing doc, or join if we don't have it
+        val doc = iroh.openDoc(peer.docNamespaceId) ?: if (peer.docTicket != null) {
+            Log.d(TAG, "Joining doc using ticket for ${peer.nodeId}")
+            iroh.joinDoc(peer.docTicket)
         } else {
-            Log.d(TAG, "No ticket stored, opening doc by namespace for ${peer.nodeId}")
-            iroh.openDoc(peer.docNamespaceId)
+            null
+        }
+
+        if (doc != null) {
+            // Sync with the peer to get latest updates
+            Log.d(TAG, "Syncing doc with peer ${peer.nodeId}")
+            val syncSuccess = doc.syncWithAndWait(peer.nodeId, timeoutMs = 30000)
+            Log.d(TAG, "Sync complete for ${peer.nodeId} (success=$syncSuccess)")
         }
 
         if (doc == null) {
             Log.w(TAG, "Could not open doc for ${peer.nodeId}")
             return
         }
-
-        // Trigger sync with peer
-        try {
-            doc.syncWith(peer.nodeId)
-        } catch (e: Exception) {
-            Log.w(TAG, "syncWith failed for ${peer.nodeId}: ${e.message}")
-        }
-
-        // Wait a moment for sync to propagate
-        // Note: This is a workaround until we implement proper sync completion detection
-        kotlinx.coroutines.delay(3000)
-        Log.d(TAG, "Sync wait complete for peer ${peer.nodeId}")
 
         // Download identity (not encrypted)
         doc.get(IrohDocKeys.KEY_IDENTITY)?.let { identityHashBytes ->
@@ -136,17 +134,29 @@ class ContentDownloader(
         // Download actions meant for us
         downloadActions(doc, peer.nodeId)
 
+        // Process downloaded actions immediately - this extracts encryption keys
+        // from UpdateKey actions so we can decrypt content below
+        processActions()
+
         // Log all keys in the doc to understand what's available
+        val docNamespace = doc.namespaceId()
         val allKeys = doc.keys()
-        Log.d(TAG, "Peer doc has ${allKeys.size} keys: ${allKeys.take(10)}")
+        Log.d(TAG, "Peer doc $docNamespace has ${allKeys.size} keys: ${allKeys.take(10)}")
 
-        // Download latest feed using cipher from stored keys
+        // NEW APPROACH: Download posts directly from posts/* entries
+        // This is the reliable sync method for Iroh Docs
+        downloadPostsFromKeys(doc, peer.nodeId)
+
+        // Debug: Check all entries for feed/latest to see if there are multiple authors
+        val allFeedEntries = doc.getAllEntriesForKey(IrohDocKeys.KEY_FEED_LATEST)
+        Log.d(TAG, "All entries for feed/latest (${allFeedEntries.size}): ${allFeedEntries.map { "${it.first.take(8)}...=${it.second.take(16)}..." }}")
+
+        // DEPRECATED: Also try old feed/latest approach for backward compatibility
+        // Remove this block after all devices are updated
         val feedHashBytes = doc.get(IrohDocKeys.KEY_FEED_LATEST)
-        Log.d(TAG, "Feed hash bytes: ${feedHashBytes?.let { String(it) } ?: "null"}")
-
         feedHashBytes?.let {
             val hash = String(feedHashBytes)
-            Log.d(TAG, "Found feed at $hash for peer ${peer.nodeId}")
+            Log.d(TAG, "Found feed at $hash for peer ${peer.nodeId} (legacy)")
 
             // Create cipher using any keys we have for this peer
             val cipher = EncryptorFactory.forPeer(db.keyDao(), peer.nodeId) { data ->
@@ -227,6 +237,58 @@ class ContentDownloader(
     }
 
     /**
+     * Download posts directly from doc entries.
+     * This is the new approach that works reliably with Iroh Docs.
+     * Posts are stored at posts/{circleId}/{timestamp} entries.
+     */
+    suspend fun downloadPostsFromKeys(doc: IrohDoc, nodeId: NodeId) {
+        val postKeys = doc.keysWithPrefix(IrohDocKeys.KEY_POSTS_PREFIX)
+        Log.d(TAG, "Found ${postKeys.size} post keys in peer doc")
+
+        for (key in postKeys) {
+            try {
+                // Parse key: "posts/{circleId}/{timestamp}"
+                val parts = key.split("/")
+                if (parts.size != 3) {
+                    Log.w(TAG, "Invalid post key format: $key")
+                    continue
+                }
+
+                val circleId = parts[1].toLongOrNull()
+                if (circleId == null) {
+                    Log.w(TAG, "Could not parse circle ID from key: $key")
+                    continue
+                }
+
+                // Get hash from doc
+                val hashBytes = doc.get(key) ?: continue
+                val hash = String(hashBytes)
+
+                // Skip if already have it
+                if (db.postDao().findByHash(hash) != null) {
+                    Log.d(TAG, "Already have post $hash")
+                    continue
+                }
+
+                // Get cipher for this peer (tries all available keys)
+                val cipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { data ->
+                    try {
+                        gson.fromJson(String(data), IrohPost::class.java)
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+
+                // Download and process
+                downloadPost(hash, nodeId, cipher)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to download post from key $key: ${e.message}")
+            }
+        }
+    }
+
+    /**
      * Download a post and its files.
      */
     suspend fun downloadPost(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
@@ -253,39 +315,70 @@ class ContentDownloader(
         val postId = db.postDao().insert(post)
 
         // Download files
-        for (file in irohPost.files) {
-            try {
-                downloadFile(file.blobHash, nodeId, postId, file.mimeType, cipher)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to download file ${file.blobHash}: ${e.message}")
+        val fileCount = irohPost.files.size
+        if (fileCount > 0) {
+            Log.i(TAG, "POST $hash has $fileCount files to download")
+            
+            // Create a file-specific cipher with binary validator.
+            // The post cipher uses a JSON validator which fails for binary file content.
+            // Files are binary data, so we just validate that decryption produces non-empty output.
+            val fileCipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { it.isNotEmpty() }
+            
+            var successCount = 0
+            var failCount = 0
+            for ((index, file) in irohPost.files.withIndex()) {
+                try {
+                    Log.d(TAG, "Downloading file ${index + 1}/$fileCount: ${file.blobHash}")
+                    val success = downloadFile(file.blobHash, nodeId, postId, file.mimeType, fileCipher)
+                    if (success) successCount++ else failCount++
+                } catch (e: Exception) {
+                    failCount++
+                    Log.e(TAG, "Exception downloading file ${file.blobHash}: ${e.message}")
+                }
             }
+            
+            Log.i(TAG, "POST $hash files: $successCount success, $failCount failed out of $fileCount total")
         }
-
         Log.d(TAG, "Downloaded post $hash with ${irohPost.files.size} files")
     }
 
     /**
      * Download a file and save to cache.
+     * @return true if file was downloaded successfully, false otherwise
      */
-    private suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor) {
-        val encrypted = downloadBlobOrLog(hash, nodeId, "file") ?: return
+    private suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor): Boolean {
+        Log.d(TAG, "Attempting to download file $hash from $nodeId")
+        
+        val encrypted = downloadBlobOrLog(hash, nodeId, "file")
+        if (encrypted == null) {
+            Log.w(TAG, "FILE DOWNLOAD FAILED: Could not get blob $hash from peer $nodeId - blob may have been garbage collected")
+            return false
+        }
 
         val data = try {
             cipher.decrypt(encrypted)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to decrypt file $hash: ${e.message}")
-            return
+            Log.e(TAG, "FILE DECRYPT FAILED: $hash - ${e.message}")
+            return false
+        }
+
+        // Safeguard: reject empty decryption results (indicates cipher validation failed)
+        if (data.isEmpty()) {
+            Log.e(TAG, "FILE DECRYPT EMPTY: $hash - decryption produced empty result, likely wrong key")
+            return false
         }
 
         // Store in local file cache
         if (!blobCache.store(hash, data)) {
-            return
+            Log.e(TAG, "FILE CACHE FAILED: Could not store $hash in local cache")
+            return false
         }
 
         // Record in DB
         db.postFileDao().insert(PostFile(postId, hash, mimeType))
 
-        Log.d(TAG, "Downloaded file $hash (${data.size} bytes)")
+        Log.i(TAG, "FILE DOWNLOAD SUCCESS: $hash (${data.size} bytes, $mimeType)")
+        return true
     }
 
     /**
@@ -430,6 +523,67 @@ class ContentDownloader(
         // The data is a Base64-encoded AES key
         KeyStorage.storeAesKey(db.keyDao(), fromPeerId, action.data)
         Log.i(TAG, "Stored key from $fromPeerId")
+    }
+
+
+    /**
+     * Retry downloading missing files for recent posts.
+     * Only retries posts from the last 30 days to avoid wasting bandwidth on old content
+     * that may no longer be available.
+     */
+    suspend fun retryMissingFiles() {
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        val postsWithFiles = db.postDao().postsWithFilesSince(thirtyDaysAgo)
+        
+        if (postsWithFiles.isEmpty()) {
+            return
+        }
+        
+        Log.d(TAG, "Checking ${postsWithFiles.size} recent posts for missing files")
+        
+        var totalMissing = 0
+        var totalRetried = 0
+        var totalSuccess = 0
+        
+        for (post in postsWithFiles) {
+            val files = db.postFileDao().filesForPost(post.id)
+            val missingFiles = files.filter { !blobCache.exists(it.blobHash) }
+            
+            if (missingFiles.isEmpty()) {
+                continue
+            }
+            
+            totalMissing += missingFiles.size
+            
+            // Get the author's identity to find their nodeId
+            val author = try {
+                db.identityDao().find(post.authorId)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot retry files for post ${post.id}: author ${post.authorId} not found")
+                continue
+            }
+            
+            // Create cipher for decryption
+            val cipher = EncryptorFactory.forPeer(db.keyDao(), author.owner) { true }
+            
+            Log.i(TAG, "RETRY: Post ${post.id} has ${missingFiles.size} missing files, attempting download from ${author.owner}")
+            
+            for (file in missingFiles) {
+                totalRetried++
+                try {
+                    val success = downloadFile(file.blobHash, author.owner, post.id, file.mimeType, cipher)
+                    if (success) {
+                        totalSuccess++
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "RETRY FAILED: ${file.blobHash} - ${e.message}")
+                }
+            }
+        }
+        
+        if (totalMissing > 0) {
+            Log.i(TAG, "RETRY SUMMARY: $totalSuccess/$totalRetried files recovered ($totalMissing total missing)")
+        }
     }
 
     /**
