@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base spacing unit (4dp grid system) -->
+    <dimen name="spacing_xxs">2dp</dimen>
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+    <dimen name="spacing_xxl">48dp</dimen>
+
+    <!-- Component-specific spacing -->
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin">8dp</dimen>
+    <dimen name="list_item_padding_vertical">12dp</dimen>
+    <dimen name="list_item_padding_horizontal">16dp</dimen>
+
+    <!-- Corner radii -->
+    <dimen name="corner_radius_sm">4dp</dimen>
+    <dimen name="corner_radius_md">8dp</dimen>
+    <dimen name="corner_radius_lg">12dp</dimen>
+    <dimen name="corner_radius_xl">16dp</dimen>
+    <dimen name="corner_radius_circle">50dp</dimen>
+
+    <!-- Elevation -->
+    <dimen name="elevation_none">0dp</dimen>
+    <dimen name="elevation_low">2dp</dimen>
+    <dimen name="elevation_medium">4dp</dimen>
+    <dimen name="elevation_high">8dp</dimen>
+
+    <!-- Avatar sizes -->
+    <dimen name="avatar_xs">24dp</dimen>
+    <dimen name="avatar_sm">32dp</dimen>
+    <dimen name="avatar_md">48dp</dimen>
+    <dimen name="avatar_lg">64dp</dimen>
+    <dimen name="avatar_xl">96dp</dimen>
+    <dimen name="avatar_profile">120dp</dimen>
+
+    <!-- Button sizes -->
+    <dimen name="button_height_sm">32dp</dimen>
+    <dimen name="button_height_md">48dp</dimen>
+    <dimen name="button_height_lg">56dp</dimen>
+    <dimen name="button_min_width">88dp</dimen>
+
+    <!-- Icon sizes -->
+    <dimen name="icon_xs">16dp</dimen>
+    <dimen name="icon_sm">20dp</dimen>
+    <dimen name="icon_md">24dp</dimen>
+    <dimen name="icon_lg">32dp</dimen>
+    <dimen name="icon_xl">48dp</dimen>
+
+    <!-- Input fields -->
+    <dimen name="input_height">48dp</dimen>
+    <dimen name="input_padding_horizontal">12dp</dimen>
+    <dimen name="input_padding_vertical">8dp</dimen>
+
+    <!-- Post/Content dimensions -->
+    <dimen name="post_image_max_height">300dp</dimen>
+    <dimen name="post_image_min_height">150dp</dimen>
+    <dimen name="post_avatar_size">40dp</dimen>
+
+    <!-- Reaction dimensions -->
+    <dimen name="reaction_chip_height">28dp</dimen>
+    <dimen name="reaction_chip_padding">8dp</dimen>
+    <dimen name="reaction_emoji_size">18dp</dimen>
+
+    <!-- Tag dimensions -->
+    <dimen name="tag_chip_height">24dp</dimen>
+    <dimen name="tag_chip_padding_horizontal">8dp</dimen>
+    <dimen name="tag_chip_margin">4dp</dimen>
+
+    <!-- Filter bar -->
+    <dimen name="filter_bar_height">48dp</dimen>
+    <dimen name="filter_chip_height">32dp</dimen>
+
+    <!-- QR code dimensions -->
+    <dimen name="qr_code_size">250dp</dimen>
+    <dimen name="qr_code_padding">16dp</dimen>
+
+    <!-- Photo grid -->
+    <dimen name="photo_grid_spacing">2dp</dimen>
+    <dimen name="photo_thumbnail_size">100dp</dimen>
+
+    <!-- Divider -->
+    <dimen name="divider_height">1dp</dimen>
+
+    <!-- Touch target minimum -->
+    <dimen name="touch_target_min">48dp</dimen>
+</resources>

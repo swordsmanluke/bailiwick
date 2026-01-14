@@ -1,36 +1,99 @@
 <resources>
     <string name="app_name">Bailiwick</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!-- First Run / Sign Up -->
     <string name="first_run_sign_up">Sign Up</string>
     <string name="first_run_use_my_key">Use My Key</string>
     <string name="new_user_name_hint">Username</string>
     <string name="new_user_name">Username: </string>
     <string name="new_user_btn_go">Go!</string>
+    <string name="username">Username</string>
+    <string name="public_name">Public Name</string>
+    <string name="blank_for_anonymous">Blank = Anonymous</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="confirm">Confirm</string>
+
+    <!-- Common -->
     <string name="logo">bailiwick logo</string>
     <string name="profile_picture">Profile Picture</string>
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
+    <string name="error">Error</string>
+    <string name="ok">Ok</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+
+    <!-- Content / Posts -->
+    <string name="post_hint">Tell us about it...</string>
+    <string name="post_content">post_content</string>
+    <string name="post_button">Post</string>
+    <string name="lorem_ipsum">Lorem ipsum dolor sit amet</string>
+    <string name="your_avatar">Your avatar</string>
+
+    <!-- Filter -->
+    <string name="filter_label">Filter:</string>
+    <string name="filter_all">All</string>
+    <string name="filter_by_circle">By Circle</string>
+    <string name="filter_by_person">By Person</string>
+
+    <!-- Reactions / Comments / Tags -->
     <string name="emote">Emote</string>
     <string name="comment">Comment</string>
     <string name="tag">Tag</string>
-    <string name="lorem_ipsum">Lorem ipsum dolor sit amet</string>
-    <string name="post_content">post_content</string>
-    <string name="confirm_password">Confirm Password</string>
-    <string name="password">Password</string>
-    <string name="confirm">Confirm</string>
-    <string name="post_hint">Tell us about it...</string>
-    <string name="username">Username</string>
-    <string name="desc_user_avatar">User Avatar</string>
-    <string name="public_name">Public Name</string>
-    <string name="blank_for_anonymous">Blank = Anonymous</string>
+    <string name="tags_hint">Add tags (comma separated)</string>
+    <string name="add_reaction">Add reaction</string>
+    <string name="add_comment">Add comment</string>
+    <string name="add_tag">Add tag</string>
+    <string name="comments_count">%d comments</string>
+    <string name="no_comments">No comments yet</string>
+    <string name="write_comment">Write a comment…</string>
+
+    <!-- Photos -->
+    <string name="add_photo">Add photo</string>
+    <string name="take_photo">Take photo</string>
+    <string name="choose_photo">Choose from gallery</string>
+    <string name="photo_preview">Photo preview</string>
+    <string name="remove_photo">Remove photo</string>
+
+    <!-- Connections -->
     <string name="send_request">Send Request</string>
     <string name="request_connect">Request Connection</string>
     <string name="accept_connection">Accept Connection</string>
     <string name="make_a_connection">Make a Connection</string>
+    <string name="add_connection">Add connection</string>
     <string name="scan">Scan</string>
     <string name="from_images">From Images</string>
     <string name="send_response">Send Response</string>
-    <string name="ok">Ok</string>
-    <string name="loading">Loading…</string>
-    <string name="retry">Retry</string>
-    <string name="error">Error</string>
+    <string name="invite_friend">Invite Friend</string>
+    <string name="scan_invitation">Scan Invitation</string>
+    <string name="show_my_qr">Show My QR Code</string>
+    <string name="waiting_for_scan">Waiting for them to scan…</string>
+    <string name="connection_step_1">Step 1: Show your QR code</string>
+    <string name="connection_step_2">Step 2: Have them scan it</string>
+    <string name="connection_step_3">Step 3: Scan their QR code</string>
+    <string name="qr_instructions">Have the other person scan this QR code with their Bailiwick app</string>
+
+    <!-- User -->
+    <string name="desc_user_avatar">User Avatar</string>
+    <string name="desc_photo_preview">Photo preview</string>
+
+    <!-- Key Export/Import -->
+    <string name="export_identity">Export Identity</string>
+    <string name="import_identity">Import Identity</string>
+    <string name="export_password_hint">Create a backup password</string>
+    <string name="export_password_confirm">Confirm backup password</string>
+    <string name="export_success">Identity exported successfully</string>
+    <string name="import_success">Identity imported successfully</string>
+    <string name="import_password_hint">Enter backup password</string>
+    <string name="password_too_short">Password must be at least 8 characters</string>
+    <string name="passwords_dont_match">Passwords don\'t match</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="account">Account</string>
+    <string name="privacy">Privacy</string>
+    <string name="about">About</string>
 </resources>

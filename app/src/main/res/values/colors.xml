@@ -1,11 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary Colors - Warm Orange/Amber theme -->
     <color name="colorPrimary">#ffc04a</color>
     <color name="colorPrimaryDark">#ff9040</color>
+    <color name="colorPrimaryLight">#ffe082</color>
     <color name="colorAccent">#3a3a3a</color>
 
-    <!--    Logo colors  -->
+    <!-- Secondary Colors -->
+    <color name="colorSecondary">#ff6347</color>
+    <color name="colorSecondaryDark">#c4412b</color>
+    <color name="colorSecondaryLight">#ff8a65</color>
+
+    <!-- Background Colors -->
+    <color name="colorBackground">#fafafa</color>
+    <color name="colorBackgroundDark">#121212</color>
+    <color name="colorSurface">#ffffff</color>
+    <color name="colorSurfaceDark">#1e1e1e</color>
+
+    <!-- Text Colors -->
+    <color name="colorTextPrimary">#212121</color>
+    <color name="colorTextSecondary">#757575</color>
+    <color name="colorTextHint">#9e9e9e</color>
+    <color name="colorTextOnPrimary">#ffffff</color>
+    <color name="colorTextOnSecondary">#ffffff</color>
+
+    <!-- State Colors -->
+    <color name="colorError">#b00020</color>
+    <color name="colorErrorLight">#cf6679</color>
+    <color name="colorSuccess">#4caf50</color>
+    <color name="colorWarning">#ff9800</color>
+    <color name="colorInfo">#2196f3</color>
+
+    <!-- Divider & Border Colors -->
+    <color name="colorDivider">#e0e0e0</color>
+    <color name="colorBorder">#bdbdbd</color>
+
+    <!-- Overlay Colors -->
+    <color name="colorOverlay">#80000000</color>
+    <color name="colorScrim">#52000000</color>
+
+    <!-- Logo colors (legacy) -->
     <color name="logoLight">#ffc04a</color>
     <color name="logoDark">#ff6347</color>
     <color name="logoAccent">#3a3a3a</color>
+
+    <!-- Reaction colors -->
+    <color name="reactionBackground">#f5f5f5</color>
+    <color name="reactionBackgroundSelected">#fff3e0</color>
+
+    <!-- Tag colors -->
+    <color name="tagBackground">#e3f2fd</color>
+    <color name="tagText">#1565c0</color>
+
+    <!-- Circle colors for filtering -->
+    <color name="circleFilterActive">#fff3e0</color>
+    <color name="circleFilterInactive">#f5f5f5</color>
 </resources>
