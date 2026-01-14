@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="@dimen/photo_thumbnail_size"
+    android:layout_height="@dimen/photo_thumbnail_size"
+    android:layout_marginEnd="@dimen/spacing_sm">
+
+    <ImageView
+        android:id="@+id/img_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorDivider"
+        android:contentDescription="@string/desc_photo_preview"
+        android:scaleType="centerCrop" />
+
+    <!-- Remove button overlay -->
+    <ImageView
+        android:id="@+id/btn_remove"
+        android:layout_width="@dimen/icon_sm"
+        android:layout_height="@dimen/icon_sm"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/spacing_xs"
+        android:background="@drawable/bg_remove_button"
+        android:contentDescription="@string/remove_photo"
+        android:padding="@dimen/spacing_xxs"
+        android:src="@drawable/ic_close"
+        app:tint="@android:color/white" />
+
+</FrameLayout>
