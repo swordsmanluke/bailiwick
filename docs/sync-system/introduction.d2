@@ -1,0 +1,83 @@
+# Peer Introduction Flow
+
+title: {
+  label: Peer Introduction (Initial Connection)
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+direction: right
+
+# Alice wants to connect to Bob
+alice: Alice {
+  shape: person
+}
+
+bob: Bob {
+  shape: person
+}
+
+# Step 1: Bob generates QR
+bob_generates: Bob: Generate QR {
+  doc_ticket: Get myDocTicket()
+  node_id: Get nodeId()
+  qr_data: Create QR with:\n- docTicket\n- nodeId
+  display: Display QR Code
+}
+
+bob -> bob_generates
+
+# Step 2: Alice scans
+alice_scans: Alice: Scan QR {
+  scan: Scan QR Code
+  parse: Parse ticket + nodeId
+  join: iroh.joinDoc(ticket)
+  store: Store PeerDoc in DB {
+    nodeId: Bob's nodeId
+    docTicket: ticket
+    docNamespaceId: from join
+  }
+}
+
+bob_generates -> alice_scans: QR Code
+
+# Step 3: Alice sends key
+alice_sends_key: Alice: Send Key Action {
+  create_action: Create UpdateKey action
+  target: "actions/{bobNodeId}/{timestamp}"
+  data: Circle encryption key
+  publish: Publish to Alice's doc
+}
+
+alice_scans -> alice_sends_key
+
+# Step 4: Bob downloads
+bob_downloads: "Bob: Download Action" {
+  sync: "Sync Alice's doc"
+  find_action: 'Find "actions/{myNodeId}/*"'
+  download: Download action blob
+  process: Extract and store key
+}
+
+alice_sends_key -> bob_downloads: "Via Iroh Doc Sync"
+
+# Step 5: Bob can now decrypt
+bob_decrypts: Bob: Decrypt Content {
+  use_key: Use stored key
+  decrypt: Decrypt Alice's posts
+}
+
+bob_downloads -> bob_decrypts
+
+# Bidirectional
+note: {
+  label: |md
+    **Note**: Both peers exchange keys
+    - Alice sends key to Bob
+    - Bob sends key to Alice
+    - Both can then decrypt each other's posts
+  |
+  shape: page
+  style.fill: "#ccffcc"
+}

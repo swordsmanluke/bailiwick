@@ -1,0 +1,71 @@
+# Content Publishing Flow
+
+title: {
+  label: Content Publishing Flow
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+direction: down
+
+# Publishing a new post
+user: User Creates Post {
+  shape: person
+}
+
+content_fragment: ContentFragment.submitPost() {
+  compress_photo: Compress Photo
+  store_blob: iroh.storeBlob(bytes)
+  store_file: network.storeFile(hash, bytes)
+  create_post: Create Post in DB
+  insert_postfile: Insert PostFile
+}
+
+user -> content_fragment
+
+# Background publish
+sync: IrohService.sync() {
+  shape: hexagon
+}
+
+publisher: ContentPublisher.publishPending() {
+  get_pending: Get posts where\nblobHash IS NULL
+
+  for_each: For Each Post {
+    get_files: Get PostFiles
+    encrypt_files: Encrypt files\n(cipher.encrypt)
+    store_encrypted: Store encrypted blobs
+    create_iroh_post: Create IrohPost JSON
+    encrypt_post: Encrypt post JSON
+    store_post_blob: Store encrypted post blob
+    set_doc_entry: "doc.set(key, hash)"
+    update_hash: Update post.blobHash in DB
+  }
+}
+
+content_fragment -> sync: triggers eventually
+sync -> publisher
+
+# Doc structure
+my_doc: My Doc {
+  identity: '"identity" = blob hash'
+  feed: '"feed/latest" = blob hash'
+  circles: '"circles/1" = blob hash'
+  actions: '"actions/{nodeId}/{ts}" = blob hash'
+  posts: '"posts/{circleId}/{ts}" = blob hash'
+}
+
+publisher -> my_doc: writes entries
+
+# Note about encryption
+note: {
+  label: |md
+    **Key Point**: Files are encrypted at publish time
+    - Original file stored unencrypted locally
+    - Encrypted version stored in Iroh
+    - IrohPost references encrypted blob hashes
+  |
+  shape: page
+  style.fill: "#ffffcc"
+}

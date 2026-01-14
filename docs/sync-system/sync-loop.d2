@@ -1,0 +1,48 @@
+# IrohService Sync Loop
+
+title: {
+  label: Sync Loop (Every 5 Minutes)
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+direction: down
+
+start: Start Sync {
+  shape: oval
+}
+
+check_connected: Connected? {
+  shape: diamond
+}
+
+publish_phase: Publish Phase {
+  publish_identity: 1. Publish Identity
+  publish_actions: 2. Publish Actions\n(UpdateKey, etc.)
+  publish_pending: 3. Publish Pending Posts
+  publish_feed: 4. Update feed/latest
+
+  publish_identity -> publish_actions -> publish_pending -> publish_feed
+}
+
+download_phase: Download Phase {
+  sync_all: 1. syncAll()\nLoop over PeerDocs
+  process_actions: 2. processActions()\nExtract keys from UpdateKey
+}
+
+end: End Sync {
+  shape: oval
+}
+
+start -> check_connected
+check_connected -> publish_phase: Yes
+check_connected -> end: No (skip)
+publish_phase -> download_phase
+download_phase -> end
+
+# Timing
+delay: Wait 5 min {
+  shape: parallelogram
+}
+end -> delay -> start

@@ -1,0 +1,77 @@
+# Content Downloading Flow
+
+title: {
+  label: Content Downloading Flow
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+direction: down
+
+sync_all: ContentDownloader.syncAll() {
+  get_peers: Get subscribed PeerDocs\nfrom database
+  loop: For each peer...
+}
+
+sync_peer: syncPeer(peer) {
+  leave_old: "1) Leave existing local replica (if any)"
+  join_doc: "2) joinDoc(peer.docTicket) - creates local replica"
+  sync_wait: "3) syncWithAndWait() - Wait for SYNC_FINISHED"
+  download_identity: "4) Download identity"
+  download_actions: "5) Download actions"
+  process_actions: "6) Process actions (extract keys)"
+  download_posts: "7) downloadPostsFromKeys()"
+  download_feed: "8) downloadFeed() [legacy]"
+}
+
+sync_all -> sync_peer
+
+# Sync with Iroh
+iroh_sync: Iroh Doc Sync {
+  local_replica: Local Replica\nof Peer's Doc
+  peer_doc: Remote Peer's Doc
+  set_reconciliation: Set Reconciliation\nProtocol {
+    shape: diamond
+  }
+
+  peer_doc -> set_reconciliation -> local_replica
+}
+
+sync_peer.join_doc -> iroh_sync
+
+# What we query
+query_doc: Query Local Replica {
+  keys: doc.keys()\nList all keys
+  get: doc.get(key)\nGet value for key
+  keys_prefix: doc.keysWithPrefix("posts/")\nFilter by prefix
+}
+
+iroh_sync.local_replica -> query_doc
+
+# Download posts
+download_posts_detail: downloadPostsFromKeys() {
+  get_keys: Get all "posts/*" keys
+  for_each: For each key {
+    parse_key: Parse circleId, timestamp
+    get_hash: Get blob hash from doc
+    check_exists: Skip if already have post
+    get_cipher: Get decryption cipher
+    download_post: downloadPost(hash)
+  }
+}
+
+query_doc -> download_posts_detail
+
+# Problem area
+problem: {
+  label: |md
+    **PROBLEM OBSERVED**:
+    - `doc.keys()` returns stale data
+    - New entries written by peer don't appear
+    - Even after leave + rejoin + syncWithAndWait
+    - SYNC_FINISHED fires but no new data
+  |
+  shape: page
+  style.fill: "#ffcccc"
+}

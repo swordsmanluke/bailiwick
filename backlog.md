@@ -643,6 +643,330 @@ Generated from code review on 2026-01-07
 
 ---
 
+---
+
+## Sprint 5: UI Overhaul & User Experience
+
+### BEAD-056: Define visual design system
+**Priority:** High
+**Type:** Design
+**Files:** New `res/values/` files, documentation
+**Issue:** UI has been a trivial consideration during prototyping. Need a cohesive visual framework.
+**Acceptance Criteria:**
+- [ ] Define color palette (primary, secondary, accent, background, surface, error)
+- [ ] Define typography scale (heading, body, caption styles)
+- [ ] Define spacing/margin system (consistent dp values)
+- [ ] Define control styles (buttons, inputs, cards)
+- [ ] Create `colors.xml`, `styles.xml`, `dimens.xml` with design tokens
+- [ ] Document design system in `designs/ui-design-system.md`
+- [ ] Create sample/reference screen showing all components
+
+---
+
+### BEAD-057: Improve sign-up flow - profile photo selection
+**Priority:** Medium
+**Type:** Feature
+**Files:** `NewUserFragment.kt`, `fragment_new_user.xml`
+**Issue:** Users cannot choose a profile photo during account creation.
+**Acceptance Criteria:**
+- [ ] Add profile photo picker (gallery selection)
+- [ ] Add camera capture option
+- [ ] Show preview of selected photo
+- [ ] Crop/resize photo to standard avatar dimensions
+- [ ] Store avatar with identity creation
+- [ ] Handle permission requests gracefully (camera, storage on older APIs)
+
+---
+
+### BEAD-058: Improve sign-up flow - form design
+**Priority:** Medium
+**Type:** UI
+**Files:** `NewUserFragment.kt`, `fragment_new_user.xml`
+**Issue:** Account creation form needs visual polish.
+**Acceptance Criteria:**
+- [ ] Apply design system from BEAD-056
+- [ ] Add visual hierarchy (clear sections, spacing)
+- [ ] Add input validation with inline error messages
+- [ ] Add loading state during account creation
+- [ ] Add success confirmation before navigation
+- [ ] Ensure keyboard doesn't obscure inputs
+
+---
+
+### BEAD-059: Post view filtering - by Circle
+**Priority:** High
+**Type:** Feature
+**Files:** `ContentFragment.kt`, `fragment_content.xml`, `BailiwickViewModel.kt`
+**Issue:** Users can only view all posts or filter by person. Need circle-based filtering.
+**Acceptance Criteria:**
+- [ ] Add circle selector UI (dropdown or tab bar)
+- [ ] Filter posts by selected circle membership
+- [ ] "All" option shows posts from all circles
+- [ ] Remember last selected filter across app restarts
+- [ ] Update LiveData observer to apply circle filter
+
+---
+
+### BEAD-060: Post view filtering - unified filter UI
+**Priority:** Medium
+**Type:** UI
+**Files:** `ContentFragment.kt`, `fragment_content.xml`
+**Issue:** Need cohesive UI for switching between filter modes (All, Circle, Person).
+**Acceptance Criteria:**
+- [ ] Design filter bar with clear mode indicators
+- [ ] Tap Circle → show circle list
+- [ ] Tap Person → show person avatars (existing horizontal scroll)
+- [ ] Tap All → clear filters, show everything
+- [ ] Visual indication of active filter
+- [ ] Apply design system styling
+
+---
+
+### BEAD-061: Improved connection flow - Invite initiation
+**Priority:** High
+**Type:** Feature
+**Files:** `IntroduceSelfFragment.kt`, `fragment_introduce_self.xml`, new fragments
+**Issue:** Connection flow is confusing. Need clearer "Invite" → Identity → QR → Accept path.
+**Acceptance Criteria:**
+- [ ] "Invite" button opens identity selector (if multiple identities)
+- [ ] After identity selection, show QR code for that identity
+- [ ] QR screen has clear "Accept Invitation" button for reciprocal connection
+- [ ] Add explanation text for each step
+- [ ] Handle single-identity case (skip selector)
+
+---
+
+### BEAD-062: Improved connection flow - Scan invitation
+**Priority:** High
+**Type:** Feature
+**Files:** `ConnectFragment.kt`, `AcceptIntroductionFragment.kt`
+**Issue:** Scanning an invitation should flow smoothly to reciprocal QR display.
+**Acceptance Criteria:**
+- [ ] "Scan Invitation" button opens camera scanner
+- [ ] After successful scan, show identity selector
+- [ ] After identity selection, show reciprocal QR code
+- [ ] Add progress indicator during processing
+- [ ] Clear error handling for invalid QR codes
+
+---
+
+### BEAD-063: Connection flow - visual redesign
+**Priority:** Medium
+**Type:** UI
+**Files:** All connection-related fragments
+**Issue:** Connection screens need visual polish to match design system.
+**Acceptance Criteria:**
+- [ ] Apply design system from BEAD-056
+- [ ] Clear step indicators (1, 2, 3 or similar)
+- [ ] Consistent button placement and sizing
+- [ ] QR code display with clear instructions
+- [ ] Scanner overlay with alignment guide
+
+---
+
+## Sprint 6: Account Portability
+
+### BEAD-064: Export encrypted key file
+**Priority:** High
+**Type:** Feature
+**Files:** New `KeyExporter.kt`, settings UI
+**Issue:** Users cannot back up or transfer their identity to another device.
+**Acceptance Criteria:**
+- [ ] Add "Export Identity" option in settings/profile
+- [ ] Prompt for export password (with confirmation)
+- [ ] Generate encrypted key file (private key + identity data)
+- [ ] Use strong encryption (AES-256-GCM with PBKDF2 key derivation)
+- [ ] Allow saving to Downloads or sharing via intent
+- [ ] Include metadata (creation date, identity name) in export
+- [ ] Document file format in `designs/key-export-format.md`
+
+---
+
+### BEAD-065: Import key file - sign in with existing identity
+**Priority:** High
+**Type:** Feature
+**Files:** New `KeyImporter.kt`, `SplashFragment.kt` or new flow
+**Issue:** Users cannot restore identity from backup or transfer from another device.
+**Acceptance Criteria:**
+- [ ] Add "Sign in with existing key" option on initial screen
+- [ ] File picker to select key file
+- [ ] Password prompt to decrypt
+- [ ] Validate key file format and integrity
+- [ ] Import private key to AndroidKeyStore
+- [ ] Restore identity data to database
+- [ ] Handle conflict if identity already exists
+- [ ] Clear error messages for wrong password / corrupt file
+
+---
+
+### BEAD-066: Key export/import - security hardening
+**Priority:** Medium
+**Type:** Security
+**Files:** `KeyExporter.kt`, `KeyImporter.kt`
+**Issue:** Key export/import needs security review.
+**Acceptance Criteria:**
+- [ ] Enforce minimum password strength
+- [ ] Use secure memory handling (clear password from memory after use)
+- [ ] Add rate limiting for import password attempts
+- [ ] Log security events (export, import attempts)
+- [ ] Consider adding optional 2FA or biometric confirmation for export
+
+---
+
+## Sprint 7: Post Interactions & Media
+
+### BEAD-067: Data model for post reactions
+**Priority:** High
+**Type:** Design/Feature
+**Files:** New `Reaction.kt`, `ReactionDao`, `IrohReaction.kt`, database migration
+**Issue:** Users cannot react to posts with emoji.
+**Acceptance Criteria:**
+- [ ] Design `Reaction` entity (postHash, authorId, emoji, timestamp, signature)
+- [ ] Add `ReactionDao` with queries (reactionsForPost, myReactionForPost)
+- [ ] Create `IrohReaction` model for network serialization
+- [ ] Add reactions to ContentPublisher (publish with post reference)
+- [ ] Add reactions to ContentDownloader (download and store)
+- [ ] Database migration to add reactions table
+- [ ] Document data model in `designs/post-interactions.md`
+
+---
+
+### BEAD-068: Reaction UI - display and add
+**Priority:** High
+**Type:** Feature
+**Files:** `PostAdapter.kt`, `post.xml`, new `ReactionPickerFragment`
+**Issue:** Need UI to display reactions and allow adding them.
+**Acceptance Criteria:**
+- [ ] Display reaction counts below each post (grouped by emoji)
+- [ ] Tap reaction count to see who reacted
+- [ ] Long-press or tap "react" button to open emoji picker
+- [ ] Tap existing reaction to toggle (add/remove your reaction)
+- [ ] Animate reaction additions
+- [ ] Limit to standard emoji set or allow custom?
+
+---
+
+### BEAD-069: Data model for comments
+**Priority:** High
+**Type:** Design/Feature
+**Files:** New `Comment.kt` or extend `Post`, database migration
+**Issue:** Users cannot comment on posts.
+**Acceptance Criteria:**
+- [ ] Design comment model (Option A: new entity, Option B: Post with parentHash)
+- [ ] If using Post with parentHash: add `replies(parentHash)` query to PostDao
+- [ ] Add comment count query
+- [ ] Update ContentPublisher to publish comments
+- [ ] Update ContentDownloader to download comment threads
+- [ ] Consider threading depth limits
+
+---
+
+### BEAD-070: Comment UI - display and compose
+**Priority:** High
+**Type:** Feature
+**Files:** `PostAdapter.kt`, new `CommentsFragment`, `post.xml`
+**Issue:** Need UI to view and write comments.
+**Acceptance Criteria:**
+- [ ] Show comment count on posts
+- [ ] Tap to expand inline comments (first N) or navigate to full thread
+- [ ] Comment composer at bottom of thread view
+- [ ] Nested replies with indentation (limit depth visually)
+- [ ] Pull-to-refresh for new comments
+- [ ] Show author avatar and name for each comment
+
+---
+
+### BEAD-071: Data model for tags
+**Priority:** Medium
+**Type:** Design/Feature
+**Files:** New `Tag.kt`, `TagDao`, database migration
+**Issue:** Users cannot tag posts with topics/categories.
+**Acceptance Criteria:**
+- [ ] Design `Tag` entity (name, postId or postHash)
+- [ ] Decide: author-only tags vs. anyone can tag?
+- [ ] Add `TagDao` with queries (tagsForPost, postsForTag)
+- [ ] Create `IrohTag` model for network serialization
+- [ ] Add to ContentPublisher/ContentDownloader
+- [ ] Consider tag suggestions/autocomplete data
+
+---
+
+### BEAD-072: Tag UI - display and search
+**Priority:** Medium
+**Type:** Feature
+**Files:** `PostAdapter.kt`, `post.xml`, `ContentFragment.kt`
+**Issue:** Need UI to display tags and filter by them.
+**Acceptance Criteria:**
+- [ ] Display tags as chips below post content
+- [ ] Tap tag to filter feed by that tag
+- [ ] Add tag input when composing posts
+- [ ] Tag autocomplete from existing tags
+- [ ] Tag cloud or list view for discovery
+
+---
+
+### BEAD-073: Photo sharing - capture and selection
+**Priority:** High
+**Type:** Feature
+**Files:** `ContentFragment.kt`, new `MediaPickerFragment`
+**Issue:** Users can only post text, not photos.
+**Acceptance Criteria:**
+- [ ] Add camera button to post composer
+- [ ] Add gallery button to post composer
+- [ ] Support selecting multiple photos
+- [ ] Show thumbnail previews before posting
+- [ ] Allow removing selected photos
+- [ ] Compress/resize images for efficient storage
+- [ ] Handle permissions (camera, media access)
+
+---
+
+### BEAD-074: Photo sharing - storage and sync
+**Priority:** High
+**Type:** Feature
+**Files:** `ContentPublisher.kt`, `ContentDownloader.kt`, `PostFile.kt`
+**Issue:** Photos need to be stored and synced via Iroh.
+**Acceptance Criteria:**
+- [ ] Store photos as Iroh blobs
+- [ ] Link photos to posts via PostFile entity
+- [ ] Update post publishing to include photo hashes
+- [ ] Update feed format to reference photo blobs
+- [ ] Download photos when syncing posts
+- [ ] Cache downloaded photos locally
+- [ ] Handle missing/failed photo downloads gracefully
+
+---
+
+### BEAD-075: Photo sharing - display
+**Priority:** High
+**Type:** Feature
+**Files:** `PostAdapter.kt`, `post.xml`, new `PhotoViewerFragment`
+**Issue:** Need UI to display photos in posts.
+**Acceptance Criteria:**
+- [ ] Display photos inline in post (single or grid for multiple)
+- [ ] Tap photo to open full-screen viewer
+- [ ] Swipe between photos in multi-photo posts
+- [ ] Pinch-to-zoom in viewer
+- [ ] Show loading placeholder while downloading
+- [ ] Show error state for failed downloads
+- [ ] Text-only posts still work (photos optional)
+
+---
+
+## Summary
+
+| Priority | Count | Resolved |
+|----------|-------|----------|
+| Critical | 8 | 8 |
+| High | 15 + 7 | 9 |
+| Medium | 16 + 7 | 15* |
+| Low | 17 | 17 |
+| **Total** | **70** | **49*** |
+
+*Note: BEAD-028 deferred due to Room/KAPT limitations.
+
+---
+
 ### Recommended Sprint Planning
 
 **Sprint 1 (Pre-merge blockers):**
@@ -653,6 +977,18 @@ Generated from code review on 2026-01-07
 
 **Sprint 3 (Code Quality):**
 - BEAD-018 through BEAD-033 (Medium)
+
+**Sprint 4 (Action Sync):**
+- BEAD-051 through BEAD-055
+
+**Sprint 5 (UI Overhaul):**
+- BEAD-056 through BEAD-063
+
+**Sprint 6 (Account Portability):**
+- BEAD-064 through BEAD-066
+
+**Sprint 7 (Post Interactions & Media):**
+- BEAD-067 through BEAD-075
 
 **Ongoing (Tech Debt):**
 - BEAD-034 through BEAD-050 (Low)

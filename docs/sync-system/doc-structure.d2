@@ -1,0 +1,73 @@
+# Iroh Doc Entry Structure
+
+title: {
+  label: Doc Entry Structure
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+doc: "User's Iroh Doc" {
+  style.fill: "#e6f3ff"
+
+  identity: identity {
+    key: 'key = "identity"'
+    value: "value = blob hash (a83039...)"
+    content: "Contains: name, profilePicHash"
+  }
+
+  circle: circles/1 {
+    key: 'key = "circles/1"'
+    value: "value = blob hash (6bdceff...)"
+    content: "Contains: id, name, members (encrypted)"
+  }
+
+  feed: "feed/latest (DEPRECATED)" {
+    key: 'key = "feed/latest"'
+    value: "value = blob hash (9fa5c0...)"
+    content: "Contains: list of post hashes"
+    note: "Overwrites don't sync reliably"
+    style.fill: "#ffcccc"
+  }
+
+  post1: posts/1/1767993388589 {
+    key: 'key = "posts/{circleId}/{timestamp}"'
+    value: "value = blob hash (58d47a...)"
+    content: "Contains: timestamp, text, files, signature (encrypted)"
+  }
+
+  post2: posts/1/1767994620297 {
+    key: 'key = "posts/1/1767994620297"'
+    value: "value = blob hash (6784d2...)"
+    note: "New posts = new keys (append-only)"
+    style.fill: "#ccffcc"
+  }
+
+  action: "actions/{targetNodeId}/{timestamp}" {
+    key: 'key = "actions/{nodeId}/{ts}"'
+    value: "value = blob hash (e17aed...)"
+    content: "Contains: type, timestamp, data"
+  }
+}
+
+# Entry metadata
+entry_structure: Entry Structure {
+  key: "Key (bytes)"
+  author: "Author ID"
+  content_hash: "Content Hash"
+  timestamp: "Timestamp"
+}
+
+# Iroh set reconciliation
+reconciliation: Set Reconciliation {
+  label: |md
+    **Iroh Docs Sync**
+    - Each entry has: key, author, hash, timestamp
+    - Sync exchanges missing entries
+    - Same key + different author = both kept
+    - Same key + same author = latest wins
+
+    **Problem**: New entries not propagating!
+  |
+  shape: page
+}

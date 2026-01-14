@@ -1,0 +1,76 @@
+# Bailiwick Sync Architecture Overview
+
+title: {
+  label: Bailiwick Sync Architecture
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+# Devices
+device_a: Device A (S7) {
+  app: Bailiwick App {
+    service: IrohService
+    publisher: ContentPublisher
+    downloader: ContentDownloader
+    db: Room Database
+  }
+
+  iroh_a: Iroh Node {
+    my_doc: My Doc\n(namespace A)
+    peer_doc_b: Peer Doc B\n(local replica)
+    blobs: Blob Store
+  }
+
+  app.service -> app.publisher: publish
+  app.service -> app.downloader: download
+  app.publisher -> iroh_a.my_doc: write entries
+  app.publisher -> iroh_a.blobs: store blobs
+  app.downloader -> iroh_a.peer_doc_b: read entries
+  app.downloader -> iroh_a.blobs: get blobs
+  app.db <-> app.service: sync state
+}
+
+device_b: Device B (22+) {
+  app: Bailiwick App {
+    service: IrohService
+    publisher: ContentPublisher
+    downloader: ContentDownloader
+    db: Room Database
+  }
+
+  iroh_b: Iroh Node {
+    my_doc: My Doc\n(namespace B)
+    peer_doc_a: Peer Doc A\n(local replica)
+    blobs: Blob Store
+  }
+
+  app.service -> app.publisher: publish
+  app.service -> app.downloader: download
+  app.publisher -> iroh_b.my_doc: write entries
+  app.publisher -> iroh_b.blobs: store blobs
+  app.downloader -> iroh_b.peer_doc_a: read entries
+  app.downloader -> iroh_b.blobs: get blobs
+  app.db <-> app.service: sync state
+}
+
+# Network sync
+relay: Iroh Relay Server {
+  shape: cloud
+}
+
+device_a.iroh_a.my_doc <-> relay: sync {
+  style.stroke-dash: 3
+}
+device_b.iroh_b.my_doc <-> relay: sync {
+  style.stroke-dash: 3
+}
+
+relay -> device_a.iroh_a.peer_doc_b: "replicate B's doc" {
+  style.stroke: blue
+  style.stroke-dash: 3
+}
+relay -> device_b.iroh_b.peer_doc_a: "replicate A's doc" {
+  style.stroke: blue
+  style.stroke-dash: 3
+}

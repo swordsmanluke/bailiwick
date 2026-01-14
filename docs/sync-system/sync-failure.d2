@@ -1,0 +1,96 @@
+# Observed Sync Failure
+
+title: {
+  label: Observed Sync Failure
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+direction: down
+
+# Timeline
+timeline: Timeline {
+  t1: T1: Initial Introduction {
+    22plus: 22+ joins S7's doc
+    s7: S7 joins 22+'s doc
+    sync: Both sync successfully
+    result: "Both see each other's initial posts"
+  }
+
+  t2: T2: 22+ Creates New Post {
+    create: User creates "Dominos" post
+    publish: ContentPublisher writes:\n- posts/1/1767994620297 -> hash
+    doc_state: "22+ Doc now has 6 keys"
+  }
+
+  t3: T3: S7 Tries to Sync {
+    join: joinDoc(ticket)
+    sync: syncWithAndWait() -> success=true
+    query: doc.keys() returns 5 keys
+    missing: "posts/1/1767994620297 NOT present!"
+  }
+
+  t4: T4: S7 Creates New Post {
+    create: User creates "Making a post..."
+    publish: ContentPublisher writes:\n- posts/1/1767996069619 -> hash
+    doc_state: "S7 Doc now has 6 keys"
+  }
+
+  t5: T5: 22+ Tries to Sync {
+    join: joinDoc(ticket)
+    sync: syncWithAndWait() -> success=true
+    query: doc.keys() returns 5 keys
+    missing: "posts/1/1767996069619 NOT present!"
+  }
+
+  t1 -> t2 -> t3 -> t4 -> t5
+}
+
+# What we see vs expect
+comparison: {
+  expected: Expected Behavior {
+    style.fill: "#ccffcc"
+    content: |md
+      After sync:
+      - New keys should appear
+      - Updated values should propagate
+      - Both devices see same data
+    |
+  }
+
+  actual: Actual Behavior {
+    style.fill: "#ffcccc"
+    content: |md
+      After sync:
+      - Only initial keys visible
+      - New keys never appear
+      - Updated feed/latest has old value
+      - SYNC_FINISHED fires but no new data
+    |
+  }
+}
+
+# Evidence
+evidence: Log Evidence {
+  s7_log: S7 Log {
+    label: |md
+      ```
+      Peer doc dd5021... has 5 keys:
+      [actions/..., circles/1, feed/latest,
+       identity, posts/1/1767993388589]
+      ```
+      Missing: posts/1/1767994620297
+    |
+  }
+
+  plus22_log: 22+ Log {
+    label: |md
+      ```
+      My doc has 6 keys:
+      [..., posts/1/1767993388589,
+       posts/1/1767994620297]
+      ```
+    |
+  }
+}
