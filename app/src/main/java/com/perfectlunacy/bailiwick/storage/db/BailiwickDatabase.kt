@@ -21,9 +21,11 @@ import com.perfectlunacy.bailiwick.models.db.*
         PeerDoc::class,
         Action::class,
         User::class,
-        Subscription::class
+        Subscription::class,
+        Reaction::class,
+        Tag::class
     ],
-    version = 3,  // Added docTicket field to PeerDoc entity
+    version = 4,  // Added Reaction and Tag entities
     exportSchema = true
 )
 abstract class BailiwickDatabase : RoomDatabase() {
@@ -39,6 +41,8 @@ abstract class BailiwickDatabase : RoomDatabase() {
     abstract fun actionDao(): ActionDao
     abstract fun userDao(): UserDao
     abstract fun subscriptionDao(): SubscriptionDao
+    abstract fun reactionDao(): ReactionDao
+    abstract fun tagDao(): TagDao
 }
 
 fun getBailiwickDb(context: Context): BailiwickDatabase {

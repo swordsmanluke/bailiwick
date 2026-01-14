@@ -112,6 +112,14 @@ interface IrohNode {
     suspend fun joinDoc(ticket: String): IrohDoc?
 
     /**
+     * Delete a document from local storage.
+     * This permanently removes the document's secret key and all entries.
+     * Use this to force a completely fresh sync when rejoining.
+     * Errors are logged but not thrown (safe to call on non-existent docs).
+     */
+    suspend fun dropDoc(namespaceId: DocNamespaceId)
+
+    /**
      * Get this node's primary document for publishing content.
      * This document is created during initialization and always exists.
      */
@@ -183,6 +191,13 @@ interface IrohDoc {
     suspend fun keys(): List<String>
 
     /**
+     * List all keys matching a prefix.
+     * Returns empty list if no matches or on error.
+     * @param prefix The prefix to match against keys
+     */
+    suspend fun keysWithPrefix(prefix: String): List<String>
+
+    /**
      * Subscribe to updates from other peers.
      * The callback will be invoked when new data arrives.
      * Errors in subscription setup or callback are logged but not thrown.
@@ -196,4 +211,25 @@ interface IrohDoc {
      * Errors are logged but not thrown.
      */
     suspend fun syncWith(nodeId: NodeId)
+
+    /**
+     * Sync with a peer and wait for completion.
+     * Waits for SYNC_FINISHED event with a timeout.
+     * @param nodeId The peer to sync with
+     * @param timeoutMs Maximum time to wait for sync completion
+     * @return true if sync completed successfully, false on timeout or error
+     */
+    suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long = 30000): Boolean
+
+    /**
+     * Debug method: Get all entries for a key from all authors.
+     * Returns a list of (authorId, hash) pairs.
+     */
+    suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>>
+
+    /**
+     * Leave (stop syncing) this document.
+     * This clears the local replica, forcing a fresh sync on next join.
+     */
+    suspend fun leave()
 }

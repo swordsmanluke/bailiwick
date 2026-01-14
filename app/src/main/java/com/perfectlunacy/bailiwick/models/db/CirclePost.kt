@@ -12,6 +12,9 @@ interface CirclePostDao {
     @Query("SELECT postId FROM circlepost WHERE circleId = :circleId")
     fun postsIn(circleId: Long): List<Long>
 
+    @Query("SELECT circleId FROM circlepost WHERE postId = :postId")
+    fun circlesForPost(postId: Long): List<Long>
+
     @Insert
     fun insert(circlePost: CirclePost)
 }

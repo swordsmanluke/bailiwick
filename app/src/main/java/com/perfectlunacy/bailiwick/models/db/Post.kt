@@ -103,6 +103,19 @@ interface PostDao {
     @Query("SELECT COUNT(*) FROM post WHERE parentHash = :parentHash")
     fun replyCount(parentHash: BlobHash): Int
 
+
+    /**
+     * Get posts from the last N days that have associated files.
+     * Used for retrying failed file downloads.
+     */
+    @Query("""
+        SELECT DISTINCT p.* FROM post p 
+        INNER JOIN postfile pf ON p.id = pf.postId 
+        WHERE p.timestamp > :minTimestamp 
+        ORDER BY p.timestamp DESC
+    """)
+    fun postsWithFilesSince(minTimestamp: Long): List<Post>
+
     @Insert
     fun insert(post: Post): Long
 

@@ -105,25 +105,23 @@ class ContentDownloader(
     suspend fun syncPeer(peer: PeerDoc) {
         Log.d(TAG, "Syncing with peer ${peer.nodeId}")
 
-        // Try to open existing doc, or join if we don't have it
-        val doc = iroh.openDoc(peer.docNamespaceId) ?: if (peer.docTicket != null) {
+        // Always try to join with ticket first to get fresh sync, fall back to open
+        val doc = if (peer.docTicket != null) {
             Log.d(TAG, "Joining doc using ticket for ${peer.nodeId}")
-            iroh.joinDoc(peer.docTicket)
+            iroh.joinDoc(peer.docTicket) ?: iroh.openDoc(peer.docNamespaceId)
         } else {
-            null
-        }
-
-        if (doc != null) {
-            // Sync with the peer to get latest updates
-            Log.d(TAG, "Syncing doc with peer ${peer.nodeId}")
-            val syncSuccess = doc.syncWithAndWait(peer.nodeId, timeoutMs = 30000)
-            Log.d(TAG, "Sync complete for ${peer.nodeId} (success=$syncSuccess)")
+            iroh.openDoc(peer.docNamespaceId)
         }
 
         if (doc == null) {
             Log.w(TAG, "Could not open doc for ${peer.nodeId}")
             return
         }
+
+        // Sync with the peer to get latest updates
+        Log.d(TAG, "Syncing doc with peer ${peer.nodeId}")
+        val syncSuccess = doc.syncWithAndWait(peer.nodeId, timeoutMs = 30000)
+        Log.d(TAG, "Sync complete for ${peer.nodeId} (success=$syncSuccess)")
 
         // Download identity (not encrypted)
         doc.get(IrohDocKeys.KEY_IDENTITY)?.let { identityHashBytes ->

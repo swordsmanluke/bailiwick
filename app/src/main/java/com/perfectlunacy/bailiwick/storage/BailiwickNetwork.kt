@@ -109,6 +109,7 @@ class BailiwickNetworkImpl(
     override fun storePost(circleId: Long, post: Post) {
         val circlePostDao = db.circlePostDao()
         val postId = db.postDao().insert(post)
+        post.id = postId  // Update the post's ID so callers can use it
         circlePostDao.insert(CirclePost(circleId, postId))
 
         // Always add things to the 'everyone' circle - if it still exists

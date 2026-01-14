@@ -81,6 +81,7 @@ class IrohWrapper private constructor(
 
             // Get or create default author
             val defaultAuthorId = iroh.authors().default()
+            Log.i(TAG, "Using author: $defaultAuthorId")
 
             // Get or create our primary document
             val myDoc = getOrCreateMyDoc(context, iroh)
@@ -166,7 +167,10 @@ class IrohWrapper private constructor(
 
     override suspend fun storeBlob(data: ByteArray): BlobHash {
         return try {
-            val outcome = blobs.addBytes(data)
+            // Use addBytesNamed to create a persistent named tag
+            // This prevents garbage collection and allows sharing with peers
+            val name = "blob-${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}"
+            val outcome = blobs.addBytesNamed(data, name)
             val hash = outcome.hash.toHex()
             Log.d(TAG, "Stored blob: $hash (${data.size} bytes)")
             hash
@@ -257,7 +261,10 @@ class IrohWrapper private constructor(
 
     override suspend fun hasBlob(hash: BlobHash): Boolean {
         return try {
-            blobs.has(Hash.fromString(hash))
+            // In v0.28.1, there's no `has` method - use `size` instead
+            // If size succeeds, the blob exists
+            blobs.size(Hash.fromString(hash))
+            true
         } catch (e: IrohException) {
             Log.d(TAG, "hasBlob($hash) failed: ${e.message}")
             false
@@ -340,6 +347,17 @@ class IrohWrapper private constructor(
         }
     }
 
+    override suspend fun dropDoc(namespaceId: DocNamespaceId) {
+        try {
+            docs.dropDoc(namespaceId)
+            Log.i(TAG, "Dropped doc: $namespaceId")
+        } catch (e: IrohException) {
+            Log.w(TAG, "Failed to drop doc $namespaceId: ${e.message}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error dropping doc $namespaceId: ${e.message}")
+        }
+    }
+
     override suspend fun getMyDoc(): IrohDoc {
         return IrohDocImpl(myDoc, defaultAuthorId, blobs)
     }
@@ -358,7 +376,7 @@ class IrohWrapper private constructor(
 
     override suspend fun shutdown() {
         try {
-            iroh.node().shutdown()
+            iroh.node().shutdown(false)  // graceful shutdown
             Log.i(TAG, "Iroh shutdown")
         } catch (e: Exception) {
             Log.w(TAG, "Error during shutdown: ${e.message}")
@@ -386,18 +404,29 @@ private class IrohDocImpl(
     override suspend fun namespaceId(): DocNamespaceId = cachedNamespaceId
 
     override suspend fun set(key: String, value: ByteArray) {
+        Log.d(TAG, "Setting key '$key' with author $authorId, value size=${value.size}")
         doc.setBytes(authorId, key.toByteArray(), value)
+        
+        // Verify the write
+        val query = Query.singleLatestPerKeyExact(key.toByteArray())
+        val entries = doc.getMany(query)
+        val entry = entries.firstOrNull()
+        if (entry != null) {
+            Log.d(TAG, "After set: key='$key' has entry from author ${entry.author()}, content=${entry.contentHash()}")
+        } else {
+            Log.w(TAG, "After set: key='$key' has NO entry!")
+        }
     }
 
     override suspend fun get(key: String): ByteArray? {
         return try {
-            // Query for the key from ANY author, not just our own
-            // This is important for reading from peer docs
+            // Query for the LATEST entry for this key across ALL authors
+            // This ensures we get the most recent value even when multiple authors have written
             val keyBytes = key.toByteArray()
-            val query = Query.keyExact(keyBytes, null)
+            val query = Query.singleLatestPerKeyExact(keyBytes)
             val entries = doc.getMany(query)
 
-            // Get the first (most recent) entry for this key
+            // Should return at most one entry (the latest)
             val entry = entries.firstOrNull()
             if (entry != null) {
                 // Read the content from the blob store
@@ -425,6 +454,20 @@ private class IrohDocImpl(
             }.distinct()
         } catch (e: IrohException) {
             Log.w(TAG, "Failed to list keys: ${e.message}")
+            emptyList()
+        }
+    }
+
+    override suspend fun keysWithPrefix(prefix: String): List<String> {
+        return try {
+            val prefixBytes = prefix.toByteArray()
+            val query = Query.keyPrefix(prefixBytes, null)
+            val entries = doc.getMany(query)
+            entries.map { entry ->
+                String(entry.key())
+            }.distinct()
+        } catch (e: IrohException) {
+            Log.w(TAG, "Failed to list keys with prefix '$prefix': ${e.message}")
             emptyList()
         }
     }
@@ -469,6 +512,98 @@ private class IrohDocImpl(
             doc.startSync(listOf(nodeAddr))
         } catch (e: IrohException) {
             Log.w(TAG, "Failed to sync with $nodeId: ${e.message}")
+        }
+    }
+
+    override suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long): Boolean {
+        return try {
+            val publicKey = PublicKey.fromString(nodeId)
+            val nodeAddr = NodeAddr(publicKey, null, listOf())
+            
+            // Use a CompletableDeferred to wait for sync completion
+            val syncComplete = kotlinx.coroutines.CompletableDeferred<Boolean>()
+            var insertCount = 0
+            
+            // Subscribe to events before starting sync
+            val callback = object : SubscribeCallback {
+                override suspend fun event(event: LiveEvent) {
+                    when (event.type()) {
+                        LiveEventType.SYNC_FINISHED -> {
+                            Log.d(TAG, "Sync finished event received for $nodeId (received $insertCount inserts)")
+                            syncComplete.complete(true)
+                        }
+                        LiveEventType.INSERT_REMOTE -> {
+                            insertCount++
+                            val insert = event.asInsertRemote()
+                            Log.i(TAG, "INSERT_REMOTE #$insertCount from $nodeId: key=${String(insert.entry.key())}")
+                        }
+                        LiveEventType.INSERT_LOCAL -> {
+                            Log.d(TAG, "INSERT_LOCAL during sync with $nodeId")
+                        }
+                        LiveEventType.CONTENT_READY -> {
+                            Log.d(TAG, "CONTENT_READY during sync with $nodeId")
+                        }
+                        LiveEventType.NEIGHBOR_UP -> {
+                            Log.d(TAG, "NEIGHBOR_UP: peer $nodeId is reachable")
+                        }
+                        LiveEventType.NEIGHBOR_DOWN -> {
+                            Log.d(TAG, "NEIGHBOR_DOWN: peer $nodeId disconnected")
+                        }
+                        else -> {
+                            Log.d(TAG, "Sync event: ${event.type()} for $nodeId")
+                        }
+                    }
+                }
+            }
+            
+            doc.subscribe(callback)
+            Log.d(TAG, "Starting sync with $nodeId")
+            doc.startSync(listOf(nodeAddr))
+            
+            // Wait for sync with timeout
+            val result = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+                syncComplete.await()
+            } ?: false
+            
+            if (!result) {
+                Log.w(TAG, "Sync with $nodeId timed out after ${timeoutMs}ms")
+            } else {
+                Log.i(TAG, "Sync with $nodeId completed: $insertCount new entries received")
+            }
+            
+            result
+        } catch (e: IrohException) {
+            Log.w(TAG, "Failed to sync with $nodeId: ${e.message}")
+            false
+        } catch (e: Exception) {
+            Log.w(TAG, "Error during sync with $nodeId: ${e.message}")
+            false
+        }
+    }
+
+    override suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>> {
+        return try {
+            val keyBytes = key.toByteArray()
+            val query = Query.keyExact(keyBytes, null)
+            val entries = doc.getMany(query)
+            
+            entries.map { entry ->
+                val authorId = entry.author().toString()
+                val contentHash = entry.contentHash().toString()
+                Pair(authorId, contentHash)
+            }
+        } catch (e: IrohException) {
+            Log.w(TAG, "Failed to get all entries for key '$key': ${e.message}")
+            emptyList()
+        }
+    }
+
+    override suspend fun leave() {
+        try {
+            doc.leave()
+            Log.i(TAG, "Left document $cachedNamespaceId")
+        } catch (e: IrohException) {
+            Log.w(TAG, "Failed to leave document: ${e.message}")
         }
     }
 

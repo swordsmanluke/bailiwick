@@ -64,27 +64,50 @@ class ContentPublisher(
     }
 
     /**
-     * Publish a post (encrypted).
+     * Publish a post (encrypted) for a specific circle.
+     * Stores the encrypted post as a blob and sets the doc entry at posts/{circleId}/{timestamp}.
      * Returns the blob hash of the encrypted post.
      */
-    suspend fun publishPost(post: Post, cipher: Encryptor): BlobHash {
+    suspend fun publishPost(post: Post, circleId: Long, cipher: Encryptor): BlobHash {
         // Get files for this post
         val files = db.postFileDao().filesForPost(post.id)
 
+        val timestamp = post.timestamp ?: System.currentTimeMillis()
+        
+        // Encrypt and publish each file, mapping original hash to encrypted hash
+        val encryptedFiles = mutableListOf<IrohFileDef>()
+        for (file in files) {
+            // Get the unencrypted file content
+            val fileData = iroh.getBlob(file.blobHash)
+            if (fileData == null) {
+                Log.w(TAG, "Could not find file blob ${file.blobHash} for post ${post.id}")
+                continue
+            }
+            
+            // Encrypt and store
+            val encryptedHash = publishFile(fileData, cipher)
+            encryptedFiles.add(IrohFileDef(file.mimeType, encryptedHash))
+            Log.d(TAG, "Encrypted file ${file.blobHash} -> $encryptedHash")
+        }
+        
         val irohPost = IrohPost(
-            timestamp = post.timestamp,
+            timestamp = timestamp,
             parentHash = post.parentHash,
             text = post.text,
-            files = files.map { IrohFileDef(it.mimeType, it.blobHash) },
+            files = encryptedFiles,
             signature = post.signature
         )
 
         val hash = storeEncrypted(irohPost, cipher)
 
+        // Set the doc entry at posts/{circleId}/{timestamp}
+        val key = IrohDocKeys.postKey(circleId, timestamp)
+        iroh.getMyDoc().set(key, hash.toByteArray())
+        
         // Update post with its hash
         db.postDao().updateHash(post.id, hash)
 
-        Log.i(TAG, "Published post: $hash")
+        Log.i(TAG, "Published post: $hash at key $key with ${encryptedFiles.size} files")
         return hash
     }
 
@@ -100,9 +123,12 @@ class ContentPublisher(
     }
 
     /**
-     * Publish a feed snapshot for a circle.
-     * This is the list of all post hashes in the circle.
+     * DEPRECATED: Publish a feed snapshot for a circle.
+     * This uses the old feed/latest approach which doesn't sync reliably in Iroh Docs.
+     * Kept for backward compatibility during migration period.
+     * New posts are now published individually via posts/{circleId}/{timestamp} entries.
      */
+    @Deprecated("Use publishPost with circleId instead - individual post entries sync reliably")
     suspend fun publishFeed(circle: Circle, cipher: Encryptor): BlobHash {
         // Get all posts in this circle
         val postIds = db.circlePostDao().postsIn(circle.id)
@@ -118,7 +144,7 @@ class ContentPublisher(
         // Store in my doc under circle path
         iroh.getMyDoc().set(IrohDocKeys.circleKey(circle.id), hash.toByteArray())
 
-        // Also update latest feed pointer
+        // Also update latest feed pointer (DEPRECATED - kept for backward compatibility)
         iroh.getMyDoc().set(IrohDocKeys.KEY_FEED_LATEST, hash.toByteArray())
 
         // Update circle with its hash
@@ -133,20 +159,26 @@ class ContentPublisher(
      * Call this during sync to push local changes.
      */
     suspend fun publishPending(cipher: Encryptor) {
-        // Publish unpublished posts
+        // Publish unpublished posts with their circle entries
         val pendingPosts = db.postDao().inNeedOfSync()
         for (post in pendingPosts) {
             try {
-                publishPost(post, cipher)
+                // Get all circles this post belongs to
+                val circleIds = db.circlePostDao().circlesForPost(post.id)
+                for (circleId in circleIds) {
+                    publishPost(post, circleId, cipher)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to publish post ${post.id}: ${e.message}")
             }
         }
 
-        // Update feeds for circles with new posts
+        // DEPRECATED: Also update feeds for backward compatibility during migration
+        // Remove this block after all devices are updated
         val circles = db.circleDao().all()
         for (circle in circles) {
             try {
+                @Suppress("DEPRECATION")
                 publishFeed(circle, cipher)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to publish feed for circle ${circle.id}: ${e.message}")
