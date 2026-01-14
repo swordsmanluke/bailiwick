@@ -680,7 +680,7 @@ internal interface UniffiCallbackInterfaceGossipMessageCallbackMethod0 : com.sun
     fun callback(`uniffiHandle`: Long,`msg`: Pointer,`uniffiFutureCallback`: UniffiForeignFutureCompleteVoid,`uniffiCallbackData`: Long,`uniffiOutReturn`: UniffiForeignFuture,)
 }
 internal interface UniffiCallbackInterfaceProtocolCreatorMethod0 : com.sun.jna.Callback {
-    fun callback(`uniffiHandle`: Long,`endpoint`: Pointer,`uniffiOutReturn`: PointerByReference,uniffiCallStatus: UniffiRustCallStatus,)
+    fun callback(`uniffiHandle`: Long,`endpoint`: Pointer,`client`: Pointer,`uniffiOutReturn`: PointerByReference,uniffiCallStatus: UniffiRustCallStatus,)
 }
 internal interface UniffiCallbackInterfaceProtocolHandlerMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`conn`: Pointer,`uniffiFutureCallback`: UniffiForeignFutureCompleteVoid,`uniffiCallbackData`: Long,`uniffiOutReturn`: UniffiForeignFuture,)
@@ -1534,7 +1534,6 @@ internal open class UniffiVTableCallbackInterfaceSubscribeCallback(
 
 
 
-
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -1669,10 +1668,6 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_iroh_ffi_fn_method_blobprovideeventcallback_blob_event(`ptr`: Pointer,`event`: Pointer,
     ): Long
-    fun uniffi_iroh_ffi_fn_clone_blobstatus(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_iroh_ffi_fn_free_blobstatus(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
     fun uniffi_iroh_ffi_fn_clone_blobticket(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_free_blobticket(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1711,8 +1706,6 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_iroh_ffi_fn_method_blobs_get_collection(`ptr`: Pointer,`hash`: Pointer,
     ): Long
-    fun uniffi_iroh_ffi_fn_method_blobs_has(`ptr`: Pointer,`hash`: Pointer,
-    ): Long
     fun uniffi_iroh_ffi_fn_method_blobs_list(`ptr`: Pointer,
     ): Long
     fun uniffi_iroh_ffi_fn_method_blobs_list_collections(`ptr`: Pointer,
@@ -1726,8 +1719,6 @@ internal interface UniffiLib : Library {
     fun uniffi_iroh_ffi_fn_method_blobs_share(`ptr`: Pointer,`hash`: Pointer,`blobFormat`: RustBuffer.ByValue,`ticketOptions`: RustBuffer.ByValue,
     ): Long
     fun uniffi_iroh_ffi_fn_method_blobs_size(`ptr`: Pointer,`hash`: Pointer,
-    ): Long
-    fun uniffi_iroh_ffi_fn_method_blobs_status(`ptr`: Pointer,`hash`: Pointer,
     ): Long
     fun uniffi_iroh_ffi_fn_method_blobs_write_to_path(`ptr`: Pointer,`hash`: Pointer,`path`: RustBuffer.ByValue,
     ): Long
@@ -1757,6 +1748,10 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_iroh_ffi_fn_method_connecting_connect(`ptr`: Pointer,
     ): Long
+    fun uniffi_iroh_ffi_fn_method_connecting_local_ip(`ptr`: Pointer,
+    ): Long
+    fun uniffi_iroh_ffi_fn_method_connecting_remote_address(`ptr`: Pointer,
+    ): Long
     fun uniffi_iroh_ffi_fn_clone_connection(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_free_connection(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1765,8 +1760,6 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_iroh_ffi_fn_method_connection_accept_uni(`ptr`: Pointer,
     ): Long
-    fun uniffi_iroh_ffi_fn_method_connection_alpn(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_method_connection_close(`ptr`: Pointer,`errorCode`: Long,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_iroh_ffi_fn_method_connection_close_reason(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1775,6 +1768,10 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_iroh_ffi_fn_method_connection_datagram_send_buffer_space(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    fun uniffi_iroh_ffi_fn_method_connection_get_remote_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Pointer
+    fun uniffi_iroh_ffi_fn_method_connection_local_ip(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_method_connection_max_datagram_size(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_method_connection_open_bi(`ptr`: Pointer,
@@ -1783,12 +1780,14 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_iroh_ffi_fn_method_connection_read_datagram(`ptr`: Pointer,
     ): Long
-    fun uniffi_iroh_ffi_fn_method_connection_remote_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_iroh_ffi_fn_method_connection_remote_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_method_connection_rtt(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     fun uniffi_iroh_ffi_fn_method_connection_send_datagram(`ptr`: Pointer,`data`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_iroh_ffi_fn_method_connection_send_datagram_wait(`ptr`: Pointer,`data`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_iroh_ffi_fn_method_connection_set_max_concurrent_bii_stream(`ptr`: Pointer,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_iroh_ffi_fn_method_connection_set_max_concurrent_uni_stream(`ptr`: Pointer,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1975,14 +1974,14 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_iroh_ffi_fn_method_endpoint_connect(`ptr`: Pointer,`nodeAddr`: Pointer,`alpn`: RustBuffer.ByValue,
     ): Long
-    fun uniffi_iroh_ffi_fn_method_endpoint_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_clone_entry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_free_entry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_iroh_ffi_fn_method_entry_author(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
+    fun uniffi_iroh_ffi_fn_method_entry_content_bytes(`ptr`: Pointer,`doc`: Pointer,
+    ): Long
     fun uniffi_iroh_ffi_fn_method_entry_content_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_method_entry_content_len(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -2039,6 +2038,8 @@ internal interface UniffiLib : Library {
     ): Pointer
     fun uniffi_iroh_ffi_fn_free_iroh(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_iroh_ffi_fn_constructor_iroh_client(`addr`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_iroh_ffi_fn_constructor_iroh_memory(
     ): Long
     fun uniffi_iroh_ffi_fn_constructor_iroh_memory_with_options(`options`: RustBuffer.ByValue,
@@ -2125,7 +2126,9 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_iroh_ffi_fn_method_node_endpoint(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
-    fun uniffi_iroh_ffi_fn_method_node_shutdown(`ptr`: Pointer,
+    fun uniffi_iroh_ffi_fn_method_node_my_rpc_addr(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_iroh_ffi_fn_method_node_shutdown(`ptr`: Pointer,`force`: Byte,
     ): Long
     fun uniffi_iroh_ffi_fn_method_node_stats(`ptr`: Pointer,
     ): Long
@@ -2155,25 +2158,13 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_method_nodestatus_version(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_iroh_ffi_fn_clone_nodeticket(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_iroh_ffi_fn_free_nodeticket(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_iroh_ffi_fn_constructor_nodeticket_new(`addr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_iroh_ffi_fn_constructor_nodeticket_parse(`str`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_iroh_ffi_fn_method_nodeticket_node_addr(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_iroh_ffi_fn_method_nodeticket_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_clone_protocolcreator(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_free_protocolcreator(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_iroh_ffi_fn_init_callback_vtable_protocolcreator(`vtable`: UniffiVTableCallbackInterfaceProtocolCreator,
     ): Unit
-    fun uniffi_iroh_ffi_fn_method_protocolcreator_create(`ptr`: Pointer,`endpoint`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_iroh_ffi_fn_method_protocolcreator_create(`ptr`: Pointer,`endpoint`: Pointer,`client`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_iroh_ffi_fn_clone_protocolhandler(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
@@ -2329,6 +2320,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_iroh_ffi_fn_func_set_log_level(`level`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_iroh_ffi_fn_func_start_metrics_collection(uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     fun ffi_iroh_ffi_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_iroh_ffi_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2447,6 +2440,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_func_set_log_level(
     ): Short
+    fun uniffi_iroh_ffi_checksum_func_start_metrics_collection(
+    ): Short
     fun uniffi_iroh_ffi_checksum_method_addcallback_progress(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_addprogress_as_abort(
@@ -2529,8 +2524,6 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_blobs_get_collection(
     ): Short
-    fun uniffi_iroh_ffi_checksum_method_blobs_has(
-    ): Short
     fun uniffi_iroh_ffi_checksum_method_blobs_list(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_blobs_list_collections(
@@ -2544,8 +2537,6 @@ internal interface UniffiLib : Library {
     fun uniffi_iroh_ffi_checksum_method_blobs_share(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_blobs_size(
-    ): Short
-    fun uniffi_iroh_ffi_checksum_method_blobs_status(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_blobs_write_to_path(
     ): Short
@@ -2565,11 +2556,13 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connecting_connect(
     ): Short
+    fun uniffi_iroh_ffi_checksum_method_connecting_local_ip(
+    ): Short
+    fun uniffi_iroh_ffi_checksum_method_connecting_remote_address(
+    ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_accept_bi(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_accept_uni(
-    ): Short
-    fun uniffi_iroh_ffi_checksum_method_connection_alpn(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_close(
     ): Short
@@ -2579,6 +2572,10 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_datagram_send_buffer_space(
     ): Short
+    fun uniffi_iroh_ffi_checksum_method_connection_get_remote_node_id(
+    ): Short
+    fun uniffi_iroh_ffi_checksum_method_connection_local_ip(
+    ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_max_datagram_size(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_open_bi(
@@ -2587,11 +2584,13 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_read_datagram(
     ): Short
-    fun uniffi_iroh_ffi_checksum_method_connection_remote_node_id(
+    fun uniffi_iroh_ffi_checksum_method_connection_remote_address(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_rtt(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_send_datagram(
+    ): Short
+    fun uniffi_iroh_ffi_checksum_method_connection_send_datagram_wait(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_connection_set_max_concurrent_bii_stream(
     ): Short
@@ -2709,9 +2708,9 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_endpoint_connect(
     ): Short
-    fun uniffi_iroh_ffi_checksum_method_endpoint_node_id(
-    ): Short
     fun uniffi_iroh_ffi_checksum_method_entry_author(
+    ): Short
+    fun uniffi_iroh_ffi_checksum_method_entry_content_bytes(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_entry_content_hash(
     ): Short
@@ -2791,6 +2790,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_method_node_endpoint(
     ): Short
+    fun uniffi_iroh_ffi_checksum_method_node_my_rpc_addr(
+    ): Short
     fun uniffi_iroh_ffi_checksum_method_node_shutdown(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_node_stats(
@@ -2810,8 +2811,6 @@ internal interface UniffiLib : Library {
     fun uniffi_iroh_ffi_checksum_method_nodestatus_rpc_addr(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_nodestatus_version(
-    ): Short
-    fun uniffi_iroh_ffi_checksum_method_nodeticket_node_addr(
     ): Short
     fun uniffi_iroh_ffi_checksum_method_protocolcreator_create(
     ): Short
@@ -2903,6 +2902,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_iroh_ffi_checksum_constructor_hash_new(
     ): Short
+    fun uniffi_iroh_ffi_checksum_constructor_iroh_client(
+    ): Short
     fun uniffi_iroh_ffi_checksum_constructor_iroh_memory(
     ): Short
     fun uniffi_iroh_ffi_checksum_constructor_iroh_memory_with_options(
@@ -2912,10 +2913,6 @@ internal interface UniffiLib : Library {
     fun uniffi_iroh_ffi_checksum_constructor_iroh_persistent_with_options(
     ): Short
     fun uniffi_iroh_ffi_checksum_constructor_nodeaddr_new(
-    ): Short
-    fun uniffi_iroh_ffi_checksum_constructor_nodeticket_new(
-    ): Short
-    fun uniffi_iroh_ffi_checksum_constructor_nodeticket_parse(
     ): Short
     fun uniffi_iroh_ffi_checksum_constructor_publickey_from_bytes(
     ): Short
@@ -2977,6 +2974,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_func_set_log_level() != 52619.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_iroh_ffi_checksum_func_start_metrics_collection() != 23413.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_addcallback_progress() != 62116.toShort()) {
@@ -3102,9 +3102,6 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_blobs_get_collection() != 57130.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_blobs_has() != 1301.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
     if (lib.uniffi_iroh_ffi_checksum_method_blobs_list() != 9714.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3124,9 +3121,6 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_blobs_size() != 20254.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_iroh_ffi_checksum_method_blobs_status() != 34093.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_blobs_write_to_path() != 47517.toShort()) {
@@ -3156,13 +3150,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_connecting_connect() != 64341.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_iroh_ffi_checksum_method_connecting_local_ip() != 3368.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_iroh_ffi_checksum_method_connecting_remote_address() != 25819.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_accept_bi() != 10996.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_accept_uni() != 17891.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_iroh_ffi_checksum_method_connection_alpn() != 53975.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_close() != 61009.toShort()) {
@@ -3177,6 +3174,12 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_connection_datagram_send_buffer_space() != 52904.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_iroh_ffi_checksum_method_connection_get_remote_node_id() != 64024.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_iroh_ffi_checksum_method_connection_local_ip() != 11203.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_max_datagram_size() != 49257.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3189,13 +3192,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_connection_read_datagram() != 23201.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_connection_remote_node_id() != 59577.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_connection_remote_address() != 60000.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_rtt() != 61654.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_send_datagram() != 105.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_iroh_ffi_checksum_method_connection_send_datagram_wait() != 3162.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_connection_set_max_concurrent_bii_stream() != 13576.toShort()) {
@@ -3372,10 +3378,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_endpoint_connect() != 29734.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_endpoint_node_id() != 54517.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_entry_author() != 39787.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_entry_author() != 39787.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_entry_content_bytes() != 18583.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_entry_content_hash() != 26949.toShort()) {
@@ -3411,7 +3417,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_hash_to_hex() != 52108.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_iroh_authors() != 61389.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_iroh_authors() != 25106.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_iroh_blobs() != 50340.toShort()) {
@@ -3495,7 +3501,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_node_endpoint() != 6829.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_node_shutdown() != 49624.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_node_my_rpc_addr() != 34751.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_iroh_ffi_checksum_method_node_shutdown() != 21075.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_node_stats() != 13439.toShort()) {
@@ -3525,13 +3534,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_method_nodestatus_version() != 3183.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_nodeticket_node_addr() != 3397.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_protocolcreator_create() != 44945.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_iroh_ffi_checksum_method_protocolcreator_create() != 33391.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_iroh_ffi_checksum_method_protocolhandler_accept() != 45944.toShort()) {
+    if (lib.uniffi_iroh_ffi_checksum_method_protocolhandler_accept() != 54515.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_method_protocolhandler_shutdown() != 55574.toShort()) {
@@ -3663,6 +3669,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_iroh_ffi_checksum_constructor_hash_new() != 30613.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_iroh_ffi_checksum_constructor_iroh_client() != 40014.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_iroh_ffi_checksum_constructor_iroh_memory() != 49939.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3676,12 +3685,6 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_constructor_nodeaddr_new() != 5759.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_iroh_ffi_checksum_constructor_nodeticket_new() != 8609.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_iroh_ffi_checksum_constructor_nodeticket_parse() != 16834.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_iroh_ffi_checksum_constructor_publickey_from_bytes() != 64011.toShort()) {
@@ -7227,233 +7230,6 @@ public object FfiConverterTypeBlobProvideEventCallback: FfiConverter<BlobProvide
 
 
 /**
- * Status information about a blob.
- */
-public interface BlobStatusInterface {
-    
-    companion object
-}
-
-/**
- * Status information about a blob.
- */
-open class BlobStatus: Disposable, AutoCloseable, BlobStatusInterface {
-
-    constructor(pointer: Pointer) {
-        this.pointer = pointer
-        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
-    }
-
-    /**
-     * This constructor can be used to instantiate a fake object. Only used for tests. Any
-     * attempt to actually use an object constructed this way will fail as there is no
-     * connected Rust object.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    constructor(noPointer: NoPointer) {
-        this.pointer = null
-        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
-    }
-
-    protected val pointer: Pointer?
-    protected val cleanable: UniffiCleaner.Cleanable
-
-    private val wasDestroyed = AtomicBoolean(false)
-    private val callCounter = AtomicLong(1)
-
-    override fun destroy() {
-        // Only allow a single call to this method.
-        // TODO: maybe we should log a warning if called more than once?
-        if (this.wasDestroyed.compareAndSet(false, true)) {
-            // This decrement always matches the initial count of 1 given at creation time.
-            if (this.callCounter.decrementAndGet() == 0L) {
-                cleanable.clean()
-            }
-        }
-    }
-
-    @Synchronized
-    override fun close() {
-        this.destroy()
-    }
-
-    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
-        // Check and increment the call counter, to keep the object alive.
-        // This needs a compare-and-set retry loop in case of concurrent updates.
-        do {
-            val c = this.callCounter.get()
-            if (c == 0L) {
-                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
-            }
-            if (c == Long.MAX_VALUE) {
-                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
-            }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
-        // Now we can safely do the method call without the pointer being freed concurrently.
-        try {
-            return block(this.uniffiClonePointer())
-        } finally {
-            // This decrement always matches the increment we performed above.
-            if (this.callCounter.decrementAndGet() == 0L) {
-                cleanable.clean()
-            }
-        }
-    }
-
-    // Use a static inner class instead of a closure so as not to accidentally
-    // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
-        override fun run() {
-            pointer?.let { ptr ->
-                uniffiRustCall { status ->
-                    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_free_blobstatus(ptr, status)
-                }
-            }
-        }
-    }
-
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
-            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_clone_blobstatus(pointer!!, status)
-        }
-    }
-
-    
-
-    
-    
-    companion object
-    
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeBlobStatus: FfiConverter<BlobStatus, Pointer> {
-
-    override fun lower(value: BlobStatus): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): BlobStatus {
-        return BlobStatus(value)
-    }
-
-    override fun read(buf: ByteBuffer): BlobStatus {
-        // The Rust code always writes pointers as 8 bytes, and will
-        // fail to compile if they don't fit.
-        return lift(Pointer(buf.getLong()))
-    }
-
-    override fun allocationSize(value: BlobStatus) = 8UL
-
-    override fun write(value: BlobStatus, buf: ByteBuffer) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(lower(value)))
-    }
-}
-
-
-// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
-// to the live Rust struct on the other side of the FFI.
-//
-// Each instance implements core operations for working with the Rust `Arc<T>` and the
-// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
-//
-// There's some subtlety here, because we have to be careful not to operate on a Rust
-// struct after it has been dropped, and because we must expose a public API for freeing
-// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
-//
-//   * Each instance holds an opaque pointer to the underlying Rust struct.
-//     Method calls need to read this pointer from the object's state and pass it in to
-//     the Rust FFI.
-//
-//   * When an instance is no longer needed, its pointer should be passed to a
-//     special destructor function provided by the Rust FFI, which will drop the
-//     underlying Rust struct.
-//
-//   * Given an instance, calling code is expected to call the special
-//     `destroy` method in order to free it after use, either by calling it explicitly
-//     or by using a higher-level helper like the `use` method. Failing to do so risks
-//     leaking the underlying Rust struct.
-//
-//   * We can't assume that calling code will do the right thing, and must be prepared
-//     to handle Kotlin method calls executing concurrently with or even after a call to
-//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
-//
-//   * We must never allow Rust code to operate on the underlying Rust struct after
-//     the destructor has been called, and must never call the destructor more than once.
-//     Doing so may trigger memory unsafety.
-//
-//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
-//     is implemented to call the destructor when the Kotlin object becomes unreachable.
-//     This is done in a background thread. This is not a panacea, and client code should be aware that
-//      1. the thread may starve if some there are objects that have poorly performing
-//     `drop` methods or do significant work in their `drop` methods.
-//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
-//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
-//
-// If we try to implement this with mutual exclusion on access to the pointer, there is the
-// possibility of a race between a method call and a concurrent call to `destroy`:
-//
-//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
-//      before it can pass the pointer over the FFI to Rust.
-//    * Thread B calls `destroy` and frees the underlying Rust struct.
-//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
-//      a use-after-free.
-//
-// One possible solution would be to use a `ReadWriteLock`, with each method call taking
-// a read lock (and thus allowed to run concurrently) and the special `destroy` method
-// taking a write lock (and thus blocking on live method calls). However, we aim not to
-// generate methods with any hidden blocking semantics, and a `destroy` method that might
-// block if called incorrectly seems to meet that bar.
-//
-// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
-// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
-// has been called. These are updated according to the following rules:
-//
-//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
-//      The initial value for the flag is false.
-//
-//    * At the start of each method call, we atomically check the counter.
-//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
-//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
-//
-//    * At the end of each method call, we atomically decrement and check the counter.
-//      If it has reached zero then we destroy the underlying Rust struct.
-//
-//    * When `destroy` is called, we atomically flip the flag from false to true.
-//      If the flag was already true we silently fail.
-//      Otherwise we atomically decrement and check the counter.
-//      If it has reached zero then we destroy the underlying Rust struct.
-//
-// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
-// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
-//
-// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
-// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
-// of the underlying Rust code.
-//
-// This makes a cleaner a better alternative to _not_ calling `destroy()` as
-// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
-// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
-// thread may be starved, and the app will leak memory.
-//
-// In this case, `destroy`ing manually may be a better solution.
-//
-// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
-// with Rust peers are reclaimed:
-//
-// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
-// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
-// 3. The memory is reclaimed when the process terminates.
-//
-// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
-//
-
-
-/**
  * A token containing everything to get a file from the provider.
  *
  * It is a single item which can be easily serialized and deserialized.
@@ -7864,13 +7640,6 @@ public interface BlobsInterface {
     suspend fun `getCollection`(`hash`: Hash): Collection
     
     /**
-     * Check if a blob is completely stored on the node.
-     *
-     * This is just a convenience wrapper around `status` that returns a boolean.
-     */
-    suspend fun `has`(`hash`: Hash): kotlin.Boolean
-    
-    /**
      * List all complete blobs.
      *
      * Note: this allocates for each `BlobListResponse`, if you have many `BlobListReponse`s this may be a prohibitively large list.
@@ -7923,11 +7692,6 @@ public interface BlobsInterface {
      * Method only exists in FFI
      */
     suspend fun `size`(`hash`: Hash): kotlin.ULong
-    
-    /**
-     * Check the storage status of a blob on this node.
-     */
-    suspend fun `status`(`hash`: Hash): BlobStatus
     
     /**
      * Export the blob contents to a file path
@@ -8236,32 +8000,6 @@ open class Blobs: Disposable, AutoCloseable, BlobsInterface {
 
     
     /**
-     * Check if a blob is completely stored on the node.
-     *
-     * This is just a convenience wrapper around `status` that returns a boolean.
-     */
-    @Throws(IrohException::class)
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `has`(`hash`: Hash) : kotlin.Boolean {
-        return uniffiRustCallAsync(
-        callWithPointer { thisPtr ->
-            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_blobs_has(
-                thisPtr,
-                FfiConverterTypeHash.lower(`hash`),
-            )
-        },
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_i8(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_i8(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_i8(future) },
-        // lift function
-        { FfiConverterBoolean.lift(it) },
-        // Error FFI converter
-        IrohException.ErrorHandler,
-    )
-    }
-
-    
-    /**
      * List all complete blobs.
      *
      * Note: this allocates for each `BlobListResponse`, if you have many `BlobListReponse`s this may be a prohibitively large list.
@@ -8442,30 +8180,6 @@ open class Blobs: Disposable, AutoCloseable, BlobsInterface {
         { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_u64(future) },
         // lift function
         { FfiConverterULong.lift(it) },
-        // Error FFI converter
-        IrohException.ErrorHandler,
-    )
-    }
-
-    
-    /**
-     * Check the storage status of a blob on this node.
-     */
-    @Throws(IrohException::class)
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `status`(`hash`: Hash) : BlobStatus {
-        return uniffiRustCallAsync(
-        callWithPointer { thisPtr ->
-            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_blobs_status(
-                thisPtr,
-                FfiConverterTypeHash.lower(`hash`),
-            )
-        },
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_pointer(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_pointer(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_pointer(future) },
-        // lift function
-        { FfiConverterTypeBlobStatus.lift(it) },
         // Error FFI converter
         IrohException.ErrorHandler,
     )
@@ -9000,6 +8714,10 @@ public interface ConnectingInterface {
     
     suspend fun `connect`(): Connection
     
+    suspend fun `localIp`(): kotlin.String?
+    
+    suspend fun `remoteAddress`(): kotlin.String
+    
     companion object
 }
 
@@ -9121,6 +8839,48 @@ open class Connecting: Disposable, AutoCloseable, ConnectingInterface {
         { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_pointer(future) },
         // lift function
         { FfiConverterTypeConnection.lift(it) },
+        // Error FFI converter
+        IrohException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(IrohException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `localIp`() : kotlin.String? {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connecting_local_ip(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterOptionalString.lift(it) },
+        // Error FFI converter
+        IrohException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(IrohException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `remoteAddress`() : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connecting_remote_address(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
         // Error FFI converter
         IrohException.ErrorHandler,
     )
@@ -9267,8 +9027,6 @@ public interface ConnectionInterface {
     
     suspend fun `acceptUni`(): RecvStream
     
-    fun `alpn`(): kotlin.ByteArray?
-    
     fun `close`(`errorCode`: kotlin.ULong, `reason`: kotlin.ByteArray)
     
     fun `closeReason`(): kotlin.String?
@@ -9276,6 +9034,10 @@ public interface ConnectionInterface {
     suspend fun `closed`(): kotlin.String
     
     fun `datagramSendBufferSpace`(): kotlin.ULong
+    
+    fun `getRemoteNodeId`(): PublicKey
+    
+    fun `localIp`(): kotlin.String?
     
     fun `maxDatagramSize`(): kotlin.ULong?
     
@@ -9285,11 +9047,13 @@ public interface ConnectionInterface {
     
     suspend fun `readDatagram`(): kotlin.ByteArray
     
-    fun `remoteNodeId`(): kotlin.String
+    fun `remoteAddress`(): kotlin.String
     
     fun `rtt`(): kotlin.ULong
     
     fun `sendDatagram`(`data`: kotlin.ByteArray)
+    
+    suspend fun `sendDatagramWait`(`data`: kotlin.ByteArray)
     
     fun `setMaxConcurrentBiiStream`(`count`: kotlin.ULong)
     
@@ -9425,18 +9189,6 @@ open class Connection: Disposable, AutoCloseable, ConnectionInterface {
     )
     }
 
-    override fun `alpn`(): kotlin.ByteArray? {
-            return FfiConverterOptionalByteArray.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_alpn(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
     
     @Throws(IrohException::class)override fun `close`(`errorCode`: kotlin.ULong, `reason`: kotlin.ByteArray)
         = 
@@ -9486,6 +9238,31 @@ open class Connection: Disposable, AutoCloseable, ConnectionInterface {
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_datagram_send_buffer_space(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(IrohException::class)override fun `getRemoteNodeId`(): PublicKey {
+            return FfiConverterTypePublicKey.lift(
+    callWithPointer {
+    uniffiRustCallWithError(IrohException) { _status ->
+    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_get_remote_node_id(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `localIp`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_local_ip(
         it, _status)
 }
     }
@@ -9568,12 +9345,11 @@ open class Connection: Disposable, AutoCloseable, ConnectionInterface {
     )
     }
 
-    
-    @Throws(IrohException::class)override fun `remoteNodeId`(): kotlin.String {
+    override fun `remoteAddress`(): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
-    uniffiRustCallWithError(IrohException) { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_remote_node_id(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_remote_address(
         it, _status)
 }
     }
@@ -9604,6 +9380,28 @@ open class Connection: Disposable, AutoCloseable, ConnectionInterface {
     }
     
     
+
+    
+    @Throws(IrohException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `sendDatagramWait`(`data`: kotlin.ByteArray) {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_connection_send_datagram_wait(
+                thisPtr,
+                FfiConverterByteArray.lower(`data`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_void(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_void(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_void(future) },
+        // lift function
+        { Unit },
+        
+        // Error FFI converter
+        IrohException.ErrorHandler,
+    )
+    }
 
     
     @Throws(IrohException::class)override fun `setMaxConcurrentBiiStream`(`count`: kotlin.ULong)
@@ -14088,11 +13886,6 @@ public interface EndpointInterface {
     
     suspend fun `connect`(`nodeAddr`: NodeAddr, `alpn`: kotlin.ByteArray): Connection
     
-    /**
-     * The string representation of this endpoint's NodeId.
-     */
-    fun `nodeId`(): kotlin.String
-    
     companion object
 }
 
@@ -14197,22 +13990,6 @@ open class Endpoint: Disposable, AutoCloseable, EndpointInterface {
         IrohException.ErrorHandler,
     )
     }
-
-    
-    /**
-     * The string representation of this endpoint's NodeId.
-     */
-    @Throws(IrohException::class)override fun `nodeId`(): kotlin.String {
-            return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCallWithError(IrohException) { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_endpoint_node_id(
-        it, _status)
-}
-    }
-    )
-    }
-    
 
     
 
@@ -14364,6 +14141,14 @@ public interface EntryInterface {
     fun `author`(): AuthorId
     
     /**
+     * Read all content of an [`Entry`] into a buffer.
+     * This allocates a buffer for the full entry. Use only if you know that the entry you're
+     * reading is small. If not sure, use [`Self::content_len`] and check the size with
+     * before calling [`Self::content_bytes`].
+     */
+    suspend fun `contentBytes`(`doc`: Doc): kotlin.ByteArray
+    
+    /**
      * Get the content_hash of this entry.
      */
     fun `contentHash`(): Hash
@@ -14493,6 +14278,33 @@ open class Entry: Disposable, AutoCloseable, EntryInterface {
     )
     }
     
+
+    
+    /**
+     * Read all content of an [`Entry`] into a buffer.
+     * This allocates a buffer for the full entry. Use only if you know that the entry you're
+     * reading is small. If not sure, use [`Self::content_len`] and check the size with
+     * before calling [`Self::content_bytes`].
+     */
+    @Throws(IrohException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `contentBytes`(`doc`: Doc) : kotlin.ByteArray {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_entry_content_bytes(
+                thisPtr,
+                FfiConverterTypeDoc.lower(`doc`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterByteArray.lift(it) },
+        // Error FFI converter
+        IrohException.ErrorHandler,
+    )
+    }
 
     
     /**
@@ -15873,7 +15685,7 @@ public object FfiConverterTypeHash: FfiConverter<Hash, Pointer> {
 public interface IrohInterface {
     
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to authors specific funtionaliy.
      */
     fun `authors`(): Authors
     
@@ -15996,7 +15808,7 @@ open class Iroh: Disposable, AutoCloseable, IrohInterface {
 
     
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to authors specific funtionaliy.
      */override fun `authors`(): Authors {
             return FfiConverterTypeAuthors.lift(
     callWithPointer {
@@ -16103,6 +15915,25 @@ open class Iroh: Disposable, AutoCloseable, IrohInterface {
 
     
     companion object {
+        
+    /**
+     * Create a new iroh client, connecting to an existing node.
+     */
+    @Throws(IrohException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+     suspend fun `client`(`addr`: kotlin.String?) : Iroh {
+        return uniffiRustCallAsync(
+        UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_constructor_iroh_client(FfiConverterOptionalString.lower(`addr`),),
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_pointer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_complete_pointer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_free_pointer(future) },
+        // lift function
+        { FfiConverterTypeIroh.lift(it) },
+        // Error FFI converter
+        IrohException.ErrorHandler,
+    )
+    }
+
         
     /**
      * Create a new iroh node.
@@ -17656,9 +17487,14 @@ public interface NodeInterface {
     fun `endpoint`(): Endpoint
     
     /**
+     * Returns `Some(addr)` if an RPC endpoint is running, `None` otherwise.
+     */
+    fun `myRpcAddr`(): kotlin.String?
+    
+    /**
      * Shutdown this iroh node.
      */
-    suspend fun `shutdown`()
+    suspend fun `shutdown`(`force`: kotlin.Boolean)
     
     /**
      * Get statistics of the running node.
@@ -17771,16 +17607,31 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
 
     
     /**
+     * Returns `Some(addr)` if an RPC endpoint is running, `None` otherwise.
+     */override fun `myRpcAddr`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_node_my_rpc_addr(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Shutdown this iroh node.
      */
     @Throws(IrohException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `shutdown`() {
+    override suspend fun `shutdown`(`force`: kotlin.Boolean) {
         return uniffiRustCallAsync(
         callWithPointer { thisPtr ->
             UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_node_shutdown(
                 thisPtr,
-                
+                FfiConverterBoolean.lower(`force`),
             )
         },
         { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_void(future, callback, continuation) },
@@ -18581,305 +18432,9 @@ public object FfiConverterTypeNodeStatus: FfiConverter<NodeStatus, Pointer> {
 //
 
 
-/**
- * A token containing information for establishing a connection to a node.
- *
- * This allows establishing a connection to the node in most circumstances where it is
- * possible to do so.
- *
- * It is a single item which can be easily serialized and deserialized.
- */
-public interface NodeTicketInterface {
-    
-    /**
-     * The [`NodeAddr`] of the provider for this ticket.
-     */
-    fun `nodeAddr`(): NodeAddr
-    
-    companion object
-}
-
-/**
- * A token containing information for establishing a connection to a node.
- *
- * This allows establishing a connection to the node in most circumstances where it is
- * possible to do so.
- *
- * It is a single item which can be easily serialized and deserialized.
- */
-open class NodeTicket: Disposable, AutoCloseable, NodeTicketInterface {
-
-    constructor(pointer: Pointer) {
-        this.pointer = pointer
-        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
-    }
-
-    /**
-     * This constructor can be used to instantiate a fake object. Only used for tests. Any
-     * attempt to actually use an object constructed this way will fail as there is no
-     * connected Rust object.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    constructor(noPointer: NoPointer) {
-        this.pointer = null
-        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
-    }
-    /**
-     * Wrap the given [`NodeAddr`] as a [`NodeTicket`].
-     *
-     * The returned ticket can easily be deserialized using its string presentation, and
-     * later parsed again using [`Self::parse`].
-     */
-    constructor(`addr`: NodeAddr) :
-        this(
-    uniffiRustCallWithError(IrohException) { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_constructor_nodeticket_new(
-        FfiConverterTypeNodeAddr.lower(`addr`),_status)
-}
-    )
-
-    protected val pointer: Pointer?
-    protected val cleanable: UniffiCleaner.Cleanable
-
-    private val wasDestroyed = AtomicBoolean(false)
-    private val callCounter = AtomicLong(1)
-
-    override fun destroy() {
-        // Only allow a single call to this method.
-        // TODO: maybe we should log a warning if called more than once?
-        if (this.wasDestroyed.compareAndSet(false, true)) {
-            // This decrement always matches the initial count of 1 given at creation time.
-            if (this.callCounter.decrementAndGet() == 0L) {
-                cleanable.clean()
-            }
-        }
-    }
-
-    @Synchronized
-    override fun close() {
-        this.destroy()
-    }
-
-    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
-        // Check and increment the call counter, to keep the object alive.
-        // This needs a compare-and-set retry loop in case of concurrent updates.
-        do {
-            val c = this.callCounter.get()
-            if (c == 0L) {
-                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
-            }
-            if (c == Long.MAX_VALUE) {
-                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
-            }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
-        // Now we can safely do the method call without the pointer being freed concurrently.
-        try {
-            return block(this.uniffiClonePointer())
-        } finally {
-            // This decrement always matches the increment we performed above.
-            if (this.callCounter.decrementAndGet() == 0L) {
-                cleanable.clean()
-            }
-        }
-    }
-
-    // Use a static inner class instead of a closure so as not to accidentally
-    // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
-        override fun run() {
-            pointer?.let { ptr ->
-                uniffiRustCall { status ->
-                    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_free_nodeticket(ptr, status)
-                }
-            }
-        }
-    }
-
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
-            UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_clone_nodeticket(pointer!!, status)
-        }
-    }
-
-    
-    /**
-     * The [`NodeAddr`] of the provider for this ticket.
-     */override fun `nodeAddr`(): NodeAddr {
-            return FfiConverterTypeNodeAddr.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_nodeticket_node_addr(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    override fun toString(): String {
-        return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_nodeticket_uniffi_trait_display(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    companion object {
-        
-    /**
-     * Parse back a [`NodeTicket`] from its string presentation.
-     */
-    @Throws(IrohException::class) fun `parse`(`str`: kotlin.String): NodeTicket {
-            return FfiConverterTypeNodeTicket.lift(
-    uniffiRustCallWithError(IrohException) { _status ->
-    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_constructor_nodeticket_parse(
-        FfiConverterString.lower(`str`),_status)
-}
-    )
-    }
-    
-
-        
-    }
-    
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeNodeTicket: FfiConverter<NodeTicket, Pointer> {
-
-    override fun lower(value: NodeTicket): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): NodeTicket {
-        return NodeTicket(value)
-    }
-
-    override fun read(buf: ByteBuffer): NodeTicket {
-        // The Rust code always writes pointers as 8 bytes, and will
-        // fail to compile if they don't fit.
-        return lift(Pointer(buf.getLong()))
-    }
-
-    override fun allocationSize(value: NodeTicket) = 8UL
-
-    override fun write(value: NodeTicket, buf: ByteBuffer) {
-        // The Rust code always expects pointers written as 8 bytes,
-        // and will fail to compile if they don't fit.
-        buf.putLong(Pointer.nativeValue(lower(value)))
-    }
-}
-
-
-// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
-// to the live Rust struct on the other side of the FFI.
-//
-// Each instance implements core operations for working with the Rust `Arc<T>` and the
-// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
-//
-// There's some subtlety here, because we have to be careful not to operate on a Rust
-// struct after it has been dropped, and because we must expose a public API for freeing
-// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
-//
-//   * Each instance holds an opaque pointer to the underlying Rust struct.
-//     Method calls need to read this pointer from the object's state and pass it in to
-//     the Rust FFI.
-//
-//   * When an instance is no longer needed, its pointer should be passed to a
-//     special destructor function provided by the Rust FFI, which will drop the
-//     underlying Rust struct.
-//
-//   * Given an instance, calling code is expected to call the special
-//     `destroy` method in order to free it after use, either by calling it explicitly
-//     or by using a higher-level helper like the `use` method. Failing to do so risks
-//     leaking the underlying Rust struct.
-//
-//   * We can't assume that calling code will do the right thing, and must be prepared
-//     to handle Kotlin method calls executing concurrently with or even after a call to
-//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
-//
-//   * We must never allow Rust code to operate on the underlying Rust struct after
-//     the destructor has been called, and must never call the destructor more than once.
-//     Doing so may trigger memory unsafety.
-//
-//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
-//     is implemented to call the destructor when the Kotlin object becomes unreachable.
-//     This is done in a background thread. This is not a panacea, and client code should be aware that
-//      1. the thread may starve if some there are objects that have poorly performing
-//     `drop` methods or do significant work in their `drop` methods.
-//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
-//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
-//
-// If we try to implement this with mutual exclusion on access to the pointer, there is the
-// possibility of a race between a method call and a concurrent call to `destroy`:
-//
-//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
-//      before it can pass the pointer over the FFI to Rust.
-//    * Thread B calls `destroy` and frees the underlying Rust struct.
-//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
-//      a use-after-free.
-//
-// One possible solution would be to use a `ReadWriteLock`, with each method call taking
-// a read lock (and thus allowed to run concurrently) and the special `destroy` method
-// taking a write lock (and thus blocking on live method calls). However, we aim not to
-// generate methods with any hidden blocking semantics, and a `destroy` method that might
-// block if called incorrectly seems to meet that bar.
-//
-// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
-// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
-// has been called. These are updated according to the following rules:
-//
-//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
-//      The initial value for the flag is false.
-//
-//    * At the start of each method call, we atomically check the counter.
-//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
-//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
-//
-//    * At the end of each method call, we atomically decrement and check the counter.
-//      If it has reached zero then we destroy the underlying Rust struct.
-//
-//    * When `destroy` is called, we atomically flip the flag from false to true.
-//      If the flag was already true we silently fail.
-//      Otherwise we atomically decrement and check the counter.
-//      If it has reached zero then we destroy the underlying Rust struct.
-//
-// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
-// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
-//
-// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
-// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
-// of the underlying Rust code.
-//
-// This makes a cleaner a better alternative to _not_ calling `destroy()` as
-// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
-// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
-// thread may be starved, and the app will leak memory.
-//
-// In this case, `destroy`ing manually may be a better solution.
-//
-// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
-// with Rust peers are reclaimed:
-//
-// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
-// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
-// 3. The memory is reclaimed when the process terminates.
-//
-// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
-//
-
-
 public interface ProtocolCreator {
     
-    fun `create`(`endpoint`: Endpoint): ProtocolHandler
+    fun `create`(`endpoint`: Endpoint, `client`: Iroh): ProtocolHandler
     
     companion object
 }
@@ -18965,12 +18520,12 @@ open class ProtocolCreatorImpl: Disposable, AutoCloseable, ProtocolCreator {
         }
     }
 
-    override fun `create`(`endpoint`: Endpoint): ProtocolHandler {
+    override fun `create`(`endpoint`: Endpoint, `client`: Iroh): ProtocolHandler {
             return FfiConverterTypeProtocolHandler.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_protocolcreator_create(
-        it, FfiConverterTypeEndpoint.lower(`endpoint`),_status)
+        it, FfiConverterTypeEndpoint.lower(`endpoint`),FfiConverterTypeIroh.lower(`client`),_status)
 }
     }
     )
@@ -18989,11 +18544,12 @@ open class ProtocolCreatorImpl: Disposable, AutoCloseable, ProtocolCreator {
 // Put the implementation in an object so we don't pollute the top-level namespace
 internal object uniffiCallbackInterfaceProtocolCreator {
     internal object `create`: UniffiCallbackInterfaceProtocolCreatorMethod0 {
-        override fun callback(`uniffiHandle`: Long,`endpoint`: Pointer,`uniffiOutReturn`: PointerByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+        override fun callback(`uniffiHandle`: Long,`endpoint`: Pointer,`client`: Pointer,`uniffiOutReturn`: PointerByReference,uniffiCallStatus: UniffiRustCallStatus,) {
             val uniffiObj = FfiConverterTypeProtocolCreator.handleMap.get(uniffiHandle)
             val makeCall = { ->
                 uniffiObj.`create`(
                     FfiConverterTypeEndpoint.lift(`endpoint`),
+                    FfiConverterTypeIroh.lift(`client`),
                 )
             }
             val writeReturn = { value: ProtocolHandler -> uniffiOutReturn.setValue(FfiConverterTypeProtocolHandler.lower(value)) }
@@ -19149,7 +18705,7 @@ public object FfiConverterTypeProtocolCreator: FfiConverter<ProtocolCreator, Poi
 
 public interface ProtocolHandler {
     
-    suspend fun `accept`(`conn`: Connection)
+    suspend fun `accept`(`conn`: Connecting)
     
     suspend fun `shutdown`()
     
@@ -19240,12 +18796,12 @@ open class ProtocolHandlerImpl: Disposable, AutoCloseable, ProtocolHandler {
     
     @Throws(CallbackException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `accept`(`conn`: Connection) {
+    override suspend fun `accept`(`conn`: Connecting) {
         return uniffiRustCallAsync(
         callWithPointer { thisPtr ->
             UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_method_protocolhandler_accept(
                 thisPtr,
-                FfiConverterTypeConnection.lower(`conn`),
+                FfiConverterTypeConnecting.lower(`conn`),
             )
         },
         { future, callback, continuation -> UniffiLib.INSTANCE.ffi_iroh_ffi_rust_future_poll_void(future, callback, continuation) },
@@ -19296,7 +18852,7 @@ internal object uniffiCallbackInterfaceProtocolHandler {
             val uniffiObj = FfiConverterTypeProtocolHandler.handleMap.get(uniffiHandle)
             val makeCall = suspend { ->
                 uniffiObj.`accept`(
-                    FfiConverterTypeConnection.lift(`conn`),
+                    FfiConverterTypeConnecting.lift(`conn`),
                 )
             }
             val uniffiHandleSuccess = { _: Unit ->
@@ -24620,6 +24176,14 @@ data class NodeOptions (
      */
     var `ipv6Addr`: kotlin.String? = null, 
     /**
+     * Enable RPC. Defaults to `false`.
+     */
+    var `enableRpc`: kotlin.Boolean = false, 
+    /**
+     * Overwrite the default RPC address.
+     */
+    var `rpcAddr`: kotlin.String? = null, 
+    /**
      * Configure the node discovery. Defaults to the default set of config
      */
     var `nodeDiscovery`: NodeDiscoveryConfig? = null, 
@@ -24643,6 +24207,10 @@ data class NodeOptions (
     
         Disposable.destroy(this.`ipv6Addr`)
     
+        Disposable.destroy(this.`enableRpc`)
+    
+        Disposable.destroy(this.`rpcAddr`)
+    
         Disposable.destroy(this.`nodeDiscovery`)
     
         Disposable.destroy(this.`secretKey`)
@@ -24665,6 +24233,8 @@ public object FfiConverterTypeNodeOptions: FfiConverterRustBuffer<NodeOptions> {
             FfiConverterBoolean.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
             FfiConverterOptionalTypeNodeDiscoveryConfig.read(buf),
             FfiConverterOptionalByteArray.read(buf),
             FfiConverterOptionalMapByteArrayTypeProtocolCreator.read(buf),
@@ -24677,6 +24247,8 @@ public object FfiConverterTypeNodeOptions: FfiConverterRustBuffer<NodeOptions> {
             FfiConverterBoolean.allocationSize(value.`enableDocs`) +
             FfiConverterOptionalString.allocationSize(value.`ipv4Addr`) +
             FfiConverterOptionalString.allocationSize(value.`ipv6Addr`) +
+            FfiConverterBoolean.allocationSize(value.`enableRpc`) +
+            FfiConverterOptionalString.allocationSize(value.`rpcAddr`) +
             FfiConverterOptionalTypeNodeDiscoveryConfig.allocationSize(value.`nodeDiscovery`) +
             FfiConverterOptionalByteArray.allocationSize(value.`secretKey`) +
             FfiConverterOptionalMapByteArrayTypeProtocolCreator.allocationSize(value.`protocols`)
@@ -24688,6 +24260,8 @@ public object FfiConverterTypeNodeOptions: FfiConverterRustBuffer<NodeOptions> {
             FfiConverterBoolean.write(value.`enableDocs`, buf)
             FfiConverterOptionalString.write(value.`ipv4Addr`, buf)
             FfiConverterOptionalString.write(value.`ipv6Addr`, buf)
+            FfiConverterBoolean.write(value.`enableRpc`, buf)
+            FfiConverterOptionalString.write(value.`rpcAddr`, buf)
             FfiConverterOptionalTypeNodeDiscoveryConfig.write(value.`nodeDiscovery`, buf)
             FfiConverterOptionalByteArray.write(value.`secretKey`, buf)
             FfiConverterOptionalMapByteArrayTypeProtocolCreator.write(value.`protocols`, buf)
@@ -24806,6 +24380,7 @@ public object FfiConverterTypeQueryOptions: FfiConverterRustBuffer<QueryOptions>
 
 
 /**
+ * The kinds of control messages that can be sent
  * Information about a remote node
  */
 data class RemoteInfo (
@@ -26211,6 +25786,7 @@ enum class NodeDiscoveryConfig {
      * configure it here as a custom discovery mechanism ([`DiscoveryConfig::Custom`]).
      *
      * [number 0]: https://n0.computer
+     * [iroh-net]: crate::net
      */
     DEFAULT;
     companion object
@@ -27502,6 +27078,18 @@ public object FfiConverterMapByteArrayTypeProtocolCreator: FfiConverterRustBuffe
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_func_set_log_level(
         FfiConverterTypeLogLevel.lower(`level`),_status)
+}
+    
+    
+
+        /**
+         * Initialize the global metrics collection.
+         */
+    @Throws(IrohException::class) fun `startMetricsCollection`()
+        = 
+    uniffiRustCallWithError(IrohException) { _status ->
+    UniffiLib.INSTANCE.uniffi_iroh_ffi_fn_func_start_metrics_collection(
+        _status)
 }
     
     
