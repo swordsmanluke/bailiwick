@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="@dimen/reaction_chip_height"
+    android:layout_marginEnd="@dimen/spacing_xs"
+    android:background="@drawable/bg_reaction_chip"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/reaction_chip_padding"
+    android:paddingEnd="@dimen/reaction_chip_padding">
+
+    <TextView
+        android:id="@+id/textEmoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="@dimen/reaction_emoji_size" />
+
+    <TextView
+        android:id="@+id/textCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_xs"
+        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+        android:textColor="@color/colorTextSecondary" />
+
+</LinearLayout>

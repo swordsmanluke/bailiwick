@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="@dimen/tag_chip_height"
+    android:layout_marginEnd="@dimen/tag_chip_margin"
+    android:background="@drawable/bg_tag_chip"
+    android:clickable="true"
+    android:focusable="true"
+    android:paddingStart="@dimen/tag_chip_padding_horizontal"
+    android:paddingEnd="@dimen/tag_chip_padding_horizontal">
+
+    <TextView
+        android:id="@+id/textTag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="@color/tagText"
+        android:textSize="12sp" />
+
+</FrameLayout>
