@@ -14,9 +14,8 @@ import androidx.core.app.NotificationCompat
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.R
-import com.perfectlunacy.bailiwick.ciphers.AesGcmEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
-import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.PeerTopic
 import com.perfectlunacy.bailiwick.models.iroh.*
 import com.perfectlunacy.bailiwick.storage.gossip.GossipMessageHandler
@@ -213,6 +212,9 @@ class GossipService : Service() {
             Log.i(TAG, "Peer joined our topic: $peerId")
             connectedPeers.add(peerId)
             updateNotificationWithPeerCount()
+            
+            // Publish our manifest so the new peer gets our latest state
+            publishManifest()
         }
 
         override fun onPeerLeft(peerId: String) {
@@ -354,7 +356,8 @@ class GossipService : Service() {
             Log.i(TAG, "Circle ${circleManifest.name}: ${circleManifest.posts.size} posts")
 
             // Download posts
-            val postCipher = EncryptorFactory.forPeer(bw.db.keyDao(), peerNodeId) { true }
+            // TODO: Implement proper decryption with shared circle keys
+            val postCipher = NoopEncryptor()  // Unencrypted for now
             for (post in circleManifest.posts) {
                 contentDownloader?.downloadPost(post.hash, peerNodeId, postCipher)
             }

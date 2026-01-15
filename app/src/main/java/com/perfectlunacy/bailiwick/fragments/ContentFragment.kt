@@ -21,8 +21,7 @@ import com.perfectlunacy.bailiwick.adapters.CircleFilterAdapter
 import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
-import com.perfectlunacy.bailiwick.ciphers.AesGcmEncryptor
-import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
@@ -255,12 +254,10 @@ class ContentFragment : BailiwickFragment() {
 
                 Log.i(TAG, "Saved new post with ${postFiles.size} photos")
 
-                // Publish post to Iroh as encrypted blob
+                // Publish post to Iroh blob storage
+                // TODO: Implement proper encryption with shared circle keys
                 try {
-                    val ed25519Keyring = Ed25519Keyring.create(requireContext())
-                    val myPublicKey = ed25519Keyring.getPublicKeyBytes()
-                    val encryptionKey = ed25519Keyring.deriveEncryptionKey(myPublicKey, "posts")
-                    val cipher = AesGcmEncryptor(encryptionKey)
+                    val cipher = NoopEncryptor()  // Unencrypted for now
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     val postHash = publisher.publishPost(newPost, circId, cipher)
