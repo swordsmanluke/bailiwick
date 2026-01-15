@@ -26,12 +26,14 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
+import com.perfectlunacy.bailiwick.crypto.KeyEncryption
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.PeerTopic
 import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.qr.QREncoder
+import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
@@ -257,6 +259,9 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                     )
                     db.peerTopicDao().upsert(peerTopic)
                     Log.i("AcceptIntro", "Stored PeerTopic for ${intro.name}: nodeId=${intro.peerId}")
+                    
+                    // Subscribe to peer's Gossip topic
+                    GossipService.getInstance()?.subscribeToNewPeer(intro.peerId, topicKey)
                 } else {
                     // Legacy v1 introductions are no longer supported
                     Log.e("AcceptIntro", "Unsupported v1 introduction format for ${intro.name}")
@@ -274,10 +279,10 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 db.userDao().insert(User(intro.peerId, intro.publicKey))
 
                 // Create an Action with our "everyone" key
-                // Note: For v2, we use X25519 key agreement; for v1, RSA encryption
-                // TODO: Update action encryption for v2 to use Ed25519/X25519
-                val rsa = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 val everyoneId = bwModel.network.circles.find { it.name == EVERYONE_CIRCLE }?.id ?: 0
+                
+                // Get the circle key - need a cipher for Keyring.keyForCircle
+                val rsa = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 val circKey = Keyring.keyForCircle(
                     db.keyDao(),
                     filesDir,
@@ -285,11 +290,20 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                     rsa
                 )
 
+                // Encrypt the circle key based on introduction version
+                val encryptedKeyB64 = if (intro.version >= 2) {
+                    // v2: Use X25519 key agreement with peer's Ed25519 public key
+                    val ed25519Keyring = Ed25519Keyring.create(ctx)
+                    val peerPubKey = Base64.getDecoder().decode(intro.publicKey)
+                    KeyEncryption.encryptKeyForPeer(circKey, ed25519Keyring, peerPubKey)
+                } else {
+                    // v1: Plain Base64 (legacy - no encryption)
+                    Base64.getEncoder().encodeToString(circKey)
+                }
+
+                Log.i("AcceptIntro", "Storing UpdateKey action for ${intro.name} (v${intro.version})")
                 bwModel.network.storeAction(
-                    Action.updateKeyAction(
-                        intro.peerId,
-                        Base64.getEncoder().encodeToString(circKey)
-                    )
+                    Action.updateKeyAction(intro.peerId, encryptedKeyB64)
                 )
                 false
             }

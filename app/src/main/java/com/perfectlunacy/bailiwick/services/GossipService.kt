@@ -16,6 +16,10 @@ import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
+import com.perfectlunacy.bailiwick.crypto.KeyEncryption
+import com.perfectlunacy.bailiwick.crypto.KeyStorage
+import com.perfectlunacy.bailiwick.models.db.ActionType
 import com.perfectlunacy.bailiwick.models.db.PeerTopic
 import com.perfectlunacy.bailiwick.models.iroh.*
 import com.perfectlunacy.bailiwick.storage.gossip.GossipMessageHandler
@@ -305,7 +309,17 @@ class GossipService : Service() {
             // Download identity if changed
             contentDownloader?.downloadIdentity(userManifest.identityHash, peerNodeId)
 
-            // Process circle manifests
+            // Process actions addressed to us FIRST (to get keys before decrypting posts)
+            val myNodeId = iroh.nodeId()
+            val myActions = userManifest.actions[myNodeId] ?: emptyList()
+            if (myActions.isNotEmpty()) {
+                Log.i(TAG, "Found ${myActions.size} actions addressed to us from $peerNodeId")
+                for (actionHash in myActions) {
+                    processAction(actionHash, peerNodeId, peerTopic)
+                }
+            }
+
+            // Process circle manifests (after keys are stored)
             for ((circleId, circleManifestHash) in userManifest.circleManifests) {
                 processCircleManifest(circleManifestHash, peerNodeId, peerTopic)
             }
@@ -355,9 +369,16 @@ class GossipService : Service() {
 
             Log.i(TAG, "Circle ${circleManifest.name}: ${circleManifest.posts.size} posts")
 
-            // Download posts
-            // TODO: Implement proper decryption with shared circle keys
-            val postCipher = NoopEncryptor()  // Unencrypted for now
+            // Download posts using keys received from peer
+            val postCipher = EncryptorFactory.forPeer(bw.db.keyDao(), peerNodeId) { decrypted ->
+                // Validate that decryption produced valid JSON
+                try {
+                    GsonProvider.gson.fromJson(String(decrypted), IrohPost::class.java)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
             for (post in circleManifest.posts) {
                 contentDownloader?.downloadPost(post.hash, peerNodeId, postCipher)
             }
@@ -366,6 +387,120 @@ class GossipService : Service() {
             Log.e(TAG, "Failed to process circle manifest", e)
         }
     }
+
+
+    /**
+     * Process an action addressed to us from a peer.
+     */
+    private suspend fun processAction(
+        actionHash: String,
+        peerNodeId: String,
+        peerTopic: PeerTopic
+    ) {
+        try {
+            val bw = Bailiwick.getInstance()
+            val iroh = bw.iroh
+            val db = bw.db
+
+            // Download action blob
+            val actionData = iroh.downloadBlob(actionHash, peerNodeId)
+            if (actionData == null) {
+                Log.w(TAG, "Failed to download action $actionHash from $peerNodeId")
+                return
+            }
+
+            // Parse the network action
+            val networkAction = try {
+                GsonProvider.gson.fromJson(String(actionData), NetworkAction::class.java)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse action from $peerNodeId: ${e.message}")
+                return
+            }
+
+            Log.i(TAG, "Received action type=${networkAction.type} from $peerNodeId")
+
+            // Route to appropriate handler
+            when (networkAction.type) {
+                ActionType.UpdateKey.name -> {
+                    processUpdateKeyAction(networkAction.data, peerNodeId, peerTopic)
+                }
+                else -> {
+                    Log.w(TAG, "Unknown action type: ${networkAction.type}")
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to process action from $peerNodeId", e)
+        }
+    }
+
+    /**
+     * Process an UpdateKey action - decrypt and store the circle key.
+     */
+    private fun processUpdateKeyAction(
+        encryptedKeyB64: String,
+        peerNodeId: String,
+        peerTopic: PeerTopic
+    ) {
+        try {
+            val bw = Bailiwick.getInstance()
+            val db = bw.db
+            val context = applicationContext
+
+            // Try X25519 decryption first (v2 format)
+            var decryptedKey: ByteArray? = null
+            
+            try {
+                val ed25519Keyring = Ed25519Keyring.create(context)
+                decryptedKey = KeyEncryption.decryptKeyFromPeer(
+                    encryptedKeyB64,
+                    ed25519Keyring,
+                    peerTopic.ed25519PublicKey
+                )
+            } catch (e: Exception) {
+                Log.d(TAG, "X25519 decryption failed, trying plain Base64: ${e.message}")
+            }
+
+            // Fallback to plain Base64 (v1 format)
+            if (decryptedKey == null) {
+                try {
+                    decryptedKey = Base64.getDecoder().decode(encryptedKeyB64)
+                    // Validate it looks like an AES key (16 or 32 bytes)
+                    if (decryptedKey.size != 16 && decryptedKey.size != 32) {
+                        Log.w(TAG, "Plain Base64 decoded to invalid key size: ${decryptedKey.size}")
+                        decryptedKey = null
+                    } else {
+                        Log.i(TAG, "Successfully decoded plain Base64 key (v1 format)")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Plain Base64 decoding also failed: ${e.message}")
+                }
+            }
+
+            if (decryptedKey == null) {
+                Log.e(TAG, "Failed to decrypt/decode circle key from $peerNodeId")
+                return
+            }
+
+            // Store the key - convert back to Base64 for KeyStorage
+            val keyB64 = Base64.getEncoder().encodeToString(decryptedKey)
+            KeyStorage.storeAesKey(db.keyDao(), peerNodeId, keyB64)
+
+            Log.i(TAG, "Stored circle key from $peerNodeId (${decryptedKey.size} bytes)")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to process UpdateKey action from $peerNodeId", e)
+        }
+    }
+
+    /**
+     * Data class for deserializing actions from Iroh.
+     */
+    private data class NetworkAction(
+        val type: String,
+        val data: String,
+        val timestamp: Long
+    )
 
     /**
      * Publish a manifest announcement to our topic.
@@ -400,6 +535,10 @@ class GossipService : Service() {
                 val prefs = applicationContext.getSharedPreferences("gossip_state", Context.MODE_PRIVATE)
                 val currentVersion = prefs.getLong("manifest_version", 0)
                 val newVersion = currentVersion + 1
+
+                // Publish any pending actions to blob storage
+                val publisher = ContentPublisher(iroh, db)
+                publisher.publishActions()
 
                 // Build circle manifests
                 val circleManifests = buildCircleManifests(nodeId, ed25519Keyring)

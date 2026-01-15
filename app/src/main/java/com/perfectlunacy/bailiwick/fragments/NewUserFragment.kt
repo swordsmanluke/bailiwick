@@ -152,6 +152,18 @@ class NewUserFragment : BailiwickFragment() {
         binding.newUserBtnGo.setOnClickListener {
             createAccount()
         }
+
+        // Quick test account buttons
+        binding.btnTestAlice.setOnClickListener {
+            createQuickTestAccount("Alice")
+        }
+        binding.btnTestBob.setOnClickListener {
+            createQuickTestAccount("Bob")
+        }
+        binding.btnTestRandom.setOnClickListener {
+            val randomSuffix = (1000..9999).random()
+            createQuickTestAccount("Tester$randomSuffix")
+        }
     }
 
     private fun createAccount() {
@@ -193,6 +205,28 @@ class NewUserFragment : BailiwickFragment() {
                 }
             }
         }
+    }
+
+    /**
+     * Create a quick test account with predefined credentials.
+     * For development/testing only.
+     */
+    private fun createQuickTestAccount(displayName: String) {
+        // Generate random username and password
+        val randomId = System.currentTimeMillis() % 10000
+        val username = "${displayName.lowercase()}_$randomId"
+        val password = "testpass${randomId}"
+
+        Log.i(TAG, "Creating quick test account: $displayName (user: $username)")
+
+        // Fill in the form
+        binding.newPublicName.setText(displayName)
+        binding.newUserName.setText(username)
+        binding.newPassword.setText(password)
+        binding.confirmPassword.setText(password)
+
+        // Trigger account creation
+        createAccount()
     }
 
     private fun setFormEnabled(enabled: Boolean) {

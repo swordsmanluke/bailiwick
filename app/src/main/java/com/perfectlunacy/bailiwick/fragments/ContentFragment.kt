@@ -22,6 +22,7 @@ import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
@@ -254,10 +255,14 @@ class ContentFragment : BailiwickFragment() {
 
                 Log.i(TAG, "Saved new post with ${postFiles.size} photos")
 
-                // Publish post to Iroh blob storage
-                // TODO: Implement proper encryption with shared circle keys
+                // Publish post to Iroh blob storage with circle key encryption
                 try {
-                    val cipher = NoopEncryptor()  // Unencrypted for now
+                    val cipher = try {
+                        EncryptorFactory.forCircle(db.keyDao(), circId)
+                    } catch (e: IllegalStateException) {
+                        Log.w(TAG, "No key for circle $circId, using noop: ${e.message}")
+                        NoopEncryptor()
+                    }
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     val postHash = publisher.publishPost(newPost, circId, cipher)

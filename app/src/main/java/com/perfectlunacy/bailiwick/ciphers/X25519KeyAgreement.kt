@@ -9,6 +9,7 @@ import org.bouncycastle.crypto.params.HKDFParameters
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 import org.bouncycastle.math.ec.rfc7748.X25519
+import java.math.BigInteger
 import java.security.MessageDigest
 
 /**
@@ -173,27 +174,39 @@ object X25519KeyAgreement {
      * u = (1 + y) / (1 - y) mod p, where p = 2^255 - 19
      */
     private fun computeMontgomeryU(y: ByteArray, u: ByteArray) {
-        // Use BouncyCastle's field arithmetic
-        // This is the standard birational equivalence formula
-
-        // For simplicity in this implementation, we use a known working approach:
-        // Generate X25519 public from X25519 private (derived from Ed25519 private)
-        // This means we need access to the private key for the conversion.
-
-        // Alternative: Use X25519.generatePublicKey which takes a private key
-        // But we need a different approach for converting just the public key.
-
-        // The correct implementation requires modular arithmetic.
-        // BouncyCastle's internal implementation handles this, but isn't directly exposed.
-
-        // For now, copy the bytes and note that proper conversion requires
-        // the Ed25519 private key to derive X25519 public key correctly.
-        // This is acceptable since we always have access to our own private key,
-        // and for peer public keys, we'll receive X25519 keys directly.
-
-        // Placeholder: In practice, peers will share X25519 public keys directly
-        // or we derive from private keys we control.
-        System.arraycopy(y, 0, u, 0, 32)
+        // The field prime for Curve25519: p = 2^255 - 19
+        val p = BigInteger.ONE.shiftLeft(255).subtract(BigInteger.valueOf(19))
+        
+        // Convert y from little-endian bytes to BigInteger
+        val yReversed = y.reversedArray()
+        val yInt = BigInteger(1, yReversed)
+        
+        // Compute u = (1 + y) / (1 - y) mod p
+        // Division in a field is multiplication by modular inverse
+        val one = BigInteger.ONE
+        val numerator = one.add(yInt).mod(p)
+        val denominator = one.subtract(yInt).mod(p)
+        
+        // Compute modular inverse of denominator
+        val denominatorInv = denominator.modInverse(p)
+        
+        // u = numerator * denominatorInv mod p
+        val uInt = numerator.multiply(denominatorInv).mod(p)
+        
+        // Convert back to little-endian bytes
+        var uBytes = uInt.toByteArray()
+        
+        // Remove leading zero if present (BigInteger adds it for positive numbers)
+        if (uBytes.size > 32 && uBytes[0] == 0.toByte()) {
+            uBytes = uBytes.copyOfRange(1, uBytes.size)
+        }
+        
+        // Reverse to little-endian and pad to 32 bytes
+        uBytes = uBytes.reversedArray()
+        
+        // Copy to output, padding with zeros if needed
+        u.fill(0)
+        System.arraycopy(uBytes, 0, u, 0, minOf(uBytes.size, 32))
     }
 
     /**
