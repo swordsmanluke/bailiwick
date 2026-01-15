@@ -42,8 +42,8 @@
             android:enabled="true"
             android:exported="false"/>
 
-        <!-- Iroh sync service - replaces IpfsService -->
-        <service android:name=".services.IrohService"
+        <!-- Gossip-based sync service for real-time manifest synchronization -->
+        <service android:name=".services.GossipService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>

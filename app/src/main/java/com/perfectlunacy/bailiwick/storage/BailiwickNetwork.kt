@@ -42,7 +42,7 @@ class BailiwickNetworkImpl(
         get() = db.identityDao().identitiesFor(nodeId)
 
     override val peers: List<NodeId>
-        get() = db.peerDocDao().subscribedPeers().map { it.nodeId }
+        get() = db.peerTopicDao().subscribedPeers().map { it.nodeId }
 
     override val users: List<Identity>
         get() = db.identityDao().all()

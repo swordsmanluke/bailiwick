@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.gson.Gson
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.*
-import com.perfectlunacy.bailiwick.models.iroh.IrohFeed
 import com.perfectlunacy.bailiwick.models.iroh.IrohIdentity
 import com.perfectlunacy.bailiwick.models.iroh.IrohPost
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
@@ -44,18 +43,13 @@ class ContentPublisherTest {
     }
 
     @Test
-    fun publishIdentityStoresBlobAndUpdatesDoc() = runBlocking {
+    fun publishIdentityStoresBlob() = runBlocking {
         val identity = createIdentity()
 
         val hash = publisher.publishIdentity(identity)
 
         // Verify blob was stored
         assertNotNull(iroh.getBlob(hash))
-
-        // Verify doc was updated
-        val docValue = iroh.getMyDoc().get("identity")
-        assertNotNull(docValue)
-        assertEquals(hash, String(docValue!!))
 
         // Verify blob content is correct
         val storedJson = String(iroh.getBlob(hash)!!)
@@ -82,95 +76,6 @@ class ContentPublisherTest {
 
         assertEquals(post.text, storedPost.text)
         assertEquals(post.timestamp, storedPost.timestamp)
-    }
-
-    @Test
-    fun publishPostCreatesDocEntry() = runBlocking {
-        val identity = createIdentity()
-        val circle = createCircle(identity.id)
-        val post = createPost(identity.id)
-        db.circlePostDao().insert(CirclePost(circle.id, post.id))
-
-        val hash = publisher.publishPost(post, circle.id, cipher)
-
-        // Verify doc entry was created at posts/{circleId}/{timestamp}
-        val expectedKey = "posts/${circle.id}/${post.timestamp}"
-        val docValue = iroh.getMyDoc().get(expectedKey)
-        assertNotNull("Doc entry should exist at $expectedKey", docValue)
-        assertEquals(hash, String(docValue!!))
-    }
-
-    @Test
-    fun keysWithPrefixFindsPostEntries() = runBlocking {
-        val identity = createIdentity()
-        val circle = createCircle(identity.id)
-        
-        // Create and publish multiple posts
-        val post1 = createPost(identity.id)
-        val post2 = createPost(identity.id)
-        db.circlePostDao().insert(CirclePost(circle.id, post1.id))
-        db.circlePostDao().insert(CirclePost(circle.id, post2.id))
-        
-        publisher.publishPost(post1, circle.id, cipher)
-        publisher.publishPost(post2, circle.id, cipher)
-
-        // Verify keysWithPrefix finds both posts
-        val postKeys = iroh.getMyDoc().keysWithPrefix("posts/")
-        assertEquals(2, postKeys.size)
-        assertTrue(postKeys.all { it.startsWith("posts/${circle.id}/") })
-    }
-
-    @Test
-    fun publishFeedIncludesAllPosts() = runBlocking {
-        val identity = createIdentity()
-        val circle = createCircle(identity.id)
-
-        // Create and publish multiple posts
-        val post1 = createPost(identity.id)
-        val post2 = createPost(identity.id)
-
-        // Add posts to circle
-        db.circlePostDao().insert(CirclePost(circle.id, post1.id))
-        db.circlePostDao().insert(CirclePost(circle.id, post2.id))
-
-        // Publish posts first (so they have hashes)
-        @Suppress("DEPRECATION")
-        publisher.publishPost(post1, circle.id, cipher)
-        @Suppress("DEPRECATION")
-        publisher.publishPost(post2, circle.id, cipher)
-
-        // Now publish the feed
-        @Suppress("DEPRECATION")
-        val feedHash = publisher.publishFeed(circle, cipher)
-
-        // Verify feed was stored
-        assertNotNull(iroh.getBlob(feedHash))
-
-        // Verify feed content
-        val encrypted = iroh.getBlob(feedHash)!!
-        val decrypted = cipher.decrypt(encrypted)
-        val feed = gson.fromJson(String(decrypted), IrohFeed::class.java)
-
-        assertEquals(2, feed.posts.size)
-    }
-
-    @Test
-    fun publishFeedUpdatesDocWithCirclePath() = runBlocking {
-        val identity = createIdentity()
-        val circle = createCircle(identity.id)
-
-        @Suppress("DEPRECATION")
-        val feedHash = publisher.publishFeed(circle, cipher)
-
-        // Verify doc was updated with circle-specific path
-        val circleValue = iroh.getMyDoc().get("circles/${circle.id}")
-        assertNotNull(circleValue)
-        assertEquals(feedHash, String(circleValue!!))
-
-        // Verify latest feed pointer was updated
-        val latestValue = iroh.getMyDoc().get("feed/latest")
-        assertNotNull(latestValue)
-        assertEquals(feedHash, String(latestValue!!))
     }
 
     @Test
@@ -214,6 +119,33 @@ class ContentPublisherTest {
         val encrypted = iroh.getBlob(hash)!!
         val decrypted = cipher.decrypt(encrypted)
         assertArrayEquals(fileData, decrypted)
+    }
+
+    @Test
+    fun publishIdentityUpdatesDbHash() = runBlocking {
+        val identity = createIdentity()
+        assertNull(identity.blobHash)
+
+        val hash = publisher.publishIdentity(identity)
+
+        // Verify DB was updated
+        val updated = db.identityDao().find(identity.id)
+        assertEquals(hash, updated.blobHash)
+    }
+
+    @Test
+    fun publishPostUpdatesDbHash() = runBlocking {
+        val identity = createIdentity()
+        val circle = createCircle(identity.id)
+        val post = createPost(identity.id)
+        db.circlePostDao().insert(CirclePost(circle.id, post.id))
+        assertNull(post.blobHash)
+
+        val hash = publisher.publishPost(post, circle.id, cipher)
+
+        // Verify DB was updated
+        val updated = db.postDao().find(post.id)
+        assertEquals(hash, updated.blobHash)
     }
 
     // ===== Helper Methods =====

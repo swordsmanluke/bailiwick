@@ -2,7 +2,6 @@ package com.perfectlunacy.bailiwick.workers
 
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.ActionType
-import com.perfectlunacy.bailiwick.storage.iroh.IrohDocKeys
 import com.perfectlunacy.bailiwick.storage.iroh.InMemoryIrohNode
 import com.perfectlunacy.bailiwick.util.GsonProvider
 import kotlinx.coroutines.runBlocking
@@ -13,7 +12,7 @@ import java.util.Base64
 
 /**
  * Integration tests for action sync functionality.
- * Tests the publish/download/process cycle for actions.
+ * Tests the serialization and blob storage for actions.
  */
 class ActionSyncTest {
 
@@ -28,30 +27,6 @@ class ActionSyncTest {
         bobIroh = InMemoryIrohNode()
         aliceNodeId = aliceIroh.nodeId()
         bobNodeId = bobIroh.nodeId()
-    }
-
-    // ===== IrohDocKeys Tests =====
-
-    @Test
-    fun `actionKey creates correct path format`() {
-        val targetNode = "abc123def456"
-        val timestamp = 1704067200000L
-
-        val key = IrohDocKeys.actionKey(targetNode, timestamp)
-
-        assertEquals("actions/abc123def456/1704067200000", key)
-    }
-
-    @Test
-    fun `actionKey with different timestamps creates unique keys`() {
-        val targetNode = "node123"
-
-        val key1 = IrohDocKeys.actionKey(targetNode, 1000L)
-        val key2 = IrohDocKeys.actionKey(targetNode, 2000L)
-
-        assertNotEquals(key1, key2)
-        assertTrue(key1.startsWith("actions/node123/"))
-        assertTrue(key2.startsWith("actions/node123/"))
     }
 
     // ===== Action Entity Tests =====
@@ -103,75 +78,6 @@ class ActionSyncTest {
         assertEquals(original.timestamp, parsed.timestamp)
     }
 
-    // ===== Action Publishing Flow Tests =====
-
-    @Test
-    fun `action key is stored in doc at correct path`() = runBlocking {
-        val targetNodeId = bobNodeId
-        val timestamp = System.currentTimeMillis()
-        val actionHash = "action-blob-hash-123"
-
-        // Simulate what ContentPublisher.publishActions does
-        val key = IrohDocKeys.actionKey(targetNodeId, timestamp)
-        aliceIroh.getMyDoc().set(key, actionHash.toByteArray())
-
-        // Verify the action is stored at the expected path
-        val storedHash = aliceIroh.getMyDoc().get(key)
-        assertNotNull(storedHash)
-        assertEquals(actionHash, String(storedHash!!))
-    }
-
-    @Test
-    fun `multiple actions for same target are stored separately`() = runBlocking {
-        val targetNodeId = bobNodeId
-        val timestamp1 = 1000L
-        val timestamp2 = 2000L
-
-        val key1 = IrohDocKeys.actionKey(targetNodeId, timestamp1)
-        val key2 = IrohDocKeys.actionKey(targetNodeId, timestamp2)
-
-        aliceIroh.getMyDoc().set(key1, "hash1".toByteArray())
-        aliceIroh.getMyDoc().set(key2, "hash2".toByteArray())
-
-        // Both actions should be stored
-        assertEquals("hash1", String(aliceIroh.getMyDoc().get(key1)!!))
-        assertEquals("hash2", String(aliceIroh.getMyDoc().get(key2)!!))
-    }
-
-    // ===== Action Discovery Tests =====
-
-    @Test
-    fun `actions for target can be found by prefix search`() = runBlocking {
-        val target1 = "nodeA"
-        val target2 = "nodeB"
-
-        // Store actions for different targets
-        aliceIroh.getMyDoc().set(IrohDocKeys.actionKey(target1, 1000L), "hash1".toByteArray())
-        aliceIroh.getMyDoc().set(IrohDocKeys.actionKey(target1, 2000L), "hash2".toByteArray())
-        aliceIroh.getMyDoc().set(IrohDocKeys.actionKey(target2, 3000L), "hash3".toByteArray())
-
-        // Find actions for target1
-        val prefix = "${IrohDocKeys.KEY_ACTIONS_PREFIX}$target1/"
-        val allKeys = aliceIroh.getMyDoc().keys()
-        val target1Keys = allKeys.filter { it.startsWith(prefix) }
-
-        assertEquals(2, target1Keys.size)
-        assertTrue(target1Keys.all { it.startsWith(prefix) })
-    }
-
-    @Test
-    fun `no actions found for unknown target`() = runBlocking {
-        // Store some actions for other targets
-        aliceIroh.getMyDoc().set(IrohDocKeys.actionKey("nodeA", 1000L), "hash".toByteArray())
-
-        // Search for actions for unknown target
-        val prefix = "${IrohDocKeys.KEY_ACTIONS_PREFIX}unknownNode/"
-        val allKeys = aliceIroh.getMyDoc().keys()
-        val unknownKeys = allKeys.filter { it.startsWith(prefix) }
-
-        assertTrue(unknownKeys.isEmpty())
-    }
-
     // ===== Action Blob Storage Tests =====
 
     @Test
@@ -198,82 +104,6 @@ class ActionSyncTest {
         val parsed = GsonProvider.gson.fromJson(String(retrieved!!), NetworkAction::class.java)
         assertEquals(networkAction.type, parsed.type)
         assertEquals(networkAction.data, parsed.data)
-    }
-
-    // ===== End-to-End Action Sync Simulation =====
-
-    @Test
-    fun `simulated action sync between two nodes`() = runBlocking {
-        // Data class matching ContentPublisher/ContentDownloader format
-        data class NetworkAction(
-            val type: String,
-            val data: String,
-            val timestamp: Long
-        )
-
-        // Step 1: Alice creates an UpdateKey action for Bob
-        val aesKey = Base64.getEncoder().encodeToString("secret-key-123".toByteArray())
-        val timestamp = System.currentTimeMillis()
-
-        val networkAction = NetworkAction(
-            type = "UpdateKey",
-            data = aesKey,
-            timestamp = timestamp
-        )
-
-        // Step 2: Alice stores the action as a blob
-        val json = GsonProvider.gson.toJson(networkAction)
-        val blobHash = aliceIroh.storeBlob(json.toByteArray())
-
-        // Step 3: Alice stores the action reference in her doc at actions/{bobNodeId}/{timestamp}
-        val actionKey = IrohDocKeys.actionKey(bobNodeId, timestamp)
-        aliceIroh.getMyDoc().set(actionKey, blobHash.toByteArray())
-
-        // Step 4: Bob opens Alice's doc (simulating join/sync)
-        val aliceDocId = aliceIroh.myDocNamespaceId()
-        val aliceDocFromBob = bobIroh.joinDoc("ticket:$aliceDocId")
-        assertNotNull(aliceDocFromBob)
-
-        // Step 5: Bob discovers actions meant for him
-        // In real sync, Alice's doc content would be synced to Bob
-        // For this test, we manually copy the data
-        val aliceDoc = aliceIroh.getMyDoc()
-        val allKeys = aliceDoc.keys()
-        val bobActionPrefix = "${IrohDocKeys.KEY_ACTIONS_PREFIX}$bobNodeId/"
-        val bobActionKeys = allKeys.filter { it.startsWith(bobActionPrefix) }
-
-        assertEquals(1, bobActionKeys.size)
-
-        // Step 6: Bob downloads the action blob
-        val storedHashBytes = aliceDoc.get(bobActionKeys[0])
-        val storedHash = String(storedHashBytes!!)
-        assertEquals(blobHash, storedHash)
-
-        // In real implementation, Bob would get the blob from the network
-        // For this test, we access it directly from Alice's node
-        val actionBlob = aliceIroh.getBlob(storedHash)
-        assertNotNull(actionBlob)
-
-        // Step 7: Bob parses the action
-        val parsedAction = GsonProvider.gson.fromJson(String(actionBlob!!), NetworkAction::class.java)
-        assertEquals("UpdateKey", parsedAction.type)
-        assertEquals(aesKey, parsedAction.data)
-
-        // Step 8: Bob would create a local Action entity and process it
-        val bobAction = Action(
-            timestamp = parsedAction.timestamp,
-            blobHash = storedHash,
-            fromPeerId = aliceNodeId,  // Alice sent this
-            toPeerId = bobNodeId,       // It's for Bob
-            actionType = ActionType.UpdateKey,
-            data = parsedAction.data,
-            processed = false
-        )
-
-        assertEquals(aliceNodeId, bobAction.fromPeerId)
-        assertEquals(bobNodeId, bobAction.toPeerId)
-        assertEquals(ActionType.UpdateKey, bobAction.actionType)
-        assertFalse(bobAction.processed)
     }
 
     // ===== Key Extraction Tests =====
@@ -304,5 +134,55 @@ class ActionSyncTest {
         assertThrows(IllegalArgumentException::class.java) {
             ActionType.valueOf(unknownType)
         }
+    }
+
+    // ===== Simulated Action Sync =====
+
+    @Test
+    fun `action can be serialized, stored, and parsed`() = runBlocking {
+        data class NetworkAction(
+            val type: String,
+            val data: String,
+            val timestamp: Long
+        )
+
+        // Step 1: Alice creates an UpdateKey action for Bob
+        val aesKey = Base64.getEncoder().encodeToString("secret-key-123".toByteArray())
+        val timestamp = System.currentTimeMillis()
+
+        val networkAction = NetworkAction(
+            type = "UpdateKey",
+            data = aesKey,
+            timestamp = timestamp
+        )
+
+        // Step 2: Alice stores the action as a blob
+        val json = GsonProvider.gson.toJson(networkAction)
+        val blobHash = aliceIroh.storeBlob(json.toByteArray())
+
+        // Step 3: Bob downloads the action blob
+        val actionBlob = aliceIroh.getBlob(blobHash)
+        assertNotNull(actionBlob)
+
+        // Step 4: Bob parses the action
+        val parsedAction = GsonProvider.gson.fromJson(String(actionBlob!!), NetworkAction::class.java)
+        assertEquals("UpdateKey", parsedAction.type)
+        assertEquals(aesKey, parsedAction.data)
+
+        // Step 5: Bob would create a local Action entity and process it
+        val bobAction = Action(
+            timestamp = parsedAction.timestamp,
+            blobHash = blobHash,
+            fromPeerId = aliceNodeId,  // Alice sent this
+            toPeerId = bobNodeId,       // It's for Bob
+            actionType = ActionType.UpdateKey,
+            data = parsedAction.data,
+            processed = false
+        )
+
+        assertEquals(aliceNodeId, bobAction.fromPeerId)
+        assertEquals(bobNodeId, bobAction.toPeerId)
+        assertEquals(ActionType.UpdateKey, bobAction.actionType)
+        assertFalse(bobAction.processed)
     }
 }

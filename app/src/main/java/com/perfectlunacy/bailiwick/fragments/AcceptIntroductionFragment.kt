@@ -24,10 +24,11 @@ import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentAcceptSubscriptionBinding
 import com.perfectlunacy.bailiwick.models.db.Action
-import com.perfectlunacy.bailiwick.models.db.PeerDoc
+import com.perfectlunacy.bailiwick.models.db.PeerTopic
 import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.qr.QREncoder
@@ -197,13 +198,26 @@ class AcceptIntroductionFragment : BailiwickFragment() {
     }
 
     suspend fun buildResponse(name: String, nodeId: NodeId): Introduction {
-        val docTicket = bwModel.iroh.myDocTicket()
+        val ctx = context ?: throw IllegalStateException("Context required for building response")
+
+        // Get Ed25519 public key for this device
+        val ed25519Keyring = Ed25519Keyring.create(ctx)
+        val publicKey = ed25519Keyring.getPublicKeyString()
+
+        // Get or create topic key for Gossip subscriptions
+        val topicKey = Ed25519Keyring.getTopicKeyString(ctx)
+
+        // Get current node addresses for bootstrap
+        val addresses = bwModel.iroh.getNodeAddresses()
+
         return Introduction(
+            version = 2,
             isResponse = true,
             peerId = nodeId,
             name = name,
-            publicKey = Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded),
-            docTicket = docTicket
+            publicKey = publicKey,
+            topicKey = topicKey,
+            addresses = addresses
         )
     }
 
@@ -225,41 +239,43 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 // Check to see if we already have this user
                 val isExistingUser = db.userDao().publicKeyFor(intro.peerId) != null
 
-                // Join the peer's doc using their ticket
-                val peerDoc = bwModel.iroh.joinDoc(intro.docTicket)
-                if (peerDoc == null) {
-                    Log.e("AcceptIntro", "Failed to join doc for ${intro.name}")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(ctx, "Failed to connect to peer", Toast.LENGTH_LONG).show()
-                    }
-                    return@withContext true // Treat as "already friends" to skip further processing
-                }
+                // Handle v2 introductions (Gossip-based with topic key)
+                if (intro.version >= 2 && intro.topicKey.isNotEmpty()) {
+                    // Decode Ed25519 public key and topic key
+                    val ed25519PublicKey = Base64.getDecoder().decode(intro.publicKey)
+                    val topicKey = Base64.getDecoder().decode(intro.topicKey)
 
-                val docNamespaceId = peerDoc.namespaceId()
-                Log.i("AcceptIntro", "Joined doc for ${intro.name}: $docNamespaceId")
-
-                // Store/update the peer's doc namespace for syncing content
-                // Also store the ticket so we can re-join after app restart
-                db.peerDocDao().upsert(
-                    PeerDoc(
+                    // Create or update PeerTopic entry for Gossip subscription
+                    val peerTopic = PeerTopic(
                         nodeId = intro.peerId,
-                        docNamespaceId = docNamespaceId,
+                        ed25519PublicKey = ed25519PublicKey,
+                        topicKey = topicKey,
+                        addresses = intro.addresses,
                         displayName = intro.name,
-                        lastSyncedAt = 0,
                         isSubscribed = true,
-                        docTicket = intro.docTicket
+                        lastSyncedAt = 0
                     )
-                )
-                Log.i("AcceptIntro", "Stored PeerDoc for ${intro.name}: $docNamespaceId")
+                    db.peerTopicDao().upsert(peerTopic)
+                    Log.i("AcceptIntro", "Stored PeerTopic for ${intro.name}: nodeId=${intro.peerId}")
+                } else {
+                    // Legacy v1 introductions are no longer supported
+                    Log.e("AcceptIntro", "Unsupported v1 introduction format for ${intro.name}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(ctx, "This introduction format is no longer supported. Please ask your friend to update their app.", Toast.LENGTH_LONG).show()
+                    }
+                    return@withContext true
+                }
 
                 if (isExistingUser) {
                     return@withContext true
                 }
 
-                // Store the new user and their key
+                // Store the new user and their key (now Ed25519 for v2)
                 db.userDao().insert(User(intro.peerId, intro.publicKey))
 
-                // Create an Action with our "everyone" key. It will be encrypted with their Public key
+                // Create an Action with our "everyone" key
+                // Note: For v2, we use X25519 key agreement; for v1, RSA encryption
+                // TODO: Update action encryption for v2 to use Ed25519/X25519
                 val rsa = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 val everyoneId = bwModel.network.circles.find { it.name == EVERYONE_CIRCLE }?.id ?: 0
                 val circKey = Keyring.keyForCircle(

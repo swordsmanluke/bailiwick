@@ -21,13 +21,17 @@ import com.perfectlunacy.bailiwick.adapters.CircleFilterAdapter
 import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
+import com.perfectlunacy.bailiwick.ciphers.AesGcmEncryptor
+import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
+import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.FilterPreferences
+import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import com.perfectlunacy.bailiwick.util.PhotoPicker
@@ -250,6 +254,27 @@ class ContentFragment : BailiwickFragment() {
                 }
 
                 Log.i(TAG, "Saved new post with ${postFiles.size} photos")
+
+                // Publish post to Iroh as encrypted blob
+                try {
+                    val ed25519Keyring = Ed25519Keyring.create(requireContext())
+                    val myPublicKey = ed25519Keyring.getPublicKeyBytes()
+                    val encryptionKey = ed25519Keyring.deriveEncryptionKey(myPublicKey, "posts")
+                    val cipher = AesGcmEncryptor(encryptionKey)
+
+                    val publisher = ContentPublisher(bwModel.iroh, db)
+                    val postHash = publisher.publishPost(newPost, circId, cipher)
+
+                    // Verify the blobHash was set
+                    val updatedPost = db.postDao().find(newPost.id)
+                    Log.i(TAG, "Published post ${newPost.id} to Iroh with hash: $postHash, blobHash in DB: ${updatedPost?.blobHash}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to publish post to Iroh: ${e.message}")
+                }
+
+                // Trigger manifest sync to notify peers
+                GossipService.getInstance()?.publishManifest()
+                Log.i(TAG, "Triggered manifest publish")
             }
 
             selectedPhotos.clear()

@@ -15,7 +15,7 @@ import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.InitState
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentSplashBinding
-import com.perfectlunacy.bailiwick.services.IrohService
+import com.perfectlunacy.bailiwick.services.GossipService
 import kotlinx.coroutines.launch
 
 /**
@@ -104,7 +104,7 @@ class SplashFragment : Fragment() {
 
     private fun onInitializationComplete(accountExists: Boolean) {
         // Start background sync service
-        IrohService.start(requireContext())
+        GossipService.start(requireContext())
 
         // Navigate based on whether account exists
         val navController = findNavController()

@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.perfectlunacy.bailiwick.services.IrohService
+import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.iroh.IrohWrapper
@@ -122,8 +122,8 @@ class BailiwickActivity : AppCompatActivity() {
 
             // Start background sync service directly from Activity to ensure it starts
             // even if the fragment misses the state change due to lifecycle issues
-            IrohService.start(applicationContext)
-            Log.i(TAG, "IrohService started")
+            GossipService.start(applicationContext)
+            Log.i(TAG, "GossipService started")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Bailiwick", e)

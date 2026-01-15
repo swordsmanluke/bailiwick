@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.perfectlunacy.bailiwick.models.db.*
 
-@TypeConverters(ActionTypeConverters::class)
+@TypeConverters(ActionTypeConverters::class, CommonConverters::class)
 @Database(
     entities = [
         Account::class,
@@ -18,14 +18,16 @@ import com.perfectlunacy.bailiwick.models.db.*
         CircleMember::class,
         CirclePost::class,
         Key::class,
-        PeerDoc::class,
         Action::class,
         User::class,
         Subscription::class,
         Reaction::class,
-        Tag::class
+        Tag::class,
+        // Gossip-related entities
+        PeerTopic::class,
+        ManifestCache::class
     ],
-    version = 4,  // Added Reaction and Tag entities
+    version = 6,  // Removed PeerDoc (migrated to Gossip-based PeerTopic)
     exportSchema = true
 )
 abstract class BailiwickDatabase : RoomDatabase() {
@@ -37,12 +39,15 @@ abstract class BailiwickDatabase : RoomDatabase() {
     abstract fun circleMemberDao(): CircleMemberDao
     abstract fun circlePostDao(): CirclePostDao
     abstract fun keyDao(): KeyDao
-    abstract fun peerDocDao(): PeerDocDao
     abstract fun actionDao(): ActionDao
     abstract fun userDao(): UserDao
     abstract fun subscriptionDao(): SubscriptionDao
     abstract fun reactionDao(): ReactionDao
     abstract fun tagDao(): TagDao
+
+    // Gossip-related DAOs (Phase 1)
+    abstract fun peerTopicDao(): PeerTopicDao
+    abstract fun manifestCacheDao(): ManifestCacheDao
 }
 
 fun getBailiwickDb(context: Context): BailiwickDatabase {

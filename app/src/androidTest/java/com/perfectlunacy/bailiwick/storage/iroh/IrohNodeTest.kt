@@ -11,7 +11,7 @@ import org.junit.runner.RunWith
 
 /**
  * Tests for IrohNode implementation.
- * Replaces the old IPFS tests with Iroh equivalents.
+ * Tests blob storage and collection operations.
  */
 @RunWith(AndroidJUnit4::class)
 class IrohNodeTest {
@@ -48,8 +48,8 @@ class IrohNodeTest {
     }
 
     @Test
-    fun documentStructureForBailiwick() = runBlocking {
-        // Simulate the Bailiwick directory structure using Iroh docs
+    fun blobStorageForBailiwickContent() = runBlocking {
+        // Simulate storing Bailiwick content as blobs
 
         // Store identity content
         val identityJson = """{"name": "TestUser", "profilePicHash": null}"""
@@ -63,20 +63,12 @@ class IrohNodeTest {
         val feedJson = """{"updatedAt": 12345, "posts": ["$postHash"]}"""
         val feedHash = iroh.storeBlob(feedJson.toByteArray())
 
-        // Set up document structure (like IPNS publish)
-        val myDoc = iroh.getMyDoc()
-        myDoc.set("identity", identityHash.toByteArray())
-        myDoc.set("feed/latest", feedHash.toByteArray())
-        myDoc.set("circles/1", feedHash.toByteArray())
-
-        // Verify we can read back the structure
-        assertEquals(identityHash, String(myDoc.get("identity")!!))
-        assertEquals(feedHash, String(myDoc.get("feed/latest")!!))
-        assertEquals(feedHash, String(myDoc.get("circles/1")!!))
-
+        // Verify we can read back the content
+        assertNotNull(iroh.getBlob(identityHash))
+        assertNotNull(iroh.getBlob(feedHash))
+        
         // Verify we can traverse back to content
-        val retrievedFeedHash = String(myDoc.get("feed/latest")!!)
-        val feedData = iroh.getBlob(retrievedFeedHash)
+        val feedData = iroh.getBlob(feedHash)
         assertNotNull(feedData)
         assertTrue(String(feedData!!).contains(postHash))
     }
@@ -118,71 +110,31 @@ class IrohNodeTest {
     }
 
     @Test
-    fun multipleDocsAreIndependent() = runBlocking {
-        val doc1Id = iroh.createDoc()
-        val doc2Id = iroh.createDoc()
-
-        val doc1 = iroh.openDoc(doc1Id)!!
-        val doc2 = iroh.openDoc(doc2Id)!!
-
-        // Set different values in each doc
-        doc1.set("key", "value1".toByteArray())
-        doc2.set("key", "value2".toByteArray())
-
-        // Verify they are independent
-        assertEquals("value1", String(doc1.get("key")!!))
-        assertEquals("value2", String(doc2.get("key")!!))
-    }
-
-    @Test
-    fun docKeysListsAllKeys() = runBlocking {
-        val doc = iroh.getMyDoc()
-
-        doc.set("alpha", "1".toByteArray())
-        doc.set("beta", "2".toByteArray())
-        doc.set("gamma", "3".toByteArray())
-
-        val keys = doc.keys()
-        assertEquals(3, keys.size)
-        assertTrue(keys.contains("alpha"))
-        assertTrue(keys.contains("beta"))
-        assertTrue(keys.contains("gamma"))
-    }
-
-    @Test
-    fun docDeleteRemovesKey() = runBlocking {
-        val doc = iroh.getMyDoc()
-        doc.set("temporary", "data".toByteArray())
-
-        assertNotNull(doc.get("temporary"))
-
-        doc.delete("temporary")
-
-        assertNull(doc.get("temporary"))
-    }
-
-    @Test
     fun isConnectedReturnsTrue() = runBlocking {
         // InMemoryIrohNode is always "connected"
         assertTrue(iroh.isConnected())
     }
 
     @Test
-    fun keysWithPrefixFiltersCorrectly() = runBlocking {
-        val doc = iroh.getMyDoc()
+    fun getNodeAddressesReturnsAddresses() = runBlocking {
+        val addresses = iroh.getNodeAddresses()
+        assertTrue(addresses.isNotEmpty())
+    }
 
-        doc.set("posts/1/100", "post1".toByteArray())
-        doc.set("posts/1/200", "post2".toByteArray())
-        doc.set("posts/2/100", "post3".toByteArray())
-        doc.set("identity", "identity".toByteArray())
+    @Test
+    fun downloadBlobReturnsLocalBlob() = runBlocking {
+        val data = "test data".toByteArray()
+        val hash = iroh.storeBlob(data)
 
-        val allPosts = doc.keysWithPrefix("posts/")
-        assertEquals(3, allPosts.size)
+        // In memory mock, downloadBlob returns local blob
+        val downloaded = iroh.downloadBlob(hash, "some-node-id")
+        assertNotNull(downloaded)
+        assertArrayEquals(data, downloaded)
+    }
 
-        val circle1Posts = doc.keysWithPrefix("posts/1/")
-        assertEquals(2, circle1Posts.size)
-
-        val circle2Posts = doc.keysWithPrefix("posts/2/")
-        assertEquals(1, circle2Posts.size)
+    @Test
+    fun downloadBlobReturnsNullForUnknownHash() = runBlocking {
+        val downloaded = iroh.downloadBlob("unknown-hash", "some-node-id")
+        assertNull(downloaded)
     }
 }

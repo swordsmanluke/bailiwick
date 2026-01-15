@@ -1,6 +1,6 @@
 # Bailiwick Architecture Proposals Index
 
-**Last Updated**: 2026-01-05
+**Last Updated**: 2026-01-14
 
 This directory contains design proposals addressing major architectural issues in Bailiwick, a decentralized social network built on IPFS.
 
@@ -8,11 +8,13 @@ This directory contains design proposals addressing major architectural issues i
 
 | # | Title | Priority | Status | Summary |
 |---|-------|----------|--------|---------|
-| [001](001-ipfs-replacement.md) | IPFS/IPNS Replacement | Critical | Draft | Replace outdated lite-debug.aar with Iroh |
-| [002](002-sync-bug-fix.md) | Sync Bug Fix | Critical | Superseded | Fix bug where clients miss updates (see 005) |
+| [001](001-ipfs-replacement.md) | IPFS/IPNS Replacement | Critical | Superseded | Replace outdated lite-debug.aar with Iroh (see 007) |
+| [002](002-sync-bug-fix.md) | Sync Bug Fix | Critical | Superseded | Fix bug where clients miss updates (see 007) |
 | [003](003-media-handling.md) | Media Handling | High | Draft | Enable images and video with battery-efficient transcoding |
 | [004](004-threaded-conversations.md) | Threaded Conversations | Medium | Draft | Implement replies and conversation threading |
-| [005](005-iroh-implementation-plan.md) | Iroh Implementation Plan | Critical | **Active** | Step-by-step plan to replace IPFS with Iroh |
+| [005](005-iroh-implementation-plan.md) | Iroh Implementation Plan | Critical | Superseded | Step-by-step plan to replace IPFS with Iroh (see 007) |
+| [006](006-doc-native-sync.md) | Doc-Native Sync | Critical | Superseded | Event-driven sync with Iroh Docs (see 007) |
+| [007](007-gossip-manifest-sync.md) | Gossip Manifest Sync | Critical | **Active** | Replace Docs with Gossip-based manifest announcements |
 
 ---
 
@@ -199,12 +201,14 @@ Post A
 
 ### Immediate (Active)
 
-1. **005 - Iroh Implementation Plan**: Complete replacement of IPFS layer
-   - ~2 weeks estimated
-   - Fixes sync bug (002) as side effect of new architecture
+1. **007 - Gossip Manifest Sync**: Replace Docs with Gossip-based manifest announcements
+   - ~3-4 weeks estimated
+   - Fixes sync reliability issues by removing Docs entirely
+   - Uses Gossip for real-time update notifications
+   - Hierarchical manifest: user manifest → circle manifests
    - Clean slate - no migration needed
 
-### After Iroh Migration
+### After Gossip Migration
 
 2. **003 - Media Handling (Images first)**
    - Image display is low-hanging fruit
@@ -219,14 +223,14 @@ Post A
 ## Dependencies
 
 ```
-005 Iroh Implementation (ACTIVE)
-    ↓ (complete first - replaces 001 & 002)
+007 Gossip Manifest Sync (ACTIVE)
+    ↓ (complete first - replaces 001, 002, 005, 006)
 003 Media Handling
     ↓ (file infrastructure stabilized)
 004 Threaded Conversations
 ```
 
-**Note**: Proposal 005 supersedes both 001 (IPFS replacement) and 002 (sync bug fix). The sync bug is resolved by the new architecture.
+**Note**: Proposal 007 supersedes proposals 001, 002, 005, and 006. It replaces the unreliable Docs sync with Gossip-based manifest announcements while retaining Blobs for content storage.
 
 ---
 

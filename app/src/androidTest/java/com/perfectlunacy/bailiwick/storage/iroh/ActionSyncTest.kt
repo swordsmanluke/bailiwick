@@ -6,9 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.models.db.ActionType
-import com.perfectlunacy.bailiwick.models.db.Circle
-import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.models.db.PeerDoc
+import com.perfectlunacy.bailiwick.models.db.PeerTopic
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.util.GsonProvider
 import kotlinx.coroutines.runBlocking
@@ -206,15 +204,26 @@ class ActionSyncTest {
     }
 
     @Test
-    fun peerDocCanBeUsedForActionDiscovery() = runBlocking {
-        // Register a peer
-        val peerDocNamespaceId = peerIroh.myDocNamespaceId()
-        val peerDoc = PeerDoc(peerNodeId, peerDocNamespaceId, null)
-        db.peerDocDao().upsert(peerDoc)
+    fun peerTopicCanBeUsedForActionDiscovery() = runBlocking {
+        // Register a peer with topic key
+        val topicKey = ByteArray(32) { it.toByte() }
+        val ed25519Key = ByteArray(32) { (it + 100).toByte() }
+        
+        val peerTopic = PeerTopic(
+            nodeId = peerNodeId,
+            ed25519PublicKey = ed25519Key,
+            topicKey = topicKey,
+            addresses = listOf("mock://address"),
+            displayName = "Test Peer",
+            isSubscribed = true,
+            lastSyncedAt = 0
+        )
+        db.peerTopicDao().upsert(peerTopic)
 
-        // Verify we can find the peer's doc
-        val retrieved = db.peerDocDao().findByNodeId(peerNodeId)
+        // Verify we can find the peer's topic
+        val retrieved = db.peerTopicDao().findByNodeId(peerNodeId)
         assertNotNull(retrieved)
-        assertEquals(peerDocNamespaceId, retrieved!!.docNamespaceId)
+        assertEquals(peerNodeId, retrieved!!.nodeId)
+        assertArrayEquals(topicKey, retrieved.topicKey)
     }
 }

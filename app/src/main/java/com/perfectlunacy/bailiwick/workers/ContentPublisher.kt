@@ -3,21 +3,18 @@ package com.perfectlunacy.bailiwick.workers
 import android.util.Log
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.models.db.*
-import com.perfectlunacy.bailiwick.models.db.ActionType as DbActionType
 import com.perfectlunacy.bailiwick.models.iroh.*
 import com.perfectlunacy.bailiwick.storage.BlobHash
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.storage.iroh.IrohDocKeys
 import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
 import com.perfectlunacy.bailiwick.util.GsonProvider
 
 /**
- * Publishes local content to Iroh.
+ * Stores local content as Iroh blobs.
  *
- * Content structure in my Doc:
- * - "identity" → blob hash of IrohIdentity JSON
- * - "feed/latest" → blob hash of latest IrohFeed
- * - "circles/{circleId}" → blob hash of IrohCircle (encrypted)
+ * This class handles serialization and encryption of content for storage.
+ * Content is stored as blobs and tracked in the local database.
+ * Publishing to the network (via Gossip) is handled separately by GossipService.
  */
 class ContentPublisher(
     private val iroh: IrohNode,
@@ -40,8 +37,9 @@ class ContentPublisher(
     }
 
     /**
-     * Publish identity to my doc.
+     * Store identity as a blob and update database.
      * Identity is public (not encrypted).
+     * @return The blob hash of the identity.
      */
     suspend fun publishIdentity(identity: Identity): BlobHash {
         val irohIdentity = IrohIdentity(
@@ -52,9 +50,6 @@ class ContentPublisher(
         val json = gson.toJson(irohIdentity)
         val hash = iroh.storeBlob(json.toByteArray())
 
-        // Update my doc to point to the new identity
-        iroh.getMyDoc().set(IrohDocKeys.KEY_IDENTITY, hash.toByteArray())
-
         // Update identity with its blob hash
         identity.blobHash = hash
         db.identityDao().updateHash(identity.id, hash)
@@ -64,9 +59,8 @@ class ContentPublisher(
     }
 
     /**
-     * Publish a post (encrypted) for a specific circle.
-     * Stores the encrypted post as a blob and sets the doc entry at posts/{circleId}/{timestamp}.
-     * Returns the blob hash of the encrypted post.
+     * Store a post as an encrypted blob.
+     * @return The blob hash of the encrypted post.
      */
     suspend fun publishPost(post: Post, circleId: Long, cipher: Encryptor): BlobHash {
         // Get files for this post
@@ -99,21 +93,17 @@ class ContentPublisher(
         )
 
         val hash = storeEncrypted(irohPost, cipher)
-
-        // Set the doc entry at posts/{circleId}/{timestamp}
-        val key = IrohDocKeys.postKey(circleId, timestamp)
-        iroh.getMyDoc().set(key, hash.toByteArray())
         
         // Update post with its hash
         db.postDao().updateHash(post.id, hash)
 
-        Log.i(TAG, "Published post: $hash at key $key with ${encryptedFiles.size} files")
+        Log.i(TAG, "Published post: $hash with ${encryptedFiles.size} files")
         return hash
     }
 
     /**
-     * Publish a file blob (encrypted).
-     * Returns the blob hash of the encrypted file.
+     * Store a file blob (encrypted).
+     * @return The blob hash of the encrypted file.
      */
     suspend fun publishFile(data: ByteArray, cipher: Encryptor): BlobHash {
         val encrypted = cipher.encrypt(data)
@@ -123,43 +113,11 @@ class ContentPublisher(
     }
 
     /**
-     * DEPRECATED: Publish a feed snapshot for a circle.
-     * This uses the old feed/latest approach which doesn't sync reliably in Iroh Docs.
-     * Kept for backward compatibility during migration period.
-     * New posts are now published individually via posts/{circleId}/{timestamp} entries.
-     */
-    @Deprecated("Use publishPost with circleId instead - individual post entries sync reliably")
-    suspend fun publishFeed(circle: Circle, cipher: Encryptor): BlobHash {
-        // Get all posts in this circle
-        val postIds = db.circlePostDao().postsIn(circle.id)
-        val posts = postIds.mapNotNull { db.postDao().find(it).blobHash }
-
-        val feed = IrohFeed(
-            updatedAt = System.currentTimeMillis(),
-            posts = posts
-        )
-
-        val hash = storeEncrypted(feed, cipher)
-
-        // Store in my doc under circle path
-        iroh.getMyDoc().set(IrohDocKeys.circleKey(circle.id), hash.toByteArray())
-
-        // Also update latest feed pointer (DEPRECATED - kept for backward compatibility)
-        iroh.getMyDoc().set(IrohDocKeys.KEY_FEED_LATEST, hash.toByteArray())
-
-        // Update circle with its hash
-        db.circleDao().storeHash(circle.id, hash)
-
-        Log.i(TAG, "Published feed for circle ${circle.id}: $hash with ${posts.size} posts")
-        return hash
-    }
-
-    /**
-     * Publish all unpublished content.
-     * Call this during sync to push local changes.
+     * Store all unpublished content as blobs.
+     * Call this to prepare local changes for sync.
      */
     suspend fun publishPending(cipher: Encryptor) {
-        // Publish unpublished posts with their circle entries
+        // Publish unpublished posts
         val pendingPosts = db.postDao().inNeedOfSync()
         for (post in pendingPosts) {
             try {
@@ -173,18 +131,6 @@ class ContentPublisher(
             }
         }
 
-        // DEPRECATED: Also update feeds for backward compatibility during migration
-        // Remove this block after all devices are updated
-        val circles = db.circleDao().all()
-        for (circle in circles) {
-            try {
-                @Suppress("DEPRECATION")
-                publishFeed(circle, cipher)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to publish feed for circle ${circle.id}: ${e.message}")
-            }
-        }
-
         // Publish unpublished actions
         publishActions()
 
@@ -192,17 +138,14 @@ class ContentPublisher(
     }
 
     /**
-     * Publish all unpublished actions to Iroh doc.
-     * Actions are stored at: actions/{targetNodeId}/{timestamp}
-     * so recipients can find all actions meant for them.
+     * Store unpublished actions as blobs.
+     * Actions are included in the manifest for recipients to discover.
      */
     suspend fun publishActions() {
         val pendingActions = db.actionDao().inNeedOfSync()
         if (pendingActions.isEmpty()) {
             return
         }
-
-        val myDoc = iroh.getMyDoc()
 
         for (action in pendingActions) {
             try {
@@ -216,10 +159,6 @@ class ContentPublisher(
                 // Store as blob
                 val json = gson.toJson(networkAction)
                 val hash = iroh.storeBlob(json.toByteArray())
-
-                // Store in doc at actions/{targetNodeId}/{timestamp}
-                val key = IrohDocKeys.actionKey(action.toPeerId, action.timestamp)
-                myDoc.set(key, hash.toByteArray())
 
                 // Update local record with blob hash
                 db.actionDao().updateHash(action.id, hash)

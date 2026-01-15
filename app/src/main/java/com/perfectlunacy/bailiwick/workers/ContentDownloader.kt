@@ -1,8 +1,8 @@
 package com.perfectlunacy.bailiwick.workers
 
 import android.util.Log
-import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.models.db.*
 import com.perfectlunacy.bailiwick.models.db.ActionType as DbActionType
 import com.perfectlunacy.bailiwick.models.iroh.*
@@ -10,21 +10,17 @@ import com.perfectlunacy.bailiwick.storage.BlobCache
 import com.perfectlunacy.bailiwick.storage.BlobHash
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
-import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
-import com.perfectlunacy.bailiwick.crypto.KeyStorage
-import com.perfectlunacy.bailiwick.storage.iroh.IrohDoc
-import com.perfectlunacy.bailiwick.storage.iroh.IrohDocKeys
 import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
+import com.perfectlunacy.bailiwick.crypto.KeyStorage
 import com.perfectlunacy.bailiwick.util.GsonProvider
 import java.io.File
 
 /**
- * Downloads content from peer Docs.
+ * Downloads content from Iroh blobs.
  *
- * Reads from peer's doc structure:
- * - "identity" → blob hash of IrohIdentity JSON
- * - "feed/latest" → blob hash of latest IrohFeed
- * - "circles/{circleId}" → blob hash of IrohCircle (encrypted)
+ * This class handles downloading, decrypting, and storing content.
+ * It provides utility methods for downloading various content types.
+ * Sync coordination is handled separately by GossipService.
  */
 class ContentDownloader(
     private val iroh: IrohNode,
@@ -75,106 +71,9 @@ class ContentDownloader(
     }
 
     /**
-     * Sync with all subscribed peers.
-     */
-    suspend fun syncAll() {
-        val peers = db.peerDocDao().subscribedPeers()
-        Log.i(TAG, "Syncing with ${peers.size} peers")
-
-        for (peer in peers) {
-            try {
-                syncPeer(peer)
-                db.peerDocDao().updateLastSynced(peer.nodeId, System.currentTimeMillis())
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync with ${peer.nodeId}: ${e.message}")
-            }
-        }
-        
-        // After syncing with all peers, retry downloading any missing files
-        // for recent posts (< 30 days old)
-        try {
-            retryMissingFiles()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to retry missing files: ${e.message}")
-        }
-    }
-
-    /**
-     * Sync with a specific peer.
-     */
-    suspend fun syncPeer(peer: PeerDoc) {
-        Log.d(TAG, "Syncing with peer ${peer.nodeId}")
-
-        // Always try to join with ticket first to get fresh sync, fall back to open
-        val doc = if (peer.docTicket != null) {
-            Log.d(TAG, "Joining doc using ticket for ${peer.nodeId}")
-            iroh.joinDoc(peer.docTicket) ?: iroh.openDoc(peer.docNamespaceId)
-        } else {
-            iroh.openDoc(peer.docNamespaceId)
-        }
-
-        if (doc == null) {
-            Log.w(TAG, "Could not open doc for ${peer.nodeId}")
-            return
-        }
-
-        // Sync with the peer to get latest updates
-        Log.d(TAG, "Syncing doc with peer ${peer.nodeId}")
-        val syncSuccess = doc.syncWithAndWait(peer.nodeId, timeoutMs = 30000)
-        Log.d(TAG, "Sync complete for ${peer.nodeId} (success=$syncSuccess)")
-
-        // Download identity (not encrypted)
-        doc.get(IrohDocKeys.KEY_IDENTITY)?.let { identityHashBytes ->
-            val hash = String(identityHashBytes)
-            downloadIdentity(hash, peer.nodeId)
-        }
-
-        // Download actions meant for us
-        downloadActions(doc, peer.nodeId)
-
-        // Process downloaded actions immediately - this extracts encryption keys
-        // from UpdateKey actions so we can decrypt content below
-        processActions()
-
-        // Log all keys in the doc to understand what's available
-        val docNamespace = doc.namespaceId()
-        val allKeys = doc.keys()
-        Log.d(TAG, "Peer doc $docNamespace has ${allKeys.size} keys: ${allKeys.take(10)}")
-
-        // NEW APPROACH: Download posts directly from posts/* entries
-        // This is the reliable sync method for Iroh Docs
-        downloadPostsFromKeys(doc, peer.nodeId)
-
-        // Debug: Check all entries for feed/latest to see if there are multiple authors
-        val allFeedEntries = doc.getAllEntriesForKey(IrohDocKeys.KEY_FEED_LATEST)
-        Log.d(TAG, "All entries for feed/latest (${allFeedEntries.size}): ${allFeedEntries.map { "${it.first.take(8)}...=${it.second.take(16)}..." }}")
-
-        // DEPRECATED: Also try old feed/latest approach for backward compatibility
-        // Remove this block after all devices are updated
-        val feedHashBytes = doc.get(IrohDocKeys.KEY_FEED_LATEST)
-        feedHashBytes?.let {
-            val hash = String(feedHashBytes)
-            Log.d(TAG, "Found feed at $hash for peer ${peer.nodeId} (legacy)")
-
-            // Create cipher using any keys we have for this peer
-            val cipher = EncryptorFactory.forPeer(db.keyDao(), peer.nodeId) { data ->
-                // Validator: check if decrypted data is valid JSON
-                try {
-                    gson.fromJson(String(data), IrohFeed::class.java)
-                    true
-                } catch (e: Exception) {
-                    false
-                }
-            }
-
-            downloadFeed(hash, peer.nodeId, cipher)
-        }
-    }
-
-    /**
      * Download and save an identity.
      */
-    private suspend fun downloadIdentity(hash: BlobHash, nodeId: NodeId) {
+    suspend fun downloadIdentity(hash: BlobHash, nodeId: NodeId) {
         // Check if we already have it
         val existing = db.identityDao().findByHash(hash)
         if (existing != null) {
@@ -217,76 +116,6 @@ class ContentDownloader(
     }
 
     /**
-     * Download a feed and its posts.
-     */
-    suspend fun downloadFeed(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
-        val feed = downloadAndDecrypt<IrohFeed>(hash, nodeId, cipher, "feed") ?: return
-
-        Log.d(TAG, "Downloaded feed with ${feed.posts.size} posts")
-
-        // Download each post
-        for (postHash in feed.posts) {
-            try {
-                downloadPost(postHash, nodeId, cipher)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to download post $postHash: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Download posts directly from doc entries.
-     * This is the new approach that works reliably with Iroh Docs.
-     * Posts are stored at posts/{circleId}/{timestamp} entries.
-     */
-    suspend fun downloadPostsFromKeys(doc: IrohDoc, nodeId: NodeId) {
-        val postKeys = doc.keysWithPrefix(IrohDocKeys.KEY_POSTS_PREFIX)
-        Log.d(TAG, "Found ${postKeys.size} post keys in peer doc")
-
-        for (key in postKeys) {
-            try {
-                // Parse key: "posts/{circleId}/{timestamp}"
-                val parts = key.split("/")
-                if (parts.size != 3) {
-                    Log.w(TAG, "Invalid post key format: $key")
-                    continue
-                }
-
-                val circleId = parts[1].toLongOrNull()
-                if (circleId == null) {
-                    Log.w(TAG, "Could not parse circle ID from key: $key")
-                    continue
-                }
-
-                // Get hash from doc
-                val hashBytes = doc.get(key) ?: continue
-                val hash = String(hashBytes)
-
-                // Skip if already have it
-                if (db.postDao().findByHash(hash) != null) {
-                    Log.d(TAG, "Already have post $hash")
-                    continue
-                }
-
-                // Get cipher for this peer (tries all available keys)
-                val cipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { data ->
-                    try {
-                        gson.fromJson(String(data), IrohPost::class.java)
-                        true
-                    } catch (e: Exception) {
-                        false
-                    }
-                }
-
-                // Download and process
-                downloadPost(hash, nodeId, cipher)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to download post from key $key: ${e.message}")
-            }
-        }
-    }
-
-    /**
      * Download a post and its files.
      */
     suspend fun downloadPost(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
@@ -318,8 +147,6 @@ class ContentDownloader(
             Log.i(TAG, "POST $hash has $fileCount files to download")
             
             // Create a file-specific cipher with binary validator.
-            // The post cipher uses a JSON validator which fails for binary file content.
-            // Files are binary data, so we just validate that decryption produces non-empty output.
             val fileCipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { it.isNotEmpty() }
             
             var successCount = 0
@@ -344,12 +171,12 @@ class ContentDownloader(
      * Download a file and save to cache.
      * @return true if file was downloaded successfully, false otherwise
      */
-    private suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor): Boolean {
+    suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor): Boolean {
         Log.d(TAG, "Attempting to download file $hash from $nodeId")
         
         val encrypted = downloadBlobOrLog(hash, nodeId, "file")
         if (encrypted == null) {
-            Log.w(TAG, "FILE DOWNLOAD FAILED: Could not get blob $hash from peer $nodeId - blob may have been garbage collected")
+            Log.w(TAG, "FILE DOWNLOAD FAILED: Could not get blob $hash from peer $nodeId")
             return false
         }
 
@@ -360,7 +187,7 @@ class ContentDownloader(
             return false
         }
 
-        // Safeguard: reject empty decryption results (indicates cipher validation failed)
+        // Safeguard: reject empty decryption results
         if (data.isEmpty()) {
             Log.e(TAG, "FILE DECRYPT EMPTY: $hash - decryption produced empty result, likely wrong key")
             return false
@@ -383,7 +210,7 @@ class ContentDownloader(
      * Download a public blob to cache without decryption.
      * Used for public content like profile pictures.
      */
-    private suspend fun downloadPublicBlob(hash: BlobHash, nodeId: NodeId) {
+    suspend fun downloadPublicBlob(hash: BlobHash, nodeId: NodeId) {
         if (blobCache.exists(hash)) {
             Log.d(TAG, "Already have blob $hash in cache")
             return
@@ -414,69 +241,16 @@ class ContentDownloader(
     }
 
     /**
-     * Download actions meant for us from a peer's doc.
-     * Actions are stored at: actions/{ourNodeId}/{timestamp}
+     * Download an action blob.
+     * @return The parsed action, or null if download/parse failed.
      */
-    suspend fun downloadActions(doc: IrohDoc, peerNodeId: NodeId) {
-        val myNodeId = iroh.nodeId()
-        val prefix = "${IrohDocKeys.KEY_ACTIONS_PREFIX}$myNodeId/"
-
-        // Get all keys and filter for actions meant for us
-        val allKeys = doc.keys()
-        val actionKeys = allKeys.filter { it.startsWith(prefix) }
-
-        if (actionKeys.isEmpty()) {
-            return
-        }
-
-        Log.d(TAG, "Found ${actionKeys.size} action keys for us from $peerNodeId")
-
-        for (key in actionKeys) {
-            try {
-                // Get the blob hash stored at this key
-                val hashBytes = doc.get(key) ?: continue
-                val hash = String(hashBytes)
-
-                // Check if we already have this action
-                if (db.actionDao().actionExists(hash)) {
-                    Log.d(TAG, "Already have action $hash")
-                    continue
-                }
-
-                // Download the action blob
-                val data = downloadBlobOrLog(hash, peerNodeId, "action") ?: continue
-
-                // Parse the network action
-                val networkAction = try {
-                    gson.fromJson(String(data), NetworkAction::class.java)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse action $hash: ${e.message}")
-                    continue
-                }
-
-                // Convert to DB action
-                val actionType = try {
-                    DbActionType.valueOf(networkAction.type)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Unknown action type: ${networkAction.type}")
-                    continue
-                }
-
-                val action = Action(
-                    timestamp = networkAction.timestamp,
-                    blobHash = hash,
-                    fromPeerId = peerNodeId,  // The peer who sent us this action
-                    toPeerId = myNodeId,       // It's meant for us
-                    actionType = actionType,
-                    data = networkAction.data,
-                    processed = false  // We need to process this
-                )
-
-                db.actionDao().insert(action)
-                Log.d(TAG, "Downloaded action $hash from $peerNodeId: ${action.actionType}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to download action from key $key: ${e.message}")
-            }
+    suspend fun downloadAction(hash: BlobHash, nodeId: NodeId): NetworkAction? {
+        val data = downloadBlobOrLog(hash, nodeId, "action") ?: return null
+        return try {
+            gson.fromJson(String(data), NetworkAction::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse action $hash: ${e.message}")
+            null
         }
     }
 
@@ -523,11 +297,9 @@ class ContentDownloader(
         Log.i(TAG, "Stored key from $fromPeerId")
     }
 
-
     /**
      * Retry downloading missing files for recent posts.
-     * Only retries posts from the last 30 days to avoid wasting bandwidth on old content
-     * that may no longer be available.
+     * Only retries posts from the last 30 days.
      */
     suspend fun retryMissingFiles() {
         val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
@@ -588,7 +360,7 @@ class ContentDownloader(
      * Data class for deserializing actions from Iroh.
      * Matches the format used by ContentPublisher.
      */
-    private data class NetworkAction(
+    data class NetworkAction(
         val type: String,
         val data: String,
         val timestamp: Long

@@ -1,27 +1,23 @@
 package com.perfectlunacy.bailiwick.storage.iroh
 
 import com.perfectlunacy.bailiwick.storage.BlobHash
-import com.perfectlunacy.bailiwick.storage.DocNamespaceId
 import com.perfectlunacy.bailiwick.storage.NodeId
+import computer.iroh.Gossip
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * In-memory implementation of IrohNode for unit testing.
- * Uses HashMaps to simulate blob storage and documents.
+ * Uses HashMaps to simulate blob storage.
  */
 class InMemoryIrohNode(
-    private val cachedNodeId: NodeId = generateNodeId(),
-    private val cachedMyDocNamespaceId: DocNamespaceId = generateDocId()
+    private val cachedNodeId: NodeId = generateNodeId()
 ) : IrohNode {
 
     companion object {
         private fun generateNodeId(): NodeId = UUID.randomUUID().toString().replace("-", "") +
                 UUID.randomUUID().toString().replace("-", "")
-
-        private fun generateDocId(): DocNamespaceId = UUID.randomUUID().toString().replace("-", "")
 
         /**
          * Compute a BLAKE3-like hash (using SHA-256 as a stand-in for tests).
@@ -38,24 +34,7 @@ class InMemoryIrohNode(
     // Collection storage: hash -> (name -> blobHash)
     private val collections = ConcurrentHashMap<BlobHash, Map<String, BlobHash>>()
 
-    // Document storage: namespaceId -> InMemoryIrohDoc
-    private val docs = ConcurrentHashMap<DocNamespaceId, InMemoryIrohDoc>()
-
-    // My primary document
-    private val myDoc = InMemoryIrohDoc(cachedMyDocNamespaceId)
-
-    init {
-        docs[cachedMyDocNamespaceId] = myDoc
-    }
-
     override suspend fun nodeId(): NodeId = cachedNodeId
-
-    override suspend fun myDocNamespaceId(): DocNamespaceId = cachedMyDocNamespaceId
-
-    override suspend fun myDocTicket(): String {
-        // In-memory mock: return a fake ticket string based on namespace
-        return "ticket:$cachedMyDocNamespaceId"
-    }
 
     // ===== Blob Operations =====
 
@@ -96,38 +75,23 @@ class InMemoryIrohNode(
         return collections[hash]?.toMap()
     }
 
-    // ===== Doc Operations =====
-
-    override suspend fun createDoc(): DocNamespaceId {
-        val id = generateDocId()
-        docs[id] = InMemoryIrohDoc(id)
-        return id
-    }
-
-    override suspend fun openDoc(namespaceId: DocNamespaceId): IrohDoc? {
-        return docs[namespaceId]
-    }
-
-    override suspend fun joinDoc(ticket: String): IrohDoc? {
-        // In-memory mock: parse ticket and create/return doc
-        val namespaceId = ticket.removePrefix("ticket:")
-        return docs.getOrPut(namespaceId) { InMemoryIrohDoc(namespaceId) }
-    }
-
-    override suspend fun dropDoc(namespaceId: DocNamespaceId) {
-        docs.remove(namespaceId)
-    }
-
-    override suspend fun getMyDoc(): IrohDoc {
-        return myDoc
-    }
-
     // ===== Network =====
 
     override suspend fun isConnected(): Boolean = true
 
+    override suspend fun getNodeAddresses(): List<String> {
+        // Return mock addresses for testing
+        return listOf("mock://localhost:1234")
+    }
+
     override suspend fun shutdown() {
         // No-op for in-memory implementation
+    }
+
+    // ===== Gossip =====
+
+    override fun getGossip(): Gossip {
+        throw UnsupportedOperationException("Gossip not available in test implementation")
     }
 
     // ===== Test Utilities =====
@@ -148,89 +112,5 @@ class InMemoryIrohNode(
     fun clear() {
         blobs.clear()
         collections.clear()
-        docs.clear()
-        docs[cachedMyDocNamespaceId] = myDoc
-        myDoc.clear()
-    }
-}
-
-/**
- * In-memory implementation of IrohDoc for unit testing.
- */
-class InMemoryIrohDoc(
-    private val cachedNamespaceId: DocNamespaceId
-) : IrohDoc {
-
-    private val data = ConcurrentHashMap<String, ByteArray>()
-    private val subscribers = CopyOnWriteArrayList<(String, ByteArray) -> Unit>()
-
-    override suspend fun namespaceId(): DocNamespaceId = cachedNamespaceId
-
-    override suspend fun set(key: String, value: ByteArray) {
-        data[key] = value.copyOf()
-        // Notify subscribers - wrap in try-catch to prevent subscriber exceptions from breaking set()
-        subscribers.forEach { subscriber ->
-            try {
-                subscriber(key, value)
-            } catch (e: Exception) {
-                // Log but don't propagate subscriber exceptions
-            }
-        }
-    }
-
-    override suspend fun get(key: String): ByteArray? {
-        return data[key]?.copyOf()
-    }
-
-    override suspend fun delete(key: String) {
-        data.remove(key)
-    }
-
-    override suspend fun keys(): List<String> {
-        return data.keys.toList()
-    }
-
-    override suspend fun subscribe(onUpdate: (key: String, value: ByteArray) -> Unit): Subscription {
-        subscribers.add(onUpdate)
-        return object : Subscription {
-            override fun unsubscribe() {
-                subscribers.remove(onUpdate)
-            }
-        }
-    }
-
-    override suspend fun syncWith(nodeId: NodeId) {
-        // No-op for in-memory implementation - can't sync without network
-    }
-
-    override suspend fun keysWithPrefix(prefix: String): List<String> {
-        return data.keys.filter { it.startsWith(prefix) }
-    }
-
-    override suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long): Boolean {
-        return true  // In-memory mock
-    }
-
-    override suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>> {
-        val value = data[key] ?: return emptyList()
-        return listOf(Pair("mock-author", String(value)))
-    }
-
-    override suspend fun leave() {
-        data.clear()
-    }
-
-    // ===== Test Utilities =====
-
-    /**
-     * Get the number of entries (for test assertions).
-     */
-    fun entryCount(): Int = data.size
-
-    /**
-     * Clear all data (for test isolation).
-     */
-    fun clear() {
-        data.clear()
     }
 }

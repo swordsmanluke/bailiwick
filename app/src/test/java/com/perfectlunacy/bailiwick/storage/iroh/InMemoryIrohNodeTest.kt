@@ -106,105 +106,15 @@ class InMemoryIrohNodeTest {
         assertEquals(hash1, hash2)
     }
 
-    // ===== Doc Tests =====
-
-    @Test
-    fun `getMyDoc returns the primary document`() = runBlocking {
-        val doc = iroh.getMyDoc()
-
-        assertEquals(iroh.myDocNamespaceId(), doc.namespaceId())
-    }
-
-    @Test
-    fun `createDoc creates a new document`() = runBlocking {
-        val docId = iroh.createDoc()
-
-        assertNotNull(docId)
-        assertNotEquals(iroh.myDocNamespaceId(), docId)
-    }
-
-    @Test
-    fun `openDoc retrieves created document`() = runBlocking {
-        val docId = iroh.createDoc()
-        val doc = iroh.openDoc(docId)
-
-        assertNotNull(doc)
-        assertEquals(docId, doc!!.namespaceId())
-    }
-
-    @Test
-    fun `openDoc returns null for unknown namespace`() = runBlocking {
-        assertNull(iroh.openDoc("unknown-namespace"))
-    }
-
-    @Test
-    fun `document set and get work correctly`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        val value = "test value".toByteArray()
-
-        doc.set("key1", value)
-
-        assertArrayEquals(value, doc.get("key1"))
-    }
-
-    @Test
-    fun `document get returns null for unknown key`() = runBlocking {
-        val doc = iroh.getMyDoc()
-
-        assertNull(doc.get("unknown-key"))
-    }
-
-    @Test
-    fun `document delete removes key`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        doc.set("key", "value".toByteArray())
-
-        doc.delete("key")
-
-        assertNull(doc.get("key"))
-    }
-
-    @Test
-    fun `document keys returns all keys`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        doc.set("a", "1".toByteArray())
-        doc.set("b", "2".toByteArray())
-        doc.set("c", "3".toByteArray())
-
-        val keys = doc.keys()
-
-        assertEquals(3, keys.size)
-        assertTrue(keys.containsAll(listOf("a", "b", "c")))
-    }
-
-    @Test
-    fun `document subscribe notifies on updates`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        var notifiedKey: String? = null
-        var notifiedValue: ByteArray? = null
-
-        doc.subscribe { key, value ->
-            notifiedKey = key
-            notifiedValue = value
-        }
-
-        doc.set("mykey", "myvalue".toByteArray())
-
-        assertEquals("mykey", notifiedKey)
-        assertArrayEquals("myvalue".toByteArray(), notifiedValue)
-    }
-
     // ===== Utility Tests =====
 
     @Test
     fun `clear resets all data`() = runBlocking {
         iroh.storeBlob("data".toByteArray())
-        iroh.getMyDoc().set("key", "value".toByteArray())
 
         iroh.clear()
 
         assertEquals(0, iroh.blobCount())
-        assertEquals(0, (iroh.getMyDoc() as InMemoryIrohDoc).entryCount())
     }
 
     @Test
@@ -215,6 +125,12 @@ class InMemoryIrohNodeTest {
     @Test
     fun `nodeId is 64 characters`() = runBlocking {
         assertEquals(64, iroh.nodeId().length)
+    }
+
+    @Test
+    fun `getNodeAddresses returns mock addresses`() = runBlocking {
+        val addresses = iroh.getNodeAddresses()
+        assertTrue(addresses.isNotEmpty())
     }
 
     // ===== Edge Case Tests =====
@@ -240,47 +156,9 @@ class InMemoryIrohNodeTest {
     }
 
     @Test
-    fun `document delete on non-existent key does not throw`() = runBlocking {
-        val doc = iroh.getMyDoc()
-
-        // Should not throw
-        doc.delete("non-existent-key")
-
-        // Key still doesn't exist
-        assertNull(doc.get("non-existent-key"))
-    }
-
-    @Test
-    fun `document keys returns empty list on empty document`() = runBlocking {
-        val docId = iroh.createDoc()
-        val doc = iroh.openDoc(docId)!!
-
-        val keys = doc.keys()
-
-        assertTrue(keys.isEmpty())
-    }
-
-    @Test
-    fun `document subscribe with multiple subscribers notifies all`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        val notifications1 = mutableListOf<String>()
-        val notifications2 = mutableListOf<String>()
-
-        doc.subscribe { key, _ -> notifications1.add(key) }
-        doc.subscribe { key, _ -> notifications2.add(key) }
-
-        doc.set("key1", "value1".toByteArray())
-        doc.set("key2", "value2".toByteArray())
-
-        assertEquals(listOf("key1", "key2"), notifications1)
-        assertEquals(listOf("key1", "key2"), notifications2)
-    }
-
-    @Test
     fun `shutdown does not throw`() = runBlocking {
         // Store some data first
         iroh.storeBlob("data".toByteArray())
-        iroh.getMyDoc().set("key", "value".toByteArray())
 
         // Should not throw
         iroh.shutdown()
@@ -290,44 +168,18 @@ class InMemoryIrohNodeTest {
     }
 
     @Test
-    fun `syncWith does not throw for valid nodeId`() = runBlocking {
-        val doc = iroh.getMyDoc()
+    fun `downloadBlob returns local blob`() = runBlocking {
+        val data = "test data".toByteArray()
+        val hash = iroh.storeBlob(data)
 
-        // Should not throw - syncWith is a no-op in InMemoryIrohNode
-        doc.syncWith("some-node-id")
+        val downloaded = iroh.downloadBlob(hash, "some-node-id")
+        assertNotNull(downloaded)
+        assertArrayEquals(data, downloaded)
     }
 
     @Test
-    fun `document set value is independent of original array`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        val value = "original".toByteArray()
-
-        doc.set("key", value)
-
-        // Mutate original
-        value[0] = 'X'.code.toByte()
-
-        // Retrieved value should be unchanged
-        assertEquals("original", String(doc.get("key")!!))
-    }
-
-    @Test
-    fun `subscription unsubscribe stops notifications`() = runBlocking {
-        val doc = iroh.getMyDoc()
-        val notifications = mutableListOf<String>()
-
-        val subscription = doc.subscribe { key, _ -> notifications.add(key) }
-
-        doc.set("key1", "value1".toByteArray())
-        assertEquals(1, notifications.size)
-
-        // Unsubscribe
-        subscription.unsubscribe()
-
-        // Should not receive this notification
-        doc.set("key2", "value2".toByteArray())
-        assertEquals(1, notifications.size) // Still 1, not 2
-
-        assertEquals(listOf("key1"), notifications)
+    fun `downloadBlob returns null for unknown hash`() = runBlocking {
+        val downloaded = iroh.downloadBlob("unknown-hash", "some-node-id")
+        assertNull(downloaded)
     }
 }

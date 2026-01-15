@@ -5,27 +5,17 @@ import android.util.Base64
 import android.util.Log
 import com.perfectlunacy.bailiwick.storage.BlobHash
 import java.security.SecureRandom
-import com.perfectlunacy.bailiwick.storage.DocNamespaceId
 import com.perfectlunacy.bailiwick.storage.NodeId
-import computer.iroh.AuthorId
 import computer.iroh.Blobs
 import computer.iroh.Collection
-import computer.iroh.Doc
-import computer.iroh.Docs
+import computer.iroh.Gossip
 import computer.iroh.Hash
 import computer.iroh.Iroh
 import computer.iroh.IrohException
 import computer.iroh.NodeOptions
-import computer.iroh.LiveEvent
-import computer.iroh.LiveEventType
 import computer.iroh.NodeAddr
 import computer.iroh.PublicKey
-import computer.iroh.Query
 import computer.iroh.SetTagOption
-import computer.iroh.ShareMode
-import computer.iroh.AddrInfoOptions
-import computer.iroh.DocTicket
-import computer.iroh.SubscribeCallback
 import computer.iroh.BlobDownloadOptions
 import computer.iroh.BlobFormat
 import computer.iroh.DownloadCallback
@@ -39,29 +29,28 @@ import computer.iroh.DownloadProgressType
  *
  * This class uses consistent error handling strategies:
  *
- * - **Write operations** (storeBlob, createCollection, createDoc): Log error, rethrow exception.
+ * - **Write operations** (storeBlob, createCollection): Log error, rethrow exception.
  *   These operations must succeed for the app to function correctly.
  *
- * - **Read operations** (getBlob, getCollection, openDoc, get, keys): Log warning, return null/empty.
+ * - **Read operations** (getBlob, getCollection): Log warning, return null/empty.
  *   Missing data is expected (e.g., content not yet synced), so failures are not exceptional.
  *
  * - **Query operations** (hasBlob, isConnected): Return false on error.
  *   These are best-effort queries where failure is equivalent to "not found/connected".
  *
- * - **Background operations** (shutdown, syncWith, subscribe): Log and suppress errors.
+ * - **Background operations** (shutdown): Log and suppress errors.
  *   These run in background contexts where failures shouldn't crash the caller.
+ *
+ * Note: Iroh Docs have been removed in favor of Gossip-based manifest synchronization.
+ * See designs/proposals/007-gossip-manifest-sync.md for details.
  */
 class IrohWrapper private constructor(
     private val iroh: Iroh,
-    private val defaultAuthorId: AuthorId,
-    private val myDoc: Doc,
-    private val cachedNodeId: NodeId,
-    private val cachedMyDocNamespaceId: DocNamespaceId
+    private val cachedNodeId: NodeId
 ) : IrohNode {
 
     companion object {
         private const val TAG = "IrohWrapper"
-        private const val MY_DOC_KEY = "my_doc_namespace_id"
         private const val SECRET_KEY = "iroh_secret_key"
 
         /**
@@ -75,47 +64,16 @@ class IrohWrapper private constructor(
             // Get or create persistent secret key to maintain stable node identity
             val secretKey = getOrCreateSecretKey(context)
 
-            // Create persistent Iroh node with docs enabled and our secret key
-            val options = NodeOptions(enableDocs = true, secretKey = secretKey)
+            // Create persistent Iroh node with our secret key
+            // Note: enableDocs is false since we use Gossip for sync
+            val options = NodeOptions(enableDocs = false, secretKey = secretKey)
             val iroh = Iroh.persistentWithOptions(dataDir, options)
-
-            // Get or create default author
-            val defaultAuthorId = iroh.authors().default()
-            Log.i(TAG, "Using author: $defaultAuthorId")
-
-            // Get or create our primary document
-            val myDoc = getOrCreateMyDoc(context, iroh)
 
             // Cache values that don't change
             val nodeIdStr = iroh.net().nodeId().toString()
-            val docId = myDoc.id()
-            Log.i(TAG, "Iroh initialized. NodeId: $nodeIdStr, DocId: $docId")
+            Log.i(TAG, "Iroh initialized. NodeId: $nodeIdStr")
 
-            return IrohWrapper(iroh, defaultAuthorId, myDoc, nodeIdStr, docId)
-        }
-
-        private suspend fun getOrCreateMyDoc(context: Context, iroh: Iroh): Doc {
-            // Try to load existing doc ID from preferences
-            val prefs = context.getSharedPreferences("iroh_config", Context.MODE_PRIVATE)
-            val savedDocId = prefs.getString(MY_DOC_KEY, null)
-
-            if (savedDocId != null) {
-                val existingDoc = iroh.docs().open(savedDocId)
-                if (existingDoc != null) {
-                    Log.i(TAG, "Opened existing doc: $savedDocId")
-                    return existingDoc
-                }
-            }
-
-            // Create a new document
-            val newDoc = iroh.docs().create()
-            val newDocId = newDoc.id()
-
-            // Save the doc ID
-            prefs.edit().putString(MY_DOC_KEY, newDocId).apply()
-            Log.i(TAG, "Created new doc: $newDocId")
-
-            return newDoc
+            return IrohWrapper(iroh, nodeIdStr)
         }
 
         /**
@@ -145,23 +103,8 @@ class IrohWrapper private constructor(
     }
 
     private val blobs: Blobs = iroh.blobs()
-    private val docs: Docs = iroh.docs()
 
     override suspend fun nodeId(): NodeId = cachedNodeId
-
-    override suspend fun myDocNamespaceId(): DocNamespaceId = cachedMyDocNamespaceId
-
-    override suspend fun myDocTicket(): String {
-        return try {
-            val ticket = myDoc.share(ShareMode.READ, AddrInfoOptions.RELAY_AND_ADDRESSES)
-            val ticketStr = ticket.toString()
-            Log.d(TAG, "Generated doc ticket: ${ticketStr.take(50)}...")
-            ticketStr
-        } catch (e: IrohException) {
-            Log.e(TAG, "Failed to generate doc ticket: ${e.message}")
-            throw e
-        }
-    }
 
     // ===== Blob Operations =====
 
@@ -304,64 +247,6 @@ class IrohWrapper private constructor(
         }
     }
 
-    // ===== Doc Operations =====
-
-    override suspend fun createDoc(): DocNamespaceId {
-        return try {
-            val doc = docs.create()
-            val id = doc.id()
-            Log.d(TAG, "Created doc: $id")
-            id
-        } catch (e: IrohException) {
-            Log.e(TAG, "Failed to create doc: ${e.message}")
-            throw e
-        }
-    }
-
-    override suspend fun openDoc(namespaceId: DocNamespaceId): IrohDoc? {
-        return try {
-            val doc = docs.open(namespaceId)
-            if (doc != null) {
-                IrohDocImpl(doc, defaultAuthorId, blobs)
-            } else {
-                null
-            }
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to open doc $namespaceId: ${e.message}")
-            null
-        }
-    }
-
-    override suspend fun joinDoc(ticket: String): IrohDoc? {
-        return try {
-            val docTicket = DocTicket(ticket)
-            val doc = docs.join(docTicket)
-            Log.i(TAG, "Joined doc: ${doc.id()}")
-            IrohDocImpl(doc, defaultAuthorId, blobs)
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to join doc with ticket: ${e.message}")
-            null
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse doc ticket: ${e.message}")
-            null
-        }
-    }
-
-    override suspend fun dropDoc(namespaceId: DocNamespaceId) {
-        try {
-            docs.dropDoc(namespaceId)
-            Log.i(TAG, "Dropped doc: $namespaceId")
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to drop doc $namespaceId: ${e.message}")
-        } catch (e: Exception) {
-            Log.w(TAG, "Error dropping doc $namespaceId: ${e.message}")
-        }
-    }
-
-    override suspend fun getMyDoc(): IrohDoc {
-        return IrohDocImpl(myDoc, defaultAuthorId, blobs)
-    }
-
     // ===== Network =====
 
     override suspend fun isConnected(): Boolean {
@@ -374,6 +259,26 @@ class IrohWrapper private constructor(
         }
     }
 
+    override suspend fun getNodeAddresses(): List<String> {
+        return try {
+            val addresses = mutableListOf<String>()
+
+            // Add the home relay URL if available
+            iroh.net().homeRelay()?.let { relay ->
+                addresses.add(relay.toString())
+            }
+
+            // Note: Direct addresses can be obtained from iroh.net().localAddresses()
+            // but these may not be reachable from outside the local network.
+            // The relay is typically the most reliable way to reach a mobile peer.
+
+            addresses
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get node addresses: ${e.message}")
+            emptyList()
+        }
+    }
+
     override suspend fun shutdown() {
         try {
             iroh.node().shutdown(false)  // graceful shutdown
@@ -382,232 +287,8 @@ class IrohWrapper private constructor(
             Log.w(TAG, "Error during shutdown: ${e.message}")
         }
     }
-}
 
-/**
- * Implementation of IrohDoc wrapping the actual Iroh Doc.
- *
- * Follows the same error handling policy as [IrohWrapper].
- */
-private class IrohDocImpl(
-    private val doc: Doc,
-    private val authorId: AuthorId,
-    private val blobs: Blobs
-) : IrohDoc {
+    // ===== Gossip =====
 
-    private val cachedNamespaceId: DocNamespaceId by lazy {
-        // This is still blocking but only happens once, lazily
-        // The underlying doc.id() is actually synchronous in the FFI
-        doc.id()
-    }
-
-    override suspend fun namespaceId(): DocNamespaceId = cachedNamespaceId
-
-    override suspend fun set(key: String, value: ByteArray) {
-        Log.d(TAG, "Setting key '$key' with author $authorId, value size=${value.size}")
-        doc.setBytes(authorId, key.toByteArray(), value)
-        
-        // Verify the write
-        val query = Query.singleLatestPerKeyExact(key.toByteArray())
-        val entries = doc.getMany(query)
-        val entry = entries.firstOrNull()
-        if (entry != null) {
-            Log.d(TAG, "After set: key='$key' has entry from author ${entry.author()}, content=${entry.contentHash()}")
-        } else {
-            Log.w(TAG, "After set: key='$key' has NO entry!")
-        }
-    }
-
-    override suspend fun get(key: String): ByteArray? {
-        return try {
-            // Query for the LATEST entry for this key across ALL authors
-            // This ensures we get the most recent value even when multiple authors have written
-            val keyBytes = key.toByteArray()
-            val query = Query.singleLatestPerKeyExact(keyBytes)
-            val entries = doc.getMany(query)
-
-            // Should return at most one entry (the latest)
-            val entry = entries.firstOrNull()
-            if (entry != null) {
-                // Read the content from the blob store
-                val hash = entry.contentHash()
-                blobs.readToBytes(hash)
-            } else {
-                null
-            }
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to get key '$key': ${e.message}")
-            null
-        }
-    }
-
-    override suspend fun delete(key: String) {
-        doc.delete(authorId, key.toByteArray())
-    }
-
-    override suspend fun keys(): List<String> {
-        return try {
-            val query = Query.all(null)
-            val entries = doc.getMany(query)
-            entries.map { entry ->
-                String(entry.key())
-            }.distinct()
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to list keys: ${e.message}")
-            emptyList()
-        }
-    }
-
-    override suspend fun keysWithPrefix(prefix: String): List<String> {
-        return try {
-            val prefixBytes = prefix.toByteArray()
-            val query = Query.keyPrefix(prefixBytes, null)
-            val entries = doc.getMany(query)
-            entries.map { entry ->
-                String(entry.key())
-            }.distinct()
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to list keys with prefix '$prefix': ${e.message}")
-            emptyList()
-        }
-    }
-
-    private var activeCallback: SubscribeCallback? = null
-
-    override suspend fun subscribe(onUpdate: (key: String, value: ByteArray) -> Unit): Subscription {
-        val callback = object : SubscribeCallback {
-            override suspend fun event(event: LiveEvent) {
-                if (event.type() == LiveEventType.CONTENT_READY) {
-                    try {
-                        val entry = event.asInsertLocal()
-                        if (entry != null) {
-                            val key = String(entry.key())
-                            val hash = entry.contentHash()
-                            val value = blobs.readToBytes(hash)
-                            onUpdate(key, value)
-                        }
-                    } catch (e: Exception) {
-                        // Ignore errors during callback
-                    }
-                }
-            }
-        }
-        activeCallback = callback
-        doc.subscribe(callback)
-
-        return object : Subscription {
-            override fun unsubscribe() {
-                // Note: Iroh FFI doesn't currently support unsubscribing,
-                // so we just clear the reference. The callback will still
-                // be registered but this allows us to track intent.
-                activeCallback = null
-            }
-        }
-    }
-
-    override suspend fun syncWith(nodeId: NodeId) {
-        try {
-            val publicKey = PublicKey.fromString(nodeId)
-            val nodeAddr = NodeAddr(publicKey, null, listOf())
-            doc.startSync(listOf(nodeAddr))
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to sync with $nodeId: ${e.message}")
-        }
-    }
-
-    override suspend fun syncWithAndWait(nodeId: NodeId, timeoutMs: Long): Boolean {
-        return try {
-            val publicKey = PublicKey.fromString(nodeId)
-            val nodeAddr = NodeAddr(publicKey, null, listOf())
-            
-            // Use a CompletableDeferred to wait for sync completion
-            val syncComplete = kotlinx.coroutines.CompletableDeferred<Boolean>()
-            var insertCount = 0
-            
-            // Subscribe to events before starting sync
-            val callback = object : SubscribeCallback {
-                override suspend fun event(event: LiveEvent) {
-                    when (event.type()) {
-                        LiveEventType.SYNC_FINISHED -> {
-                            Log.d(TAG, "Sync finished event received for $nodeId (received $insertCount inserts)")
-                            syncComplete.complete(true)
-                        }
-                        LiveEventType.INSERT_REMOTE -> {
-                            insertCount++
-                            val insert = event.asInsertRemote()
-                            Log.i(TAG, "INSERT_REMOTE #$insertCount from $nodeId: key=${String(insert.entry.key())}")
-                        }
-                        LiveEventType.INSERT_LOCAL -> {
-                            Log.d(TAG, "INSERT_LOCAL during sync with $nodeId")
-                        }
-                        LiveEventType.CONTENT_READY -> {
-                            Log.d(TAG, "CONTENT_READY during sync with $nodeId")
-                        }
-                        LiveEventType.NEIGHBOR_UP -> {
-                            Log.d(TAG, "NEIGHBOR_UP: peer $nodeId is reachable")
-                        }
-                        LiveEventType.NEIGHBOR_DOWN -> {
-                            Log.d(TAG, "NEIGHBOR_DOWN: peer $nodeId disconnected")
-                        }
-                        else -> {
-                            Log.d(TAG, "Sync event: ${event.type()} for $nodeId")
-                        }
-                    }
-                }
-            }
-            
-            doc.subscribe(callback)
-            Log.d(TAG, "Starting sync with $nodeId")
-            doc.startSync(listOf(nodeAddr))
-            
-            // Wait for sync with timeout
-            val result = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
-                syncComplete.await()
-            } ?: false
-            
-            if (!result) {
-                Log.w(TAG, "Sync with $nodeId timed out after ${timeoutMs}ms")
-            } else {
-                Log.i(TAG, "Sync with $nodeId completed: $insertCount new entries received")
-            }
-            
-            result
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to sync with $nodeId: ${e.message}")
-            false
-        } catch (e: Exception) {
-            Log.w(TAG, "Error during sync with $nodeId: ${e.message}")
-            false
-        }
-    }
-
-    override suspend fun getAllEntriesForKey(key: String): List<Pair<String, String>> {
-        return try {
-            val keyBytes = key.toByteArray()
-            val query = Query.keyExact(keyBytes, null)
-            val entries = doc.getMany(query)
-            
-            entries.map { entry ->
-                val authorId = entry.author().toString()
-                val contentHash = entry.contentHash().toString()
-                Pair(authorId, contentHash)
-            }
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to get all entries for key '$key': ${e.message}")
-            emptyList()
-        }
-    }
-
-    override suspend fun leave() {
-        try {
-            doc.leave()
-            Log.i(TAG, "Left document $cachedNamespaceId")
-        } catch (e: IrohException) {
-            Log.w(TAG, "Failed to leave document: ${e.message}")
-        }
-    }
-
-    companion object {
-        private const val TAG = "IrohDocImpl"
-    }
+    override fun getGossip(): Gossip = iroh.gossip()
 }

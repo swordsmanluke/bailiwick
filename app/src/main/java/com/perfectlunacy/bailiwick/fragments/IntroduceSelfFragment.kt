@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
+import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
 import com.perfectlunacy.bailiwick.databinding.FragmentSubscribeBinding
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.storage.NodeId
@@ -123,13 +124,26 @@ class IntroduceSelfFragment : BailiwickFragment() {
     }
 
     suspend fun buildRequest(name: String, nodeId: NodeId): Introduction {
-        val docTicket = bwModel.iroh.myDocTicket()
+        val ctx = context ?: throw IllegalStateException("Context required for building introduction")
+
+        // Get Ed25519 public key for this device
+        val ed25519Keyring = Ed25519Keyring.create(ctx)
+        val publicKey = ed25519Keyring.getPublicKeyString()
+
+        // Get or create topic key for Gossip subscriptions
+        val topicKey = Ed25519Keyring.getTopicKeyString(ctx)
+
+        // Get current node addresses for bootstrap
+        val addresses = bwModel.iroh.getNodeAddresses()
+
         return Introduction(
+            version = 2,
             isResponse = false,
             peerId = nodeId,
             name = name,
-            publicKey = Base64.getEncoder().encodeToString(bwModel.keyring.publicKey.encoded),
-            docTicket = docTicket
+            publicKey = publicKey,
+            topicKey = topicKey,
+            addresses = addresses
         )
     }
 
