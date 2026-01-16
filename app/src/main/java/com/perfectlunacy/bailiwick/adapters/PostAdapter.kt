@@ -1,20 +1,26 @@
 package com.perfectlunacy.bailiwick.adapters
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.text.method.LinkMovementMethod
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
+import android.widget.PopupWindow
+import android.widget.TextView
 import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.PostBinding
+import com.perfectlunacy.bailiwick.models.db.EmojiCount
 import com.perfectlunacy.bailiwick.models.db.Post
+import com.perfectlunacy.bailiwick.models.db.Reaction
 import com.perfectlunacy.bailiwick.storage.BlobCache
+import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import com.perfectlunacy.bailiwick.util.MentionParser
@@ -23,7 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.IndexOutOfBoundsException
+import java.util.Calendar
 
 class PostAdapter(
     private val db: BailiwickDatabase,
@@ -34,7 +40,10 @@ class PostAdapter(
     private val onDeleteClick: ((Post) -> Unit)? = null,
     private val onMentionClick: ((String) -> Unit)? = null,
     private val onCommentClick: ((Post) -> Unit)? = null,
-    private val currentUserId: Long = -1
+    private val onReactionAdded: ((Post, String) -> Unit)? = null,
+    private val onReactionRemoved: ((Post, String) -> Unit)? = null,
+    private val currentUserId: Long = -1,
+    private val currentUserNodeId: NodeId = ""
 ): BaseAdapter() {
 
     // Cache of known usernames for mention highlighting
@@ -78,7 +87,7 @@ class PostAdapter(
             if(post == null) { return@launch }
 
             // Load all data on background thread
-            val (author, avatar, postImage, commentCount) = withContext(Dispatchers.Default) {
+            val postData = withContext(Dispatchers.Default) {
                 val author = db.identityDao().find(post.authorId)
                 val avatar = AvatarLoader.loadAvatar(author, context.filesDir.toPath())
                     ?: BitmapFactory.decodeStream(context.assets.open("avatar.png"))
@@ -108,8 +117,26 @@ class PostAdapter(
                     db.postDao().replyCount(it)
                 } ?: 0
 
-                Quad(author, avatar, postBitmap, commentCount)
+                // Get reactions for this post
+                val reactions = post.blobHash?.let {
+                    db.reactionDao().reactionCountsForPost(it)
+                } ?: emptyList()
+
+                // Get user's reactions
+                val userReactions = post.blobHash?.let {
+                    db.reactionDao().myReactionsForPost(it, currentUserNodeId)
+                        .map { r -> r.emoji }.toSet()
+                } ?: emptySet()
+
+                PostViewData(author, avatar, postBitmap, commentCount, reactions, userReactions)
             }
+
+            val author = postData.author
+            val avatar = postData.avatar
+            val postImage = postData.postImage
+            val commentCount = postData.commentCount
+            val reactions = postData.reactions
+            val userReactions = postData.userReactions
 
             // Back on main thread - update UI
             binding.avatar.setImageBitmap(avatar)
@@ -166,6 +193,32 @@ class PostAdapter(
                 onCommentClick?.invoke(post)
             }
 
+            // Set up reactions display
+            if (reactions.isNotEmpty()) {
+                binding.listReactions.visibility = View.VISIBLE
+                binding.listReactions.layoutManager = LinearLayoutManager(
+                    context, LinearLayoutManager.HORIZONTAL, false
+                )
+                binding.listReactions.adapter = ReactionAdapter(
+                    context,
+                    reactions,
+                    userReactions
+                ) { emoji, isCurrentlyReacted ->
+                    if (isCurrentlyReacted) {
+                        onReactionRemoved?.invoke(post, emoji)
+                    } else {
+                        onReactionAdded?.invoke(post, emoji)
+                    }
+                }
+            } else {
+                binding.listReactions.visibility = View.GONE
+            }
+
+            // Set up Emote button to show reaction picker
+            binding.btnLike.setOnClickListener { anchorView ->
+                showReactionPicker(anchorView, post, userReactions)
+            }
+
             notifyDataSetChanged()
         }
 
@@ -192,12 +245,61 @@ class PostAdapter(
         MainScope().launch { notifyDataSetChanged() }
     }
 
+    /**
+     * Shows a popup with common emoji reactions.
+     */
+    private fun showReactionPicker(anchorView: View, post: Post, userReactions: Set<String>) {
+        val popupView = LayoutInflater.from(context)
+            .inflate(R.layout.layout_reaction_picker, null)
+
+        val popup = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        popup.elevation = 8f
+
+        // Set up click listeners for each emoji
+        val emojis = listOf(
+            R.id.emoji_thumbsup to "👍",
+            R.id.emoji_heart to "❤️",
+            R.id.emoji_laugh to "😂",
+            R.id.emoji_wow to "😮",
+            R.id.emoji_sad to "😢",
+            R.id.emoji_fire to "🔥"
+        )
+
+        for ((viewId, emoji) in emojis) {
+            popupView.findViewById<TextView>(viewId)?.setOnClickListener {
+                popup.dismiss()
+                val hasReaction = userReactions.contains(emoji)
+                if (hasReaction) {
+                    onReactionRemoved?.invoke(post, emoji)
+                } else {
+                    onReactionAdded?.invoke(post, emoji)
+                }
+            }
+        }
+
+        // Show popup above the button
+        popup.showAsDropDown(anchorView, 0, -anchorView.height * 2, Gravity.CENTER_HORIZONTAL)
+    }
+
     companion object {
         const val TAG = "PostAdapter"
     }
 
     /**
-     * Helper class to hold post view data loaded on background thread.
+     * Data class to hold post view data loaded on background thread.
      */
-    private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+    private data class PostViewData(
+        val author: com.perfectlunacy.bailiwick.models.db.Identity,
+        val avatar: android.graphics.Bitmap,
+        val postImage: android.graphics.Bitmap?,
+        val commentCount: Int,
+        val reactions: List<EmojiCount>,
+        val userReactions: Set<String>
+    )
 }

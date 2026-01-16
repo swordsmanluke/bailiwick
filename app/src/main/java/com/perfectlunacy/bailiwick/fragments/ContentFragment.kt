@@ -34,6 +34,7 @@ import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
+import com.perfectlunacy.bailiwick.models.db.Reaction
 import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
@@ -485,7 +486,14 @@ class ContentFragment : BailiwickFragment() {
             onCommentClick = { post ->
                 navigateToComments(post)
             },
-            currentUserId = bwModel.network.me.id
+            onReactionAdded = { post, emoji ->
+                addReaction(post, emoji)
+            },
+            onReactionRemoved = { post, emoji ->
+                removeReaction(post, emoji)
+            },
+            currentUserId = bwModel.network.me.id,
+            currentUserNodeId = bwModel.network.me.owner
         )
     }
 
@@ -570,6 +578,64 @@ class ContentFragment : BailiwickFragment() {
             R.id.action_contentFragment_to_commentsFragment,
             bundle
         )
+    }
+
+    private fun addReaction(post: Post, emoji: String) {
+        val postHash = post.blobHash
+        if (postHash == null) {
+            Toast.makeText(context, "Cannot react to unsaved post", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val me = bwModel.network.me
+
+                // Check if already reacted with this emoji
+                val existing = bwModel.db.reactionDao().findReaction(postHash, me.owner, emoji)
+                if (existing != null) {
+                    Log.d(TAG, "Already reacted with $emoji")
+                    return@withContext
+                }
+
+                val reaction = Reaction(
+                    postHash = postHash,
+                    authorNodeId = me.owner,
+                    emoji = emoji,
+                    timestamp = Calendar.getInstance().timeInMillis,
+                    signature = "",  // TODO: Sign reaction
+                    blobHash = null
+                )
+
+                bwModel.db.reactionDao().insert(reaction)
+                Log.i(TAG, "Added reaction $emoji to post $postHash")
+            }
+
+            // Refresh the adapter to show new reaction
+            bwModel.postsLive.value?.let { posts ->
+                applyFilters(posts)
+            }
+        }
+    }
+
+    private fun removeReaction(post: Post, emoji: String) {
+        val postHash = post.blobHash
+        if (postHash == null) {
+            return
+        }
+
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val me = bwModel.network.me
+                bwModel.db.reactionDao().deleteReaction(postHash, me.owner, emoji)
+                Log.i(TAG, "Removed reaction $emoji from post $postHash")
+            }
+
+            // Refresh the adapter to show updated reactions
+            bwModel.postsLive.value?.let { posts ->
+                applyFilters(posts)
+            }
+        }
     }
 
     override fun onDestroyView() {
