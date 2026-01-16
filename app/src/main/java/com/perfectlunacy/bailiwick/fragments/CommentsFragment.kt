@@ -9,14 +9,19 @@ import android.widget.Toast
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import android.util.Log
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.CommentAdapter
+import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.databinding.FragmentCommentsBinding
 import com.perfectlunacy.bailiwick.models.db.Post
+import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.storage.BlobHash
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
 import com.perfectlunacy.bailiwick.util.AvatarLoader
+import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,6 +33,7 @@ import java.util.Calendar
 class CommentsFragment : BailiwickFragment() {
 
     companion object {
+        private const val TAG = "CommentsFragment"
         const val ARG_POST_ID = "post_id"
         const val ARG_POST_HASH = "post_hash"
 
@@ -205,8 +211,43 @@ class CommentsFragment : BailiwickFragment() {
                 val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
                 comment.sign(signer, emptyList())
 
-                // Insert and publish
-                db.postDao().insert(comment)
+                // Find the parent post to get its circles
+                val parentPost = db.postDao().findByHash(parentHash)
+                val circleId = if (parentPost != null) {
+                    // Get circles the parent post belongs to
+                    val parentCircles = db.circlePostDao().circlesForPost(parentPost.id)
+                    // Use the first non-"everyone" circle, or fall back to first circle
+                    val everyoneCircle = bwModel.network.circles.find { it.name == "everyone" }
+                    parentCircles.firstOrNull { it != everyoneCircle?.id }
+                        ?: parentCircles.firstOrNull()
+                        ?: bwModel.network.circles.first().id
+                } else {
+                    // Fallback: use first circle (shouldn't happen normally)
+                    bwModel.network.circles.first().id
+                }
+
+                // Use storePost to properly create CirclePost associations
+                bwModel.network.storePost(circleId, comment)
+
+                // Publish comment to Iroh blob storage with circle key encryption
+                try {
+                    val cipher = try {
+                        EncryptorFactory.forCircle(db.keyDao(), circleId)
+                    } catch (e: IllegalStateException) {
+                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
+                        NoopEncryptor()
+                    }
+
+                    val publisher = ContentPublisher(bwModel.iroh, db)
+                    val commentHash = publisher.publishPost(comment, circleId, cipher)
+                    Log.i(TAG, "Published comment ${comment.id} to Iroh with hash: $commentHash")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to publish comment to Iroh: ${e.message}")
+                }
+
+                // Trigger manifest sync to notify peers
+                GossipService.getInstance()?.publishManifest()
+                Log.i(TAG, "Triggered manifest publish for comment")
             }
 
             // Clear input and refresh
