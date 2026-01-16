@@ -148,6 +148,18 @@
                     android:textAppearance="@style/TextAppearance.Bailiwick.Body1" />
             </LinearLayout>
 
+            <!-- Mention Suggestions -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/list_mention_suggestions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorSurface"
+                android:elevation="@dimen/elevation_medium"
+                android:maxHeight="150dp"
+                android:visibility="gone"
+                tools:listitem="@android:layout/simple_list_item_1"
+                tools:visibility="visible" />
+
             <!-- Photo Preview Row -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/list_photo_previews"

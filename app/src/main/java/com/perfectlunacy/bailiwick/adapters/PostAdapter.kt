@@ -3,6 +3,7 @@ package com.perfectlunacy.bailiwick.adapters
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +17,7 @@ import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.BlobCache
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.util.AvatarLoader
+import com.perfectlunacy.bailiwick.util.MentionParser
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -30,8 +32,21 @@ class PostAdapter(
     private val list: ArrayList<Post>,
     private val onAuthorClick: ((Long) -> Unit)? = null,
     private val onDeleteClick: ((Post) -> Unit)? = null,
+    private val onMentionClick: ((String) -> Unit)? = null,
     private val currentUserId: Long = -1
 ): BaseAdapter() {
+
+    // Cache of known usernames for mention highlighting
+    private var knownUsernames: Set<String> = emptySet()
+
+    init {
+        // Load known usernames in background
+        bwModel.viewModelScope.launch {
+            knownUsernames = withContext(Dispatchers.Default) {
+                bwModel.getUsers().map { it.name.lowercase() }.toSet()
+            }
+        }
+    }
     override fun getCount(): Int {
         return list.count()
     }
@@ -119,6 +134,19 @@ class PostAdapter(
                 imgContent.visibility = View.VISIBLE
             } else {
                 imgContent.visibility = View.GONE
+            }
+
+            // Apply mention highlighting to post text
+            val postText = post.text
+            if (!postText.isNullOrEmpty() && onMentionClick != null) {
+                val spannableText = MentionParser.createSpannableWithMentions(
+                    postText,
+                    knownUsernames
+                ) { username ->
+                    onMentionClick.invoke(username)
+                }
+                binding.txtSocialContent.text = spannableText
+                binding.txtSocialContent.movementMethod = LinkMovementMethod.getInstance()
             }
 
             notifyDataSetChanged()

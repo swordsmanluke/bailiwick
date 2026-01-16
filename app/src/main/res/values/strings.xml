@@ -132,4 +132,7 @@
     <string name="delete_post_title">Delete Post</string>
     <string name="delete_post_confirm">Are you sure you want to delete this post? This cannot be undone.</string>
     <string name="post_deleted">Post deleted</string>
+
+    <!-- Mentions -->
+    <string name="user_not_found">User @%s not found</string>
 </resources>

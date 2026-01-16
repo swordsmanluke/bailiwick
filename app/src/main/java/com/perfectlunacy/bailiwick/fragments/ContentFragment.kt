@@ -17,10 +17,14 @@ import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
+import android.text.Editable
+import android.text.TextWatcher
 import com.perfectlunacy.bailiwick.adapters.CircleFilterAdapter
+import com.perfectlunacy.bailiwick.adapters.MentionSuggestionsAdapter
 import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
+import com.perfectlunacy.bailiwick.util.MentionParser
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.storage.BlobCache
@@ -64,6 +68,11 @@ class ContentFragment : BailiwickFragment() {
 
     // Circle filter adapter
     private var circleFilterAdapter: CircleFilterAdapter? = null
+
+    // Mention suggestions
+    private var mentionSuggestionsAdapter: MentionSuggestionsAdapter? = null
+    private var allUsernames: List<String> = emptyList()
+    private var currentMentionStart: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,6 +185,73 @@ class ContentFragment : BailiwickFragment() {
         binding.btnPost.setOnClickListener {
             submitPost(binding)
         }
+
+        // Setup mention suggestions
+        setupMentionSuggestions(binding)
+    }
+
+    private fun setupMentionSuggestions(binding: FragmentContentBinding) {
+        // Load usernames for autocomplete
+        bwModel.viewModelScope.launch {
+            allUsernames = withContext(Dispatchers.Default) {
+                bwModel.getUsers().map { it.name }
+            }
+        }
+
+        // Setup suggestions RecyclerView
+        binding.listMentionSuggestions.layoutManager = LinearLayoutManager(requireContext())
+        mentionSuggestionsAdapter = MentionSuggestionsAdapter { selectedUsername ->
+            insertMention(binding, selectedUsername)
+        }
+        binding.listMentionSuggestions.adapter = mentionSuggestionsAdapter
+
+        // Add text watcher to detect mentions
+        binding.txtPostText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+            override fun afterTextChanged(s: Editable?) {
+                val text = s?.toString() ?: ""
+                val cursorPosition = binding.txtPostText.selectionStart
+
+                val mentionContext = MentionParser.getMentionContext(text, cursorPosition)
+
+                if (mentionContext != null) {
+                    val (atIndex, prefix) = mentionContext
+                    currentMentionStart = atIndex
+                    val suggestions = MentionParser.getAutocompleteSuggestions(prefix, allUsernames)
+
+                    if (suggestions.isNotEmpty()) {
+                        mentionSuggestionsAdapter?.updateSuggestions(suggestions)
+                        binding.listMentionSuggestions.visibility = View.VISIBLE
+                    } else {
+                        binding.listMentionSuggestions.visibility = View.GONE
+                    }
+                } else {
+                    currentMentionStart = -1
+                    binding.listMentionSuggestions.visibility = View.GONE
+                }
+            }
+        })
+    }
+
+    private fun insertMention(binding: FragmentContentBinding, username: String) {
+        if (currentMentionStart == -1) return
+
+        val text = binding.txtPostText.text ?: return
+        val cursorPosition = binding.txtPostText.selectionStart
+
+        // Replace from @ to cursor with @username + space
+        val newText = StringBuilder(text)
+            .replace(currentMentionStart, cursorPosition, "@$username ")
+            .toString()
+
+        binding.txtPostText.setText(newText)
+        binding.txtPostText.setSelection(currentMentionStart + username.length + 2)
+
+        // Hide suggestions
+        binding.listMentionSuggestions.visibility = View.GONE
+        currentMentionStart = -1
     }
 
     private fun showPhotoOptions() {
@@ -403,8 +479,28 @@ class ContentFragment : BailiwickFragment() {
             onDeleteClick = { post ->
                 deletePost(post)
             },
+            onMentionClick = { username ->
+                navigateToUserByUsername(username)
+            },
             currentUserId = bwModel.network.me.id
         )
+    }
+
+    private fun navigateToUserByUsername(username: String) {
+        bwModel.viewModelScope.launch {
+            val userId = withContext(Dispatchers.Default) {
+                // Find user by username (case-insensitive)
+                bwModel.getUsers()
+                    .find { it.name.equals(username, ignoreCase = true) }
+                    ?.id
+            }
+
+            if (userId != null) {
+                navigateToUserProfile(userId)
+            } else {
+                Toast.makeText(context, getString(R.string.user_not_found, username), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun deletePost(post: Post) {
