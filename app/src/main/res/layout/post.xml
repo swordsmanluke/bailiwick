@@ -36,8 +36,18 @@
                     android:textColor="#000000"
                     android:gravity="center_vertical"
                     android:textSize="24sp"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="match_parent"/>
+                <ImageButton
+                    android:id="@+id/btn_delete"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/delete"
+                    android:src="@drawable/ic_delete"
+                    android:visibility="gone"
+                    app:tint="@color/colorTextSecondary" />
             </LinearLayout>
             <TextView
                 android:layout_width="wrap_content"

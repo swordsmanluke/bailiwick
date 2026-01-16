@@ -22,6 +22,8 @@ import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.models.db.Action
+import com.perfectlunacy.bailiwick.storage.BlobCache
 import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.databinding.FragmentContentBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
@@ -394,9 +396,64 @@ class ContentFragment : BailiwickFragment() {
             getBailiwickDb(requireContext()),
             bwModel,
             requireContext(),
-            ArrayList()
-        ) { userId ->
-            navigateToUserProfile(userId)
+            ArrayList(),
+            onAuthorClick = { userId ->
+                navigateToUserProfile(userId)
+            },
+            onDeleteClick = { post ->
+                deletePost(post)
+            },
+            currentUserId = bwModel.network.me.id
+        )
+    }
+
+    private fun deletePost(post: Post) {
+        // Show confirmation dialog
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_post_title)
+            .setMessage(R.string.delete_post_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                performDeletePost(post)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun performDeletePost(post: Post) {
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val blobHash = post.blobHash
+                if (blobHash == null) {
+                    Log.w(TAG, "Cannot delete post ${post.id}: no blobHash")
+                    return@withContext
+                }
+
+                // Delete associated files from cache
+                val files = bwModel.db.postFileDao().filesForPost(post.id)
+                val blobCache = BlobCache(Bailiwick.getInstance().cacheDir)
+                for (file in files) {
+                    blobCache.delete(file.blobHash)
+                }
+
+                // Delete post files from database
+                bwModel.db.postFileDao().deleteForPost(post.id)
+
+                // Delete the post from database
+                bwModel.db.postDao().delete(post.id)
+                Log.i(TAG, "Deleted post ${post.id} locally")
+
+                // Create and store delete action for broadcast to peers
+                val deleteAction = Action.deletePostAction(blobHash)
+                bwModel.db.actionDao().insert(deleteAction)
+
+                // Trigger gossip to broadcast the delete action
+                GossipService.getInstance()?.publishManifest()
+            }
+
+            // Remove from adapter
+            adapter.ifPresent { it.removePost(post) }
+
+            Toast.makeText(context, R.string.post_deleted, Toast.LENGTH_SHORT).show()
         }
     }
 

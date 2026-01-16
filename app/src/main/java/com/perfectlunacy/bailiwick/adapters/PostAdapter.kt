@@ -28,7 +28,9 @@ class PostAdapter(
     private val bwModel: BailiwickViewModel,
     private val context: Context,
     private val list: ArrayList<Post>,
-    private val onAuthorClick: ((Long) -> Unit)? = null
+    private val onAuthorClick: ((Long) -> Unit)? = null,
+    private val onDeleteClick: ((Post) -> Unit)? = null,
+    private val currentUserId: Long = -1
 ): BaseAdapter() {
     override fun getCount(): Int {
         return list.count()
@@ -101,6 +103,15 @@ class PostAdapter(
                 binding.txtAuthor.setOnClickListener(clickListener)
             }
 
+            // Show delete button only for own posts
+            val isOwnPost = post.authorId == currentUserId
+            binding.btnDelete.visibility = if (isOwnPost && onDeleteClick != null) View.VISIBLE else View.GONE
+            if (isOwnPost) {
+                binding.btnDelete.setOnClickListener {
+                    onDeleteClick?.invoke(post)
+                }
+            }
+
             // Display post image if available
             val imgContent = binding.imgSocialContent
             if (postImage != null) {
@@ -118,6 +129,11 @@ class PostAdapter(
 
     fun clear() {
         list.clear()
+    }
+
+    fun removePost(post: Post) {
+        list.remove(post)
+        MainScope().launch { notifyDataSetChanged() }
     }
 
     fun addToEnd(posts: List<Post>) {

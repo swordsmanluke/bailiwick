@@ -22,4 +22,7 @@ interface PostFileDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(postFile: PostFile): Long
+
+    @Query("DELETE FROM postfile WHERE postId = :postId")
+    fun deleteForPost(postId: Long)
 }

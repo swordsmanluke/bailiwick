@@ -121,4 +121,10 @@ interface PostDao {
 
     @Update
     fun update(post: Post)
+
+    @Query("DELETE FROM post WHERE id = :id")
+    fun delete(id: Long)
+
+    @Query("DELETE FROM post WHERE blobHash = :hash")
+    fun deleteByHash(hash: BlobHash)
 }

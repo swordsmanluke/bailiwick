@@ -45,6 +45,25 @@ data class Action(
                 processed = true  // We don't need to process this, recipient will
             )
         }
+
+        /**
+         * Create a delete action for a post.
+         * The data field contains the blob hash of the post to delete.
+         * This action is broadcast to all subscribers so they can remove the post locally.
+         */
+        @JvmStatic
+        fun deletePostAction(postBlobHash: BlobHash): Action {
+            val now = Calendar.getInstance().timeInMillis
+            return Action(
+                timestamp = now,
+                blobHash = null,
+                fromPeerId = null,  // Will be set by receiver
+                toPeerId = "*",     // Broadcast to all subscribers
+                actionType = ActionType.Delete,
+                data = postBlobHash,
+                processed = true  // We already processed locally, recipients will process
+            )
+        }
     }
 }
 

@@ -270,7 +270,7 @@ class ContentDownloader(
             try {
                 when (action.actionType) {
                     DbActionType.UpdateKey -> processUpdateKeyAction(action)
-                    DbActionType.Delete -> Log.d(TAG, "Delete action not yet implemented")
+                    DbActionType.Delete -> processDeleteAction(action)
                     DbActionType.Introduce -> Log.d(TAG, "Introduce action not yet implemented")
                 }
                 db.actionDao().markProcessed(action.id)
@@ -295,6 +295,44 @@ class ContentDownloader(
         // The data is a Base64-encoded AES key
         KeyStorage.storeAesKey(db.keyDao(), fromPeerId, action.data)
         Log.i(TAG, "Stored key from $fromPeerId")
+    }
+
+    /**
+     * Process a Delete action.
+     * Removes the post with the specified blob hash from the local database.
+     * Also removes associated files from the cache.
+     */
+    private fun processDeleteAction(action: Action) {
+        val postBlobHash = action.data
+        if (postBlobHash.isBlank()) {
+            Log.w(TAG, "Delete action has empty post hash")
+            return
+        }
+
+        val post = db.postDao().findByHash(postBlobHash)
+        if (post == null) {
+            Log.d(TAG, "Post with hash $postBlobHash not found locally, nothing to delete")
+            return
+        }
+
+        // Delete associated files from cache
+        val files = db.postFileDao().filesForPost(post.id)
+        for (file in files) {
+            try {
+                blobCache.delete(file.blobHash)
+                Log.d(TAG, "Deleted cached file: ${file.blobHash}")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to delete cached file ${file.blobHash}: ${e.message}")
+            }
+        }
+
+        // Delete post files from database
+        db.postFileDao().deleteForPost(post.id)
+
+        // Delete the post itself
+        db.postDao().delete(post.id)
+
+        Log.i(TAG, "Deleted post ${post.id} (hash: $postBlobHash) from peer ${action.fromPeerId}")
     }
 
     /**
