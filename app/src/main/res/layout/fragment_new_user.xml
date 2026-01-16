@@ -10,172 +10,198 @@
             type="String" />
     </data>
 
-    <ScrollView
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorBackground"
-        android:fillViewport="true">
+        android:background="@color/colorBackground">
 
-        <LinearLayout
+        <!-- Main Content ScrollView -->
+        <ScrollView
+            android:id="@+id/scroll_content"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="@dimen/spacing_lg">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
-            <!-- Header -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/spacing_lg"
-                android:text="@string/first_run_sign_up"
-                android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
-
-            <!-- Avatar Section -->
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/spacing_lg">
-
-                <ImageButton
-                    android:id="@+id/avatar"
-                    android:layout_width="@dimen/avatar_profile"
-                    android:layout_height="@dimen/avatar_profile"
-                    android:background="@drawable/bg_avatar_circle"
-                    android:clipToOutline="true"
-                    android:contentDescription="@string/desc_user_avatar"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/avatar" />
-
-                <!-- Camera overlay icon -->
-                <ImageView
-                    android:layout_width="@dimen/icon_lg"
-                    android:layout_height="@dimen/icon_lg"
-                    android:layout_gravity="bottom|end"
-                    android:background="@drawable/bg_avatar_circle"
-                    android:padding="@dimen/spacing_xs"
-                    android:src="@drawable/ic_camera"
-                    app:tint="@color/colorTextSecondary" />
-            </FrameLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/spacing_lg"
-                android:text="@string/choose_photo"
-                android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
-                android:textColor="@color/colorTextHint" />
-
-            <!-- Form Card -->
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Bailiwick.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/spacing_md">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/spacing_md">
-
-                    <!-- Public Name -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Bailiwick.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/spacing_md"
-                        android:hint="@string/public_name"
-                        app:helperText="@string/blank_for_anonymous"
-                        app:helperTextEnabled="true">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/new_public_name"
-                            style="@style/Widget.Bailiwick.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPersonName" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Username -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Bailiwick.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/spacing_md"
-                        android:hint="@string/username">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/new_user_name"
-                            style="@style/Widget.Bailiwick.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Password -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Bailiwick.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/spacing_md"
-                        android:hint="@string/password"
-                        app:endIconMode="password_toggle">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/new_password"
-                            style="@style/Widget.Bailiwick.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPassword" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Confirm Password -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Bailiwick.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/confirm_password"
-                        app:endIconMode="password_toggle">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/confirm_password"
-                            style="@style/Widget.Bailiwick.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPassword" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Validation Error -->
-                    <TextView
-                        android:id="@+id/txt_error"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_sm"
-                        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
-                        android:textColor="@color/colorError"
-                        android:visibility="gone"
-                        tools:text="Passwords don't match"
-                        tools:visibility="visible" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Loading Indicator -->
-            <ProgressBar
-                android:id="@+id/progress_loading"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginVertical="@dimen/spacing_md"
-                android:indeterminateTint="@color/colorPrimary"
-                android:visibility="gone" />
-
-            <!-- Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_lg">
 
+                <!-- Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xl"
+                    android:text="@string/first_run_sign_up"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
+
+                <!-- Profile Section -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:text="@string/section_profile"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline3"
+                    android:textColor="@color/colorTextSecondary" />
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.Bailiwick.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_lg">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <!-- Avatar Section -->
+                        <FrameLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm">
+
+                            <ImageButton
+                                android:id="@+id/avatar"
+                                android:layout_width="@dimen/avatar_profile"
+                                android:layout_height="@dimen/avatar_profile"
+                                android:background="@drawable/bg_avatar_circle"
+                                android:clipToOutline="true"
+                                android:contentDescription="@string/desc_user_avatar"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/avatar" />
+
+                            <!-- Camera overlay icon -->
+                            <ImageView
+                                android:layout_width="@dimen/icon_lg"
+                                android:layout_height="@dimen/icon_lg"
+                                android:layout_gravity="bottom|end"
+                                android:background="@drawable/bg_avatar_circle"
+                                android:padding="@dimen/spacing_xs"
+                                android:src="@drawable/ic_camera"
+                                android:contentDescription="@null"
+                                app:tint="@color/colorTextSecondary" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_md"
+                            android:text="@string/tap_to_change_photo"
+                            android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                            android:textColor="@color/colorPrimary" />
+
+                        <!-- Public Name -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_public_name"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/public_name"
+                            app:helperText="@string/blank_for_anonymous"
+                            app:helperTextEnabled="true">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/new_public_name"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textPersonName"
+                                android:imeOptions="actionNext" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Credentials Section -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:text="@string/section_credentials"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline3"
+                    android:textColor="@color/colorTextSecondary" />
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.Bailiwick.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_lg">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <!-- Username -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_username"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_md"
+                            android:hint="@string/username"
+                            app:helperText="@string/username_helper"
+                            app:helperTextEnabled="true"
+                            app:errorEnabled="true">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/new_user_name"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:imeOptions="actionNext" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Password -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_password"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_md"
+                            android:hint="@string/password"
+                            app:helperText="@string/password_helper"
+                            app:helperTextEnabled="true"
+                            app:errorEnabled="true"
+                            app:endIconMode="password_toggle">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/new_password"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textPassword"
+                                android:imeOptions="actionNext" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Confirm Password -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_confirm_password"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/confirm_password"
+                            app:errorEnabled="true"
+                            app:endIconMode="password_toggle">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/confirm_password"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textPassword"
+                                android:imeOptions="actionDone" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Create Account Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/new_user_btn_go"
                     style="@style/Widget.Bailiwick.Button.Primary"
@@ -192,64 +218,152 @@
                     android:layout_height="wrap_content"
                     android:text="@string/first_run_use_my_key"
                     android:visibility="gone" />
-            </LinearLayout>
 
-            <!-- Quick Test Account Buttons (Development Only) -->
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Bailiwick.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_lg"
-                app:cardBackgroundColor="#FFF3E0">
-
-                <LinearLayout
+                <!-- Quick Test Account Buttons (Development Only) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_test_accounts"
+                    style="@style/Widget.Bailiwick.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/spacing_md">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/spacing_sm"
-                        android:text="🧪 Quick Test Accounts"
-                        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
-                        android:textStyle="bold" />
+                    android:layout_marginTop="@dimen/spacing_lg"
+                    app:cardBackgroundColor="@color/circleFilterActive">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:text="Quick Test Accounts"
+                            android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_test_alice"
+                                style="@style/Widget.Bailiwick.Button.Secondary"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="@dimen/spacing_sm"
+                                android:layout_weight="1"
+                                android:text="Alice" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_test_bob"
+                                style="@style/Widget.Bailiwick.Button.Secondary"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/spacing_sm"
+                                android:layout_weight="1"
+                                android:text="Bob" />
+                        </LinearLayout>
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_test_alice"
-                            style="@style/Widget.Bailiwick.Button.Secondary"
-                            android:layout_width="0dp"
+                            android:id="@+id/btn_test_random"
+                            style="@style/Widget.Bailiwick.Button.Text"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="@dimen/spacing_sm"
-                            android:layout_weight="1"
-                            android:text="Alice" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_test_bob"
-                            style="@style/Widget.Bailiwick.Button.Secondary"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/spacing_sm"
-                            android:layout_weight="1"
-                            android:text="Bob" />
+                            android:text="Random Test User" />
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_test_random"
-                        style="@style/Widget.Bailiwick.Button.Text"
-                        android:layout_width="match_parent"
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Loading Overlay -->
+        <FrameLayout
+            android:id="@+id/overlay_loading"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorOverlay"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Bailiwick.Card"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                app:cardElevation="@dimen/elevation_high">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_xl">
+
+                    <ProgressBar
+                        android:id="@+id/progress_loading"
+                        android:layout_width="@dimen/icon_xl"
+                        android:layout_height="@dimen/icon_xl"
+                        android:indeterminateTint="@color/colorPrimary" />
+
+                    <TextView
+                        android:id="@+id/txt_loading_message"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎲 Random Test User" />
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/creating_account"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Body1" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
 
-        </LinearLayout>
-    </ScrollView>
+        <!-- Success Overlay -->
+        <FrameLayout
+            android:id="@+id/overlay_success"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_xl">
+
+                <ImageView
+                    android:id="@+id/img_success"
+                    android:layout_width="@dimen/avatar_xl"
+                    android:layout_height="@dimen/avatar_xl"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/colorSuccess"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:id="@+id/txt_success_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_lg"
+                    android:text="@string/account_created"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline2"
+                    android:textColor="@color/colorSuccess" />
+
+                <TextView
+                    android:id="@+id/txt_welcome_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Body1"
+                    android:textColor="@color/colorTextSecondary"
+                    tools:text="Welcome to Bailiwick, Alice!" />
+            </LinearLayout>
+        </FrameLayout>
+    </FrameLayout>
 
 </layout>
