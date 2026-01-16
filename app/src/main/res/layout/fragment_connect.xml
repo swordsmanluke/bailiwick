@@ -1,30 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".ConnectFragment"
-    android:orientation="vertical"
-    android:layout_gravity="center"
-    android:gravity="center_vertical"
-    android:layout_width="wrap_content"
-    android:layout_height="match_parent">
-    <Button
-        android:id="@+id/btn_conn_request"
-        android:text="@string/request_connect"
-        android:layout_gravity="center"
-        android:textColor="@color/cardview_light_background"
-        android:background="@color/colorPrimaryDark"
-        android:paddingHorizontal="10dp"
-        android:layout_marginBottom="20dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+    tools:context=".ConnectFragment">
 
-    <Button
-        android:id="@+id/btn_conn_accept"
-        android:text="@string/accept_connection"
-        android:background="@color/colorPrimaryDark"
-        android:textColor="@color/cardview_light_background"
-        android:paddingHorizontal="10dp"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-</LinearLayout>
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_lg">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_xl"
+            android:text="@string/make_a_connection"
+            android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
+
+        <!-- Step Indicator -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_lg"
+            android:text="@string/qr_instructions"
+            android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+            android:textColor="@color/colorTextSecondary"
+            android:gravity="center" />
+
+        <!-- Connection Options Card -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Bailiwick.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_lg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md">
+
+                <!-- Invite Friend Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_conn_request"
+                    style="@style/Widget.Bailiwick.Button.Primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:text="@string/invite_friend"
+                    app:icon="@drawable/ic_qr_code"
+                    app:iconGravity="textStart" />
+
+                <!-- Accept Invitation Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_conn_accept"
+                    style="@style/Widget.Bailiwick.Button.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/scan_invitation"
+                    app:icon="@drawable/ic_camera"
+                    app:iconGravity="textStart" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</layout>

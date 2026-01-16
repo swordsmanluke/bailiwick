@@ -1,74 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".AcceptSubscriptionFragment">
 
     <data>
         <variable name="model" type="com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel"/>
     </data>
-    <LinearLayout
+
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        >
+        android:background="@color/colorBackground">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:textSize="30sp"
-            android:gravity="center_horizontal"
-            android:background="@color/colorPrimaryDark"
-            android:textColor="#FFFFFF"
-            android:text="@string/make_a_connection" />
-
+        <!-- Scan Mode -->
         <LinearLayout
             android:id="@+id/layout_buttons"
-            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:gravity="center"
-            android:layout_gravity="center_horizontal"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent">
-            <Button
-                android:id="@+id/btn_scan"
-                android:text="@string/scan"
-                android:background="@color/colorPrimaryDark"
-                android:textColor="@color/cardview_light_background"
-                android:layout_marginBottom="20dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-            <Button
-                android:id="@+id/btn_images"
-                android:text="@string/from_images"
-                android:paddingHorizontal="20dp"
-                android:background="@color/colorPrimaryDark"
-                android:textColor="@color/cardview_light_background"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_lg"
+            android:visibility="visible">
+
+            <!-- Header -->
+            <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_lg"
+                android:text="@string/scan_invitation"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
+
+            <!-- Step Indicator -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_xl"
+                android:gravity="center"
+                android:text="@string/connection_step_3"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                android:textColor="@color/colorTextSecondary" />
+
+            <!-- Scan Options Card -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Bailiwick.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <!-- Scan Camera Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_scan"
+                        style="@style/Widget.Bailiwick.Button.Primary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md"
+                        android:text="@string/scan"
+                        app:icon="@drawable/ic_camera"
+                        app:iconGravity="textStart" />
+
+                    <!-- From Images Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_images"
+                        style="@style/Widget.Bailiwick.Button.Secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/from_images"
+                        app:icon="@drawable/ic_photo_library"
+                        app:iconGravity="textStart" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
+        <!-- Send Response Mode (QR Code Display) -->
         <LinearLayout
             android:id="@+id/layout_send_response"
-            android:orientation="vertical"
-            android:layout_weight="1"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <ImageView
-                android:id="@+id/img_response_qr"
-                android:layout_gravity="center_horizontal"
-                android:layout_width="300dp"
-                android:layout_height="300dp"/>
-            <Button
-                android:id="@+id/btn_send"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/send_response"
-                android:paddingHorizontal="20dp"
-                android:background="@color/colorPrimaryDark"
-                android:textColor="@color/cardview_light_background"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_lg"
+            android:visibility="gone">
+
+            <!-- Header -->
+            <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                android:text="@string/send_response"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
 
+            <!-- Instructions -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_lg"
+                android:gravity="center"
+                android:text="@string/waiting_for_scan"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                android:textColor="@color/colorTextSecondary" />
+
+            <!-- QR Code Card -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Bailiwick.Card"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_lg"
+                app:cardElevation="@dimen/elevation_medium">
+
+                <ImageView
+                    android:id="@+id/img_response_qr"
+                    android:layout_width="@dimen/qr_code_size"
+                    android:layout_height="@dimen/qr_code_size"
+                    android:layout_margin="@dimen/qr_code_padding"
+                    android:contentDescription="@string/qr_instructions"
+                    android:scaleType="fitCenter" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Done Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_send"
+                style="@style/Widget.Bailiwick.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/confirm" />
         </LinearLayout>
-
-    </LinearLayout>
+    </FrameLayout>
 </layout>
