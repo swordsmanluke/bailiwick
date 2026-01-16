@@ -273,8 +273,6 @@ class PostAdapter(
             binding.btnLike.setOnClickListener { anchorView ->
                 showReactionPicker(anchorView, post, userReactions)
             }
-
-            notifyDataSetChanged()
         }
 
         return binding.root

@@ -63,11 +63,14 @@ class ContentPublisher(
      * @return The blob hash of the encrypted post.
      */
     suspend fun publishPost(post: Post, circleId: Long, cipher: Encryptor): BlobHash {
+        // Log cipher type for debugging key issues
+        Log.i(TAG, "publishPost: using cipher ${cipher.javaClass.simpleName} for circle $circleId")
+
         // Get files for this post
         val files = db.postFileDao().filesForPost(post.id)
 
         val timestamp = post.timestamp ?: System.currentTimeMillis()
-        
+
         // Encrypt and publish each file, mapping original hash to encrypted hash
         val encryptedFiles = mutableListOf<IrohFileDef>()
         for (file in files) {
@@ -77,8 +80,9 @@ class ContentPublisher(
                 Log.w(TAG, "Could not find file blob ${file.blobHash} for post ${post.id}")
                 continue
             }
-            
-            // Encrypt and store
+
+            // Encrypt and store with SAME cipher as post
+            Log.d(TAG, "Encrypting file ${file.blobHash} (${fileData.size} bytes) with same cipher as post")
             val encryptedHash = publishFile(fileData, cipher)
             encryptedFiles.add(IrohFileDef(file.mimeType, encryptedHash))
             Log.d(TAG, "Encrypted file ${file.blobHash} -> $encryptedHash")

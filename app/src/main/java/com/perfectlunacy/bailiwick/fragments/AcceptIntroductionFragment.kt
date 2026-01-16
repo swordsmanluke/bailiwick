@@ -290,6 +290,9 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                     rsa
                 )
 
+                // Log the key being sent (from keystore.json file)
+                Log.i("AcceptIntro", "Circle key to send: ${circKey.size} bytes, first4=${circKey.take(4).map { "%02x".format(it) }}")
+
                 // Encrypt the circle key based on introduction version
                 val encryptedKeyB64 = if (intro.version >= 2) {
                     // v2: Use X25519 key agreement with peer's Ed25519 public key

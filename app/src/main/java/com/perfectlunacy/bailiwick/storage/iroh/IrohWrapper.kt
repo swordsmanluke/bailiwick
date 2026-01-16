@@ -21,6 +21,7 @@ import computer.iroh.BlobFormat
 import computer.iroh.DownloadCallback
 import computer.iroh.DownloadProgress
 import computer.iroh.DownloadProgressType
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Implementation of IrohNode using the iroh-ffi bindings.
@@ -157,8 +158,8 @@ class IrohWrapper private constructor(
                 tag
             )
 
-            // Track download result
-            var downloadFailed = false
+            // Use CompletableDeferred to wait for download completion
+            val downloadComplete = CompletableDeferred<Boolean>()
             var failureReason: String? = null
 
             val callback = object : DownloadCallback {
@@ -166,14 +167,14 @@ class IrohWrapper private constructor(
                     when (progress.type()) {
                         DownloadProgressType.ALL_DONE -> {
                             Log.d(TAG, "Blob $hash download complete")
+                            downloadComplete.complete(true)
                         }
                         DownloadProgressType.ABORT -> {
-                            downloadFailed = true
                             failureReason = progress.asAbort().toString()
                             Log.w(TAG, "Blob $hash download aborted: $failureReason")
+                            downloadComplete.complete(false)
                         }
                         DownloadProgressType.PROGRESS -> {
-                            // Just log progress
                             Log.d(TAG, "Blob $hash download in progress")
                         }
                         DownloadProgressType.FOUND -> {
@@ -186,16 +187,21 @@ class IrohWrapper private constructor(
                 }
             }
 
-            // Download is a suspend function that completes when download finishes
+            // Start the download - this returns immediately, callback fires async
             blobs.download(irohHash, options, callback)
 
-            if (downloadFailed) {
+            // Wait for the download to actually complete
+            val success = downloadComplete.await()
+
+            if (!success) {
                 Log.w(TAG, "Blob $hash download failed: $failureReason")
                 return null
             }
 
-            // Now read from local store
-            blobs.readToBytes(irohHash)
+            // Now read from local store - download is guaranteed complete
+            val data = blobs.readToBytes(irohHash)
+            Log.d(TAG, "IROH READ: $hash - ${data.size} bytes from local store")
+            data
         } catch (e: Exception) {
             Log.w(TAG, "Failed to download blob $hash from $nodeId: ${e.message}")
             null
@@ -276,6 +282,19 @@ class IrohWrapper private constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get node addresses: ${e.message}")
             emptyList()
+        }
+    }
+
+    override suspend fun addPeerAddresses(nodeId: NodeId, relayUrl: String?, directAddresses: List<String>) {
+        try {
+            val publicKey = PublicKey.fromString(nodeId)
+
+            // NodeAddr takes the relay URL as a String directly
+            val nodeAddr = NodeAddr(publicKey, relayUrl, directAddresses)
+            iroh.net().addNodeAddr(nodeAddr)
+            Log.d(TAG, "Added peer address for $nodeId: relay=$relayUrl, direct=${directAddresses.size} addrs")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to add peer address for $nodeId: ${e.message}")
         }
     }
 

@@ -93,6 +93,16 @@ interface IrohNode {
     suspend fun getNodeAddresses(): List<String>
 
     /**
+     * Add a peer's address information to this node's address book.
+     * This enables connectivity to the peer via relay or direct connection.
+     *
+     * @param nodeId The peer's node ID (Ed25519 public key)
+     * @param relayUrl The peer's relay URL (optional, but recommended for NAT traversal)
+     * @param directAddresses Direct socket addresses for the peer (optional)
+     */
+    suspend fun addPeerAddresses(nodeId: NodeId, relayUrl: String?, directAddresses: List<String> = emptyList())
+
+    /**
      * Shutdown the node gracefully.
      * Errors are logged but not thrown.
      */

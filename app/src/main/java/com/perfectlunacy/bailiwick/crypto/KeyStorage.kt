@@ -35,12 +35,36 @@ object KeyStorage {
     /**
      * Store an AES key received from a peer.
      *
+     * This method first removes any existing keys for this peer to avoid
+     * accumulating stale or invalid keys. Only the most recent key should be used.
+     *
      * @param keyDao Database access for key metadata
      * @param nodeId The peer's node ID
      * @param key Base64-encoded AES key
      */
     fun storeAesKey(keyDao: KeyDao, nodeId: NodeId, key: String) {
-        val pk = SecretKeySpec(Base64.getDecoder().decode(key), "AES")
+        // Clean up old keys for this peer first
+        val oldKeys = keyDao.keysFor(nodeId).filter { it.type == KeyType.Secret }
+        if (oldKeys.isNotEmpty()) {
+            Log.d(TAG, "Removing ${oldKeys.size} old keys for $nodeId before storing new key")
+            val ks = KeyStore.getInstance("AndroidKeyStore")
+            ks.load(null)
+            for (oldKey in oldKeys) {
+                try {
+                    ks.deleteEntry(oldKey.alias)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to delete old key ${oldKey.alias} from KeyStore: ${e.message}")
+                }
+            }
+            keyDao.deleteKeysFor(nodeId, KeyType.Secret)
+        }
+
+        // Store the new key
+        val keyBytes = Base64.getDecoder().decode(key)
+        val pk = SecretKeySpec(keyBytes, "AES")
+        val keyId = keyBytes.take(4).map { "%02x".format(it) }.joinToString("")
+        Log.d(TAG, "Storing key for $nodeId: keyId=$keyId, size=${keyBytes.size} bytes")
+
         val ks = KeyStore.getInstance("AndroidKeyStore")
         ks.load(null)
 
@@ -52,7 +76,9 @@ object KeyStorage {
             .build()
         ks.setEntry(alias, entry, protection)
 
-        keyDao.insert(Key(nodeId, alias, "AES", KeyType.Secret))
+        // Store key with keyBytes so we can decrypt without AndroidKeyStore
+        keyDao.insert(Key(nodeId, alias, "AES", KeyType.Secret, key))
+        Log.i(TAG, "Stored new key for $nodeId: alias=$alias, keyId=$keyId, keyBytes=${key.take(8)}...")
     }
 
     /**

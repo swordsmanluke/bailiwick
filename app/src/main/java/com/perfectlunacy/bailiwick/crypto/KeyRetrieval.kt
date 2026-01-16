@@ -30,7 +30,9 @@ object KeyRetrieval {
      * @throws IllegalStateException if no key exists for the circle
      */
     fun getKeyBytesForCircle(keyDao: KeyDao, filesDir: Path, circleId: Int, cipher: Encryptor): ByteArray {
-        val key = keyDao.keysFor("circle:$circleId").lastOrNull()
+        // Use firstOrNull to get the newest key (ORDER BY id DESC)
+        // Must match EncryptorFactory.forCircle which also uses firstOrNull
+        val key = keyDao.keysFor("circle:$circleId").firstOrNull()
             ?: throw IllegalStateException("No key found for circle $circleId")
         val alias = key.alias
 
@@ -38,7 +40,10 @@ object KeyRetrieval {
 
         val keyRec = store.keys.find { it.alias == alias }
             ?: throw IllegalStateException("Key with alias $alias not found in keystore for circle $circleId")
-        return Base64.getDecoder().decode(keyRec.encKey)
+        val keyBytes = Base64.getDecoder().decode(keyRec.encKey)
+        val keyId = keyBytes.take(4).map { "%02x".format(it) }.joinToString("")
+        android.util.Log.i("KeyRetrieval", "getKeyBytesForCircle($circleId): alias=$alias, keyId=$keyId, size=${keyBytes.size}")
+        return keyBytes
     }
 
     /**

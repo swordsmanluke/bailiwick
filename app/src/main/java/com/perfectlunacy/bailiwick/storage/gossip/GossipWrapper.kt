@@ -118,6 +118,9 @@ class GossipWrapper private constructor(
         }
 
         Log.i(TAG, "Subscribing to topic $topicId with ${bootstrapPeers.size} bootstrap peers")
+        if (bootstrapPeers.isNotEmpty()) {
+            Log.d(TAG, "  Bootstrap peers: ${bootstrapPeers.joinToString(", ")}")
+        }
 
         val callback = object : GossipMessageCallback {
             override suspend fun onMessage(msg: Message) {
@@ -125,7 +128,12 @@ class GossipWrapper private constructor(
             }
         }
 
-        val sender = gossip.subscribe(topicKey, bootstrapPeers, callback)
+        val sender = try {
+            gossip.subscribe(topicKey, bootstrapPeers, callback)
+        } catch (e: Exception) {
+            Log.e(TAG, "Gossip subscribe failed for topic $topicId: ${e.javaClass.simpleName}: ${e.message}", e)
+            throw e
+        }
         val subscription = TopicSubscription(topicKey, sender, handler)
 
         subscriptions[topicId] = subscription

@@ -175,6 +175,13 @@ class ContentFragment : BailiwickFragment() {
             refreshContent()
         }
 
+        // Long-press to force re-download all files (hidden sync feature)
+        binding.btnRefresh.setOnLongClickListener {
+            Toast.makeText(requireContext(), "Force re-downloading all images...", Toast.LENGTH_SHORT).show()
+            GossipService.getInstance()?.forceRedownloadFiles()
+            true
+        }
+
         binding.btnAddSubscription.setOnClickListener {
             requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
         }
@@ -374,12 +381,12 @@ class ContentFragment : BailiwickFragment() {
                 Pair(me.id, me.owner)
             }
             buildAdapter(binding.listContent, userId, userNodeId)
-        }
 
-        // Observe LiveData for automatic UI updates when posts change
-        bwModel.postsLive.observe(viewLifecycleOwner) { posts ->
-            Log.d(TAG, "LiveData updated: ${posts.size} posts")
-            applyFilters(posts)
+            // Observe LiveData AFTER adapter is built to avoid race condition
+            bwModel.postsLive.observe(viewLifecycleOwner) { posts ->
+                Log.d(TAG, "LiveData updated: ${posts.size} posts")
+                applyFilters(posts)
+            }
         }
     }
 
@@ -471,6 +478,10 @@ class ContentFragment : BailiwickFragment() {
             Log.d(TAG, "User filter: ${filteredPosts.size} posts from user $userId")
         }
 
+        if (!adapter.isPresent) {
+            Log.d(TAG, "Adapter not yet initialized, skipping filter update")
+            return
+        }
         adapter.get().clear()
         adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
     }

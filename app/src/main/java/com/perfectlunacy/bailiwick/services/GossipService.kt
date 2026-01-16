@@ -81,6 +81,21 @@ class GossipService : Service() {
         fun getInstance(): GossipService? = instance
     }
 
+    /**
+     * Force re-download all files for recent posts.
+     * Clears the cache and re-downloads to fix corruption issues.
+     */
+    fun forceRedownloadFiles() {
+        scope.launch {
+            try {
+                Log.i(TAG, "Starting force redownload of all files...")
+                contentDownloader?.forceRedownloadFiles()
+            } catch (e: Exception) {
+                Log.e(TAG, "Force redownload failed: ${e.message}")
+            }
+        }
+    }
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var gossipWrapper: GossipWrapper? = null
     private var myTopicSubscription: TopicSubscription? = null
@@ -180,17 +195,23 @@ class GossipService : Service() {
 
     /**
      * Subscribe to a peer's Gossip topic.
-     * We try to use the peer's nodeId as a bootstrap address.
+     *
+     * Before subscribing, we add the peer's addresses to Iroh's address book
+     * so Iroh knows how to reach them (via relay or direct connection).
      */
     private suspend fun subscribeToTopic(peer: PeerTopic) {
         try {
-            // Log peer info for debugging
             Log.d(TAG, "Subscribing to peer ${peer.nodeId}")
-            Log.d(TAG, "  Stored addresses: ${peer.addresses}")
             Log.d(TAG, "  Topic key: ${Base64.getEncoder().encodeToString(peer.topicKey).take(16)}...")
+            Log.d(TAG, "  Addresses: ${peer.addresses}")
 
-            // Try using the peer's nodeId directly as bootstrap
-            // Iroh should be able to resolve this via relay
+            // Add peer's addresses to Iroh's address book for connectivity
+            val iroh = Bailiwick.getInstance().iroh
+            val relayUrl = peer.addresses.firstOrNull { it.startsWith("https://") }
+            val directAddresses = peer.addresses.filter { !it.startsWith("https://") }
+            iroh.addPeerAddresses(peer.nodeId, relayUrl, directAddresses)
+
+            // Now subscribe with the nodeId as bootstrap peer
             val bootstrapPeers = listOf(peer.nodeId)
 
             val subscription = gossipWrapper?.subscribe(
@@ -202,9 +223,11 @@ class GossipService : Service() {
             if (subscription != null) {
                 peerSubscriptions[peer.nodeId] = subscription
                 Log.i(TAG, "Subscribed to peer ${peer.nodeId}")
+            } else {
+                Log.w(TAG, "Subscription returned null for peer ${peer.nodeId}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to subscribe to peer ${peer.nodeId}: ${e.message}")
+            Log.e(TAG, "Failed to subscribe to peer ${peer.nodeId}: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
@@ -453,38 +476,58 @@ class GossipService : Service() {
             val db = bw.db
             val context = applicationContext
 
+            Log.i(TAG, "Processing UpdateKey from $peerNodeId")
+            Log.d(TAG, "  encryptedKeyB64 length: ${encryptedKeyB64.length}")
+            Log.d(TAG, "  peerTopic.ed25519PublicKey: ${peerTopic.ed25519PublicKey.take(8).map { "%02x".format(it) }}")
+
             // Try X25519 decryption first (v2 format)
             var decryptedKey: ByteArray? = null
-            
+            var usedX25519 = false
+
             try {
                 val ed25519Keyring = Ed25519Keyring.create(context)
+                Log.d(TAG, "  myEd25519Pub: ${ed25519Keyring.getPublicKeyBytes().take(8).map { "%02x".format(it) }}")
                 decryptedKey = KeyEncryption.decryptKeyFromPeer(
                     encryptedKeyB64,
                     ed25519Keyring,
                     peerTopic.ed25519PublicKey
                 )
+                if (decryptedKey != null) {
+                    usedX25519 = true
+                    Log.i(TAG, "  X25519 decryption SUCCESS: ${decryptedKey.size} bytes")
+                }
             } catch (e: Exception) {
-                Log.d(TAG, "X25519 decryption failed, trying plain Base64: ${e.message}")
+                Log.w(TAG, "  X25519 decryption threw exception: ${e.message}")
             }
 
-            // Fallback to plain Base64 (v1 format)
+            // Fallback to plain Base64 (v1 format) - BUT this is WRONG for v2!
+            // If X25519 failed, the data is encrypted and Base64 will give garbage
             if (decryptedKey == null) {
+                Log.w(TAG, "  X25519 decryption returned null, checking if plain Base64...")
                 try {
-                    decryptedKey = Base64.getDecoder().decode(encryptedKeyB64)
-                    // Validate it looks like an AES key (16 or 32 bytes)
-                    if (decryptedKey.size != 16 && decryptedKey.size != 32) {
-                        Log.w(TAG, "Plain Base64 decoded to invalid key size: ${decryptedKey.size}")
-                        decryptedKey = null
+                    val rawDecoded = Base64.getDecoder().decode(encryptedKeyB64)
+                    Log.d(TAG, "  Raw Base64 decoded: ${rawDecoded.size} bytes")
+
+                    // AES-GCM encrypted data is: 12 byte nonce + ciphertext + 16 byte tag
+                    // For a 16-byte key: 12 + 16 + 16 = 44 bytes
+                    // For a 32-byte key: 12 + 32 + 16 = 60 bytes
+                    // If raw decode is 44 or 60 bytes, it's likely ENCRYPTED data, not a plain key!
+                    if (rawDecoded.size == 44 || rawDecoded.size == 60) {
+                        Log.w(TAG, "  Decoded size ${rawDecoded.size} looks like encrypted data, NOT storing as key")
+                        // Don't use this as a key - it's encrypted ciphertext
+                    } else if (rawDecoded.size == 16 || rawDecoded.size == 32) {
+                        decryptedKey = rawDecoded
+                        Log.i(TAG, "  Using plain Base64 decoded key (v1 format): ${decryptedKey.size} bytes")
                     } else {
-                        Log.i(TAG, "Successfully decoded plain Base64 key (v1 format)")
+                        Log.w(TAG, "  Plain Base64 decoded to invalid key size: ${rawDecoded.size}")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Plain Base64 decoding also failed: ${e.message}")
+                    Log.e(TAG, "  Plain Base64 decoding also failed: ${e.message}")
                 }
             }
 
             if (decryptedKey == null) {
-                Log.e(TAG, "Failed to decrypt/decode circle key from $peerNodeId")
+                Log.e(TAG, "  FAILED to decrypt/decode circle key from $peerNodeId - NOT storing")
                 return
             }
 
@@ -492,7 +535,7 @@ class GossipService : Service() {
             val keyB64 = Base64.getEncoder().encodeToString(decryptedKey)
             KeyStorage.storeAesKey(db.keyDao(), peerNodeId, keyB64)
 
-            Log.i(TAG, "Stored circle key from $peerNodeId (${decryptedKey.size} bytes)")
+            Log.i(TAG, "  Stored circle key from $peerNodeId (${decryptedKey.size} bytes, x25519=$usedX25519)")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process UpdateKey action from $peerNodeId", e)
@@ -580,7 +623,13 @@ class GossipService : Service() {
                 val announcementJson = GsonProvider.gson.toJson(announcement)
 
                 // Broadcast to own topic
-                myTopicSubscription?.broadcast(announcementJson.toByteArray())
+                if (myTopicSubscription != null) {
+                    Log.d(TAG, "Broadcasting manifest to ${connectedPeers.size} connected peers")
+                    myTopicSubscription?.broadcast(announcementJson.toByteArray())
+                    Log.d(TAG, "Broadcast completed")
+                } else {
+                    Log.w(TAG, "Cannot broadcast - no topic subscription")
+                }
 
                 // Update local version in SharedPreferences
                 prefs.edit().putLong("manifest_version", newVersion).apply()

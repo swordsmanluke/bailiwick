@@ -27,7 +27,7 @@ import com.perfectlunacy.bailiwick.models.db.*
         PeerTopic::class,
         ManifestCache::class
     ],
-    version = 6,  // Removed PeerDoc (migrated to Gossip-based PeerTopic)
+    version = 7,  // Added keyBytes to Key entity for reliable cross-device decryption
     exportSchema = true
 )
 abstract class BailiwickDatabase : RoomDatabase() {

@@ -84,6 +84,10 @@ class InMemoryIrohNode(
         return listOf("mock://localhost:1234")
     }
 
+    override suspend fun addPeerAddresses(nodeId: NodeId, relayUrl: String?, directAddresses: List<String>) {
+        // No-op for in-memory implementation
+    }
+
     override suspend fun shutdown() {
         // No-op for in-memory implementation
     }

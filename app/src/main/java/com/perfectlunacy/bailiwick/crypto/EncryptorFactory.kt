@@ -1,11 +1,16 @@
 package com.perfectlunacy.bailiwick.crypto
 
+import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.models.db.KeyDao
 import com.perfectlunacy.bailiwick.storage.NodeId
+import java.util.Base64
+import javax.crypto.spec.SecretKeySpec
+import kotlin.io.path.Path
 
 /**
  * Factory for creating Encryptor instances from stored keys.
@@ -38,6 +43,10 @@ object EncryptorFactory {
     /**
      * Create an encryptor for a specific circle.
      *
+     * IMPORTANT: This reads the key from keystore.json to ensure consistency
+     * with the key sent to peers via KeyRetrieval.getKeyBytesForCircle().
+     * Previously used AndroidKeyStore which could become out of sync.
+     *
      * @param keyDao Database access for keys
      * @param circleId The circle's ID
      * @return AESEncryptor with the circle's key
@@ -46,8 +55,24 @@ object EncryptorFactory {
     fun forCircle(keyDao: KeyDao, circleId: Long): Encryptor {
         val curKey = keyDao.keysFor("circle:$circleId").firstOrNull()
             ?: throw IllegalStateException("No key found for circle $circleId")
-        val secretKey = curKey.secretKey
-            ?: throw IllegalStateException("Key for circle $circleId has no secret key")
+        val alias = curKey.alias
+
+        // Read key from keystore.json - the SAME source used for key exchange
+        // This ensures the key we encrypt with matches what we send to peers
+        val bw = Bailiwick.getInstance()
+        val filesDir = Path(bw.cacheDir.parentFile?.path ?: bw.cacheDir.path)
+        val keystoreCipher = RsaWithAesEncryptor(bw.keyring.privateKey, bw.keyring.publicKey)
+
+        val keyFile = KeyStorage.loadKeyFile(filesDir, keystoreCipher)
+        val keyRec = keyFile.keys.find { it.alias == alias }
+            ?: throw IllegalStateException("Key with alias $alias not found in keystore.json for circle $circleId")
+
+        val keyBytes = Base64.getDecoder().decode(keyRec.encKey)
+        val secretKey = SecretKeySpec(keyBytes, "AES")
+
+        val keyId = keyBytes.take(4).map { "%02x".format(it) }.joinToString("")
+        android.util.Log.i("EncryptorFactory", "forCircle($circleId): alias=$alias, keyId=$keyId (from keystore.json)")
+
         return AESEncryptor(secretKey)
     }
 }

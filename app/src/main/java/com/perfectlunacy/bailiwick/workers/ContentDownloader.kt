@@ -146,9 +146,22 @@ class ContentDownloader(
         val fileCount = irohPost.files.size
         if (fileCount > 0) {
             Log.i(TAG, "POST $hash has $fileCount files to download")
-            
-            // Create a file-specific cipher with binary validator.
-            val fileCipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { it.isNotEmpty() }
+
+            // Create a file-specific cipher with image magic byte validator.
+            // This ensures we don't accept garbage decryption results.
+            val fileCipher = EncryptorFactory.forPeer(db.keyDao(), nodeId) { data ->
+                if (data.isEmpty()) return@forPeer false
+                // Check for valid image magic bytes
+                val isJpeg = data.size >= 3 && data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte()
+                val isPng = data.size >= 8 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte() && data[2] == 0x4E.toByte() && data[3] == 0x47.toByte()
+                val isGif = data.size >= 6 && data[0] == 0x47.toByte() && data[1] == 0x49.toByte() && data[2] == 0x46.toByte()
+                val isWebp = data.size >= 12 && data[0] == 0x52.toByte() && data[1] == 0x49.toByte() && data[2] == 0x46.toByte() && data[3] == 0x46.toByte()
+                val valid = isJpeg || isPng || isGif || isWebp  // Only accept recognized image formats
+                if (!valid) {
+                    Log.w(TAG, "Image validation failed: first bytes = ${data.take(8).map { "%02x".format(it) }}")
+                }
+                valid
+            }
             
             var successCount = 0
             var failCount = 0
@@ -177,12 +190,15 @@ class ContentDownloader(
      */
     suspend fun downloadFile(hash: BlobHash, nodeId: NodeId, postId: Long, mimeType: String, cipher: Encryptor): Boolean {
         Log.d(TAG, "Attempting to download file $hash from $nodeId")
-        
+
         val encrypted = downloadBlobOrLog(hash, nodeId, "file")
         if (encrypted == null) {
             Log.w(TAG, "FILE DOWNLOAD FAILED: Could not get blob $hash from peer $nodeId")
             return false
         }
+
+        // Log raw encrypted data info
+        Log.d(TAG, "FILE ENCRYPTED: $hash - ${encrypted.size} bytes, first bytes: ${encrypted.take(16).map { "%02x".format(it) }}")
 
         val data = try {
             cipher.decrypt(encrypted)
@@ -195,6 +211,17 @@ class ContentDownloader(
         if (data.isEmpty()) {
             Log.e(TAG, "FILE DECRYPT EMPTY: $hash - decryption produced empty result, likely wrong key")
             return false
+        }
+
+        // Log decrypted data info for debugging
+        val magicBytes = data.take(16).map { "%02x".format(it) }
+        Log.d(TAG, "FILE DECRYPTED: $hash - ${data.size} bytes, magic: $magicBytes")
+
+        // Validate image magic bytes
+        val isJpeg = data.size >= 3 && data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte()
+        val isPng = data.size >= 8 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte()
+        if (mimeType.startsWith("image/") && !isJpeg && !isPng) {
+            Log.w(TAG, "FILE MAGIC MISMATCH: $hash - expected image but got $magicBytes")
         }
 
         // Store in local file cache
@@ -410,9 +437,16 @@ class ContentDownloader(
                 continue
             }
             
-            // Create cipher for decryption
-            val cipher = EncryptorFactory.forPeer(db.keyDao(), author.owner) { true }
-            
+            // Create cipher for decryption with image validation
+            val cipher = EncryptorFactory.forPeer(db.keyDao(), author.owner) { data ->
+                if (data.isEmpty()) return@forPeer false
+                val isJpeg = data.size >= 3 && data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte()
+                val isPng = data.size >= 8 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte()
+                val isGif = data.size >= 6 && data[0] == 0x47.toByte() && data[1] == 0x49.toByte()
+                val isWebp = data.size >= 12 && data[0] == 0x52.toByte() && data[1] == 0x49.toByte()
+                isJpeg || isPng || isGif || isWebp
+            }
+
             Log.i(TAG, "RETRY: Post ${post.id} has ${missingFiles.size} missing files, attempting download from ${author.owner}")
             
             for (file in missingFiles) {
@@ -431,6 +465,75 @@ class ContentDownloader(
         if (totalMissing > 0) {
             Log.i(TAG, "RETRY SUMMARY: $totalSuccess/$totalRetried files recovered ($totalMissing total missing)")
         }
+    }
+
+    /**
+     * Force re-download all files for recent posts, even if already cached.
+     * This clears the cache and re-downloads to fix corruption issues.
+     * Only processes posts from the last 30 days.
+     */
+    suspend fun forceRedownloadFiles() {
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        val postsWithFiles = db.postDao().postsWithFilesSince(thirtyDaysAgo)
+
+        if (postsWithFiles.isEmpty()) {
+            Log.d(TAG, "FORCE REDOWNLOAD: No posts with files found")
+            return
+        }
+
+        Log.i(TAG, "FORCE REDOWNLOAD: Processing ${postsWithFiles.size} posts with files")
+
+        var totalFiles = 0
+        var totalCleared = 0
+        var totalSuccess = 0
+
+        for (post in postsWithFiles) {
+            val files = db.postFileDao().filesForPost(post.id)
+            if (files.isEmpty()) continue
+
+            totalFiles += files.size
+
+            // Get the author's identity to find their nodeId
+            val author = try {
+                db.identityDao().find(post.authorId)
+            } catch (e: Exception) {
+                Log.w(TAG, "FORCE REDOWNLOAD: Cannot find author ${post.authorId} for post ${post.id}")
+                continue
+            }
+
+            // Create cipher for decryption with image validation
+            val cipher = EncryptorFactory.forPeer(db.keyDao(), author.owner) { data ->
+                if (data.isEmpty()) return@forPeer false
+                val isJpeg = data.size >= 3 && data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte()
+                val isPng = data.size >= 8 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte()
+                val isGif = data.size >= 6 && data[0] == 0x47.toByte() && data[1] == 0x49.toByte()
+                val isWebp = data.size >= 12 && data[0] == 0x52.toByte() && data[1] == 0x49.toByte()
+                isJpeg || isPng || isGif || isWebp
+            }
+
+            Log.i(TAG, "FORCE REDOWNLOAD: Post ${post.id} has ${files.size} files from ${author.owner}")
+
+            for (file in files) {
+                // Clear existing cache entry
+                if (blobCache.exists(file.blobHash)) {
+                    blobCache.delete(file.blobHash)
+                    totalCleared++
+                    Log.d(TAG, "FORCE REDOWNLOAD: Cleared cache for ${file.blobHash}")
+                }
+
+                // Re-download
+                try {
+                    val success = downloadFile(file.blobHash, author.owner, post.id, file.mimeType, cipher)
+                    if (success) {
+                        totalSuccess++
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "FORCE REDOWNLOAD FAILED: ${file.blobHash} - ${e.message}")
+                }
+            }
+        }
+
+        Log.i(TAG, "FORCE REDOWNLOAD COMPLETE: $totalSuccess/$totalFiles files downloaded ($totalCleared cleared from cache)")
     }
 
     /**
