@@ -89,6 +89,13 @@
     <string name="export_success">Identity exported successfully</string>
     <string name="import_success">Identity imported successfully</string>
     <string name="import_password_hint">Enter backup password</string>
+    <string name="import_password_message">Enter the password you used when exporting this identity.</string>
+    <string name="import_restart_required">Your identity has been restored. The app needs to restart to complete the import.</string>
+    <string name="password_required">Password is required</string>
+    <string name="wrong_password">Wrong password</string>
+    <string name="invalid_backup_file">Invalid backup file</string>
+    <string name="unsupported_backup_version">Unsupported backup version: %1$d</string>
+    <string name="restart">Restart</string>
     <string name="password_too_short">Password must be at least 8 characters</string>
     <string name="passwords_dont_match">Passwords don\'t match</string>
     <string name="username_too_short">Username must be at least 4 characters</string>
