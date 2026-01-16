@@ -137,6 +137,17 @@
                         android:layout_marginTop="@dimen/spacing_md"
                         android:text="@string/unsubscribe"
                         android:visibility="gone" />
+
+                    <!-- Export Identity (own profile only) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_export_identity"
+                        style="@style/Widget.Bailiwick.Button.Secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/export_identity"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
