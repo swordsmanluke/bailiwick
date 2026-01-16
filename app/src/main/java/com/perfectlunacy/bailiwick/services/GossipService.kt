@@ -26,6 +26,7 @@ import com.perfectlunacy.bailiwick.storage.gossip.GossipMessageHandler
 import com.perfectlunacy.bailiwick.storage.gossip.GossipWrapper
 import com.perfectlunacy.bailiwick.storage.gossip.TopicSubscription
 import com.perfectlunacy.bailiwick.util.GsonProvider
+import com.perfectlunacy.bailiwick.util.NotificationHelper
 import com.perfectlunacy.bailiwick.workers.ContentDownloader
 import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import kotlinx.coroutines.CoroutineScope
@@ -96,6 +97,8 @@ class GossipService : Service() {
         super.onCreate()
         instance = this
         createNotificationChannel()
+        // Also create the new posts notification channel
+        NotificationHelper.createNotificationChannel(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -125,7 +128,10 @@ class GossipService : Service() {
                 Log.i(TAG, "Initializing Gossip subscriptions")
 
                 // Create ContentDownloader for processing received manifests
-                contentDownloader = ContentDownloader(iroh, db, bw.cacheDir)
+                contentDownloader = ContentDownloader(iroh, db, bw.cacheDir) { postHash, authorName, authorNodeId ->
+                    // Notify user about new posts
+                    NotificationHelper.onNewPost(applicationContext, postHash, authorName, authorNodeId)
+                }
 
                 // Create GossipWrapper from Iroh's Gossip
                 val gossip = iroh.getGossip()

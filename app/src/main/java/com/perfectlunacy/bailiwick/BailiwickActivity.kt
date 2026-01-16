@@ -9,6 +9,7 @@ import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.iroh.IrohWrapper
+import com.perfectlunacy.bailiwick.util.NotificationHelper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
 import kotlinx.coroutines.Dispatchers
@@ -132,6 +133,18 @@ class BailiwickActivity : AppCompatActivity() {
                 cause = e
             )
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        NotificationHelper.isAppInForeground = true
+        // Clear any pending notifications when app comes to foreground
+        NotificationHelper.cancelAll(this)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        NotificationHelper.isAppInForeground = false
     }
 
     private fun showDisplay() {

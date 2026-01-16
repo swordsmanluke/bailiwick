@@ -152,4 +152,12 @@
     <string name="send_comment">Send</string>
     <string name="comment_added">Comment added</string>
     <string name="replying_to">Replying to %s</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_new_posts">New Posts</string>
+    <string name="notification_channel_new_posts_desc">Notifications when people you follow share new posts</string>
+    <string name="notification_new_posts_title">New posts in Bailiwick</string>
+    <string name="notification_new_post_single">New post from %s</string>
+    <string name="notification_new_posts_single_author">%1$d new posts from %2$s</string>
+    <string name="notification_new_posts_multiple_authors">%1$d new posts from %2$d people</string>
 </resources>

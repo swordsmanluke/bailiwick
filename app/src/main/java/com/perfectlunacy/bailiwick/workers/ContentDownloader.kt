@@ -25,7 +25,8 @@ import java.io.File
 class ContentDownloader(
     private val iroh: IrohNode,
     private val db: BailiwickDatabase,
-    private val cacheDir: File
+    private val cacheDir: File,
+    private val onNewPost: ((postHash: String, authorName: String, authorNodeId: String) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "ContentDownloader"
@@ -165,6 +166,9 @@ class ContentDownloader(
             Log.i(TAG, "POST $hash files: $successCount success, $failCount failed out of $fileCount total")
         }
         Log.d(TAG, "Downloaded post $hash with ${irohPost.files.size} files")
+
+        // Notify about the new post
+        onNewPost?.invoke(hash, identity.name, nodeId)
     }
 
     /**
