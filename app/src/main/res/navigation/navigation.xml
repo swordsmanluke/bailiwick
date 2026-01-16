@@ -63,7 +63,7 @@
         <argument
             android:name="user_id"
             app:argType="long"
-            android:defaultValue="-1" />
+            android:defaultValue="-1L" />
         <action
             android:id="@+id/action_userProfileFragment_to_contentFragment"
             app:destination="@id/contentFragment"
@@ -78,7 +78,7 @@
         <argument
             android:name="post_id"
             app:argType="long"
-            android:defaultValue="-1" />
+            android:defaultValue="-1L" />
         <argument
             android:name="post_hash"
             app:argType="string"

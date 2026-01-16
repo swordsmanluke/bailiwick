@@ -1,16 +1,19 @@
 package com.perfectlunacy.bailiwick.crypto
 
 import android.content.Context
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.db.Identity
+import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.security.KeyPairGenerator
 
 /**
  * Tests for KeyExporter and KeyImporter.
@@ -19,97 +22,96 @@ import java.security.KeyPairGenerator
 class KeyExportImportTest {
 
     private lateinit var context: Context
-    private lateinit var exporter: KeyExporter
-    private lateinit var importer: KeyImporter
+    private lateinit var db: BailiwickDatabase
+
+    private val testSecretKey = "dGVzdC1zZWNyZXQta2V5LWJhc2U2NC1lbmNvZGVk" // Base64 test key
+    private val testUsername = "testuser"
+    private val testDisplayName = "Test User"
+    private val testAvatarHash = "avatar-blob-hash-12345"
+    private val testNodeId = "test-node-id-abc123"
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        exporter = KeyExporter()
-        importer = KeyImporter()
-    }
 
-    @Test
-    fun exportAndImportRoundTrip() {
-        // Generate test keys
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
-            initialize(2048)
-        }.generateKeyPair()
+        // Create in-memory database
+        db = Room.inMemoryDatabaseBuilder(context, BailiwickDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+
+        // Set up test account and identity
+        val account = Account(
+            username = testUsername,
+            passwordHash = "password-hash",
+            peerId = testNodeId,
+            rootCid = "",
+            sequence = 0,
+            loggedIn = true
+        )
+        db.accountDao().insert(account)
 
         val identity = Identity(
             blobHash = null,
-            owner = "test-node-id-abc123",
-            name = "Test User",
-            profilePicHash = "avatar-blob-hash"
+            owner = testNodeId,
+            name = testDisplayName,
+            profilePicHash = testAvatarHash
         )
+        db.identityDao().insert(identity)
 
-        val password = "securePassword123!"
+        // Set up SharedPreferences with test secret key
+        val prefs = context.getSharedPreferences("iroh_config", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("iroh_secret_key", testSecretKey)
+            .commit()
+    }
 
-        // Export
-        val exportStream = ByteArrayOutputStream()
-        exporter.export(identity, keyPair.private, keyPair.public, password, exportStream)
+    @After
+    fun tearDown() {
+        db.close()
 
-        val exportedData = exportStream.toByteArray()
-        assertTrue(exportedData.isNotEmpty())
-
-        // Import
-        val importStream = ByteArrayInputStream(exportedData)
-        val result = importer.import(importStream, password)
-
-        assertTrue(result is KeyImporter.ImportResult.Success)
-        val success = result as KeyImporter.ImportResult.Success
-
-        assertEquals(identity.name, success.identity.name)
-        assertEquals(identity.owner, success.identity.owner)
-        assertEquals(identity.profilePicHash, success.identity.profilePicHash)
-
-        // Verify keys are usable
-        assertNotNull(success.privateKey)
-        assertNotNull(success.publicKey)
-        assertEquals("RSA", success.privateKey.algorithm)
-        assertEquals("RSA", success.publicKey.algorithm)
+        // Clean up SharedPreferences
+        val prefs = context.getSharedPreferences("iroh_config", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
     }
 
     @Test
-    fun importWithWrongPasswordFails() {
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
-            initialize(2048)
-        }.generateKeyPair()
+    fun exportAndImportRoundTrip() = runBlocking {
+        val password = "securePassword123!"
 
-        val identity = Identity(null, "node-id", "Test", "hash")
+        // Export
+        val exportedData = KeyExporter.export(context, db, password)
+        assertTrue("Exported data should not be empty", exportedData.isNotEmpty())
+
+        // Import
+        val importStream = ByteArrayInputStream(exportedData)
+        val result = KeyImporter.import(importStream, password)
+
+        assertTrue("Import should succeed", result is KeyImporter.ImportResult.Success)
+        val success = result as KeyImporter.ImportResult.Success
+
+        assertEquals(testDisplayName, success.data.displayName)
+        assertEquals(testUsername, success.data.username)
+        assertEquals(testAvatarHash, success.data.avatarHash)
+        assertEquals(testSecretKey, success.data.secretKey)
+        assertTrue("createdAt should be recent", success.data.createdAt > 0)
+    }
+
+    @Test
+    fun importWithWrongPasswordFails() = runBlocking {
         val correctPassword = "correctPassword123!"
         val wrongPassword = "wrongPassword456!"
 
         // Export with correct password
-        val exportStream = ByteArrayOutputStream()
-        exporter.export(identity, keyPair.private, keyPair.public, correctPassword, exportStream)
+        val exportedData = KeyExporter.export(context, db, correctPassword)
 
         // Import with wrong password
-        val importStream = ByteArrayInputStream(exportStream.toByteArray())
-        val result = importer.import(importStream, wrongPassword)
+        val importStream = ByteArrayInputStream(exportedData)
+        val result = KeyImporter.import(importStream, wrongPassword)
 
-        assertTrue(result is KeyImporter.ImportResult.Error)
-        val error = result as KeyImporter.ImportResult.Error
-        assertTrue(error.message.contains("Invalid password") || error.message.contains("corrupted"))
-    }
-
-    @Test
-    fun exportRequiresMinimumPasswordLength() {
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
-            initialize(2048)
-        }.generateKeyPair()
-
-        val identity = Identity(null, "node-id", "Test", "hash")
-        val shortPassword = "short"  // Less than 8 characters
-
-        val exportStream = ByteArrayOutputStream()
-
-        try {
-            exporter.export(identity, keyPair.private, keyPair.public, shortPassword, exportStream)
-            fail("Should have thrown IllegalArgumentException")
-        } catch (e: IllegalArgumentException) {
-            assertTrue(e.message!!.contains("8 characters"))
-        }
+        assertTrue(
+            "Import should fail with wrong password",
+            result is KeyImporter.ImportResult.WrongPassword
+        )
     }
 
     @Test
@@ -117,49 +119,92 @@ class KeyExportImportTest {
         val corruptedData = "{ invalid json content }".toByteArray()
         val importStream = ByteArrayInputStream(corruptedData)
 
-        val result = importer.import(importStream, "anyPassword")
+        val result = KeyImporter.import(importStream, "anyPassword123!")
 
-        assertTrue(result is KeyImporter.ImportResult.Error)
+        assertTrue(
+            "Import should fail with invalid format",
+            result is KeyImporter.ImportResult.InvalidFormat ||
+                    result is KeyImporter.ImportResult.WrongPassword ||
+                    result is KeyImporter.ImportResult.Error
+        )
     }
 
     @Test
-    fun exportedFileContainsVersion() {
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
-            initialize(2048)
-        }.generateKeyPair()
+    fun exportedDataHasCorrectFormat() = runBlocking {
+        val password = "password12345678!"
 
-        val identity = Identity(null, "node-id", "Test", "hash")
+        val exportedData = KeyExporter.export(context, db, password)
 
-        val exportStream = ByteArrayOutputStream()
-        exporter.export(identity, keyPair.private, keyPair.public, "password123!", exportStream)
+        // Export format: salt (16 bytes) + iv (12 bytes) + encrypted data
+        assertTrue("Exported data should have at least salt + iv", exportedData.size >= 28)
 
-        val exportedJson = String(exportStream.toByteArray())
-        assertTrue(exportedJson.contains("\"version\""))
-        assertTrue(exportedJson.contains("\"salt\""))
-        assertTrue(exportedJson.contains("\"iv\""))
-        assertTrue(exportedJson.contains("\"encryptedData\""))
+        // First 16 bytes are salt
+        val salt = exportedData.copyOfRange(0, 16)
+        assertFalse("Salt should not be all zeros", salt.all { it == 0.toByte() })
+
+        // Next 12 bytes are IV
+        val iv = exportedData.copyOfRange(16, 28)
+        assertFalse("IV should not be all zeros", iv.all { it == 0.toByte() })
+
+        // Remaining bytes are encrypted data
+        val ciphertext = exportedData.copyOfRange(28, exportedData.size)
+        assertTrue("Ciphertext should not be empty", ciphertext.isNotEmpty())
     }
 
     @Test
-    fun importPreservesTimestamps() {
-        val keyPair = KeyPairGenerator.getInstance("RSA").apply {
-            initialize(2048)
-        }.generateKeyPair()
-
-        val identity = Identity(null, "node-id", "Test", "hash")
+    fun importPreservesTimestamps() = runBlocking {
         val password = "password123!"
 
         val beforeExport = System.currentTimeMillis()
-
-        val exportStream = ByteArrayOutputStream()
-        exporter.export(identity, keyPair.private, keyPair.public, password, exportStream)
-
+        val exportedData = KeyExporter.export(context, db, password)
         val afterExport = System.currentTimeMillis()
 
-        val importStream = ByteArrayInputStream(exportStream.toByteArray())
-        val result = importer.import(importStream, password) as KeyImporter.ImportResult.Success
+        val importStream = ByteArrayInputStream(exportedData)
+        val result = KeyImporter.import(importStream, password) as KeyImporter.ImportResult.Success
 
-        assertTrue(result.exportedAt >= beforeExport)
-        assertTrue(result.exportedAt <= afterExport)
+        assertTrue(
+            "createdAt should be at or after export start",
+            result.data.createdAt >= beforeExport
+        )
+        assertTrue(
+            "createdAt should be at or before export end",
+            result.data.createdAt <= afterExport
+        )
+    }
+
+    @Test
+    fun getRecommendedFilenameFormatsCorrectly() {
+        val filename = KeyExporter.getRecommendedFilename("Test User")
+
+        assertTrue("Filename should start with bailiwick-", filename.startsWith("bailiwick-"))
+        assertTrue("Filename should end with .bwkey", filename.endsWith(".bwkey"))
+        assertTrue("Filename should contain sanitized name", filename.contains("Test_User"))
+    }
+
+    @Test
+    fun exportFailsWithoutAccount() = runBlocking {
+        // Clear the account
+        db.clearAllTables()
+
+        try {
+            KeyExporter.export(context, db, "password123!")
+            fail("Export should throw ExportException when no account exists")
+        } catch (e: KeyExporter.ExportException) {
+            assertTrue(e.message!!.contains("No account"))
+        }
+    }
+
+    @Test
+    fun exportFailsWithoutSecretKey() = runBlocking {
+        // Clear the secret key from SharedPreferences
+        val prefs = context.getSharedPreferences("iroh_config", Context.MODE_PRIVATE)
+        prefs.edit().remove("iroh_secret_key").commit()
+
+        try {
+            KeyExporter.export(context, db, "password123!")
+            fail("Export should throw ExportException when no secret key exists")
+        } catch (e: KeyExporter.ExportException) {
+            assertTrue(e.message!!.contains("secret key"))
+        }
     }
 }
