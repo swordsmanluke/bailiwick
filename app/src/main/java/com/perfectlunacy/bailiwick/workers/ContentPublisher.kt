@@ -118,24 +118,27 @@ class ContentPublisher(
 
     /**
      * Store a reaction as an encrypted blob.
+     * @param isRemoval If true, this publishes a reaction removal notification.
      * @return The blob hash of the encrypted reaction.
      */
-    suspend fun publishReaction(reaction: Reaction, cipher: Encryptor): BlobHash {
+    suspend fun publishReaction(reaction: Reaction, cipher: Encryptor, isRemoval: Boolean = false): BlobHash {
         val irohReaction = IrohReaction(
             postHash = reaction.postHash,
             authorNodeId = reaction.authorNodeId,
             emoji = reaction.emoji,
             timestamp = reaction.timestamp,
             signature = reaction.signature,
-            isRemoval = false
+            isRemoval = isRemoval
         )
 
         val hash = storeEncrypted(irohReaction, cipher)
-        
-        // Update reaction with its hash
-        db.reactionDao().updateHash(reaction.id, hash)
 
-        Log.i(TAG, "Published reaction: $hash (${reaction.emoji} on ${reaction.postHash})")
+        // Update reaction with its hash (only for non-removals)
+        if (!isRemoval) {
+            db.reactionDao().updateHash(reaction.id, hash)
+        }
+
+        Log.i(TAG, "Published reaction: $hash (${reaction.emoji} on ${reaction.postHash}, removal=$isRemoval)")
         return hash
     }
 
