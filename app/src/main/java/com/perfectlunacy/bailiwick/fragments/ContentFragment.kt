@@ -367,7 +367,14 @@ class ContentFragment : BailiwickFragment() {
     }
 
     private fun setupPostList(binding: FragmentContentBinding) {
-        buildAdapter(binding.listContent)
+        // Load current user info on background thread, then build adapter
+        bwModel.viewModelScope.launch {
+            val (userId, userNodeId) = withContext(Dispatchers.Default) {
+                val me = bwModel.network.me
+                Pair(me.id, me.owner)
+            }
+            buildAdapter(binding.listContent, userId, userNodeId)
+        }
 
         // Observe LiveData for automatic UI updates when posts change
         bwModel.postsLive.observe(viewLifecycleOwner) { posts ->
@@ -392,8 +399,8 @@ class ContentFragment : BailiwickFragment() {
     }
 
     private var adapter: Optional<PostAdapter> = Optional.empty()
-    private fun buildAdapter(messagesList: ListView) {
-        adapter = Optional.of(buildListAdapter())
+    private fun buildAdapter(messagesList: ListView, currentUserId: Long, currentUserNodeId: String) {
+        adapter = Optional.of(buildListAdapter(currentUserId, currentUserNodeId))
         messagesList.adapter = adapter.get()
     }
 
@@ -468,7 +475,7 @@ class ContentFragment : BailiwickFragment() {
         adapter.get().addToEnd(filteredPosts.sortedByDescending { it.timestamp })
     }
 
-    private fun buildListAdapter(): PostAdapter {
+    private fun buildListAdapter(currentUserId: Long, currentUserNodeId: String): PostAdapter {
         return PostAdapter(
             getBailiwickDb(requireContext()),
             bwModel,
@@ -495,8 +502,8 @@ class ContentFragment : BailiwickFragment() {
             onPhotoClick = { photoHashes, startPosition ->
                 navigateToPhotoViewer(photoHashes, startPosition)
             },
-            currentUserId = bwModel.network.me.id,
-            currentUserNodeId = bwModel.network.me.owner
+            currentUserId = currentUserId,
+            currentUserNodeId = currentUserNodeId
         )
     }
 
