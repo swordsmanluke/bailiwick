@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="2dp">
+
+    <ImageView
+        android:id="@+id/img_photo"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:scaleType="centerCrop"
+        android:background="@color/colorPrimaryLight"
+        android:contentDescription="@string/photo_preview" />
+
+    <ProgressBar
+        android:id="@+id/progress_photo"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- Error icon overlay -->
+    <ImageView
+        android:id="@+id/img_error"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_error"
+        android:visibility="gone"
+        android:contentDescription="@string/error" />
+
+    <!-- More photos overlay (e.g., "+3" for posts with many photos) -->
+    <TextView
+        android:id="@+id/txt_more_count"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:background="#80000000"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+</FrameLayout>

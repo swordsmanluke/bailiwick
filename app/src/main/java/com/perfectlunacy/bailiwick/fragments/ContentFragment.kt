@@ -492,6 +492,9 @@ class ContentFragment : BailiwickFragment() {
             onReactionRemoved = { post, emoji ->
                 removeReaction(post, emoji)
             },
+            onPhotoClick = { photoHashes, startPosition ->
+                navigateToPhotoViewer(photoHashes, startPosition)
+            },
             currentUserId = bwModel.network.me.id,
             currentUserNodeId = bwModel.network.me.owner
         )
@@ -576,6 +579,14 @@ class ContentFragment : BailiwickFragment() {
         val bundle = CommentsFragment.newBundle(post.id, post.blobHash)
         requireView().findNavController().navigate(
             R.id.action_contentFragment_to_commentsFragment,
+            bundle
+        )
+    }
+
+    private fun navigateToPhotoViewer(photoHashes: List<String>, startPosition: Int) {
+        val bundle = PhotoViewerFragment.newBundle(photoHashes, startPosition)
+        requireView().findNavController().navigate(
+            R.id.action_contentFragment_to_photoViewerFragment,
             bundle
         )
     }

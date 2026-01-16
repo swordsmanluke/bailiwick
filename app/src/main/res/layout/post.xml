@@ -63,14 +63,35 @@
             android:layout_height="1dp"
             android:layout_margin="4dp"
             />
-        <ImageView
-            android:id="@+id/img_social_content"
-            android:src="@color/colorPrimary"
-            android:layout_width="400dp"
-            android:layout_height="300dp"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            android:contentDescription="@string/post_content" />
+        <!-- Single image display (for 1 photo) -->
+        <FrameLayout
+            android:id="@+id/container_single_image"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/img_social_content"
+                android:src="@color/colorPrimary"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/post_content" />
+            <!-- Loading overlay -->
+            <ProgressBar
+                android:id="@+id/progress_image"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Photo grid for multiple photos -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/grid_photos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/txt_social_content"

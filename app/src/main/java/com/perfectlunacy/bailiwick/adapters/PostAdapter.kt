@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.adapters
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.text.method.LinkMovementMethod
 import android.util.Log
@@ -12,6 +13,7 @@ import android.widget.BaseAdapter
 import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
@@ -42,6 +44,7 @@ class PostAdapter(
     private val onCommentClick: ((Post) -> Unit)? = null,
     private val onReactionAdded: ((Post, String) -> Unit)? = null,
     private val onReactionRemoved: ((Post, String) -> Unit)? = null,
+    private val onPhotoClick: ((List<String>, Int) -> Unit)? = null,
     private val currentUserId: Long = -1,
     private val currentUserNodeId: NodeId = ""
 ): BaseAdapter() {
@@ -92,24 +95,29 @@ class PostAdapter(
                 val avatar = AvatarLoader.loadAvatar(author, context.filesDir.toPath())
                     ?: BitmapFactory.decodeStream(context.assets.open("avatar.png"))
 
-                // Load post image if available
-                val postBitmap = try {
+                // Load post photos if available
+                val photos = try {
                     val files = db.postFileDao().filesForPost(post.id)
-                    Log.d(TAG, "Post ${post.id} has ${files.size} files")
-                    val imageFile = files.firstOrNull { it.mimeType.startsWith("image") }
-                    if (imageFile != null && Bailiwick.isInitialized()) {
-                        Log.d(TAG, "Found image file: ${imageFile.blobHash}, mimeType: ${imageFile.mimeType}")
+                        .filter { it.mimeType.startsWith("image") }
+                    Log.d(TAG, "Post ${post.id} has ${files.size} image files")
+
+                    if (files.isNotEmpty() && Bailiwick.isInitialized()) {
                         val blobCache = BlobCache(Bailiwick.getInstance().cacheDir)
-                        val imageData = blobCache.get(imageFile.blobHash)
-                        Log.d(TAG, "Blob cache returned: ${imageData?.size ?: "null"} bytes")
-                        imageData?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                        files.map { file ->
+                            val imageData = blobCache.get(file.blobHash)
+                            val bitmap = imageData?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                            PhotoData(
+                                hash = file.blobHash,
+                                bitmap = bitmap,
+                                hasError = imageData != null && bitmap == null
+                            )
+                        }
                     } else {
-                        if (imageFile == null) Log.d(TAG, "No image file found for post ${post.id}")
-                        null
+                        emptyList()
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load post image", e)
-                    null
+                    Log.w(TAG, "Failed to load post images", e)
+                    emptyList<PhotoData>()
                 }
 
                 // Get comment count if the post has a blob hash
@@ -128,12 +136,12 @@ class PostAdapter(
                         .map { r -> r.emoji }.toSet()
                 } ?: emptySet()
 
-                PostViewData(author, avatar, postBitmap, commentCount, reactions, userReactions)
+                PostViewData(author, avatar, photos, commentCount, reactions, userReactions)
             }
 
             val author = postData.author
             val avatar = postData.avatar
-            val postImage = postData.postImage
+            val photos = postData.photos
             val commentCount = postData.commentCount
             val reactions = postData.reactions
             val userReactions = postData.userReactions
@@ -160,13 +168,60 @@ class PostAdapter(
                 }
             }
 
-            // Display post image if available
+            // Display photos
+            val containerSingleImage = binding.containerSingleImage
             val imgContent = binding.imgSocialContent
-            if (postImage != null) {
-                imgContent.setImageBitmap(postImage)
-                imgContent.visibility = View.VISIBLE
-            } else {
-                imgContent.visibility = View.GONE
+            val gridPhotos = binding.gridPhotos
+
+            when {
+                photos.isEmpty() -> {
+                    // No photos
+                    containerSingleImage.visibility = View.GONE
+                    gridPhotos.visibility = View.GONE
+                }
+                photos.size == 1 -> {
+                    // Single photo - use large display
+                    containerSingleImage.visibility = View.VISIBLE
+                    gridPhotos.visibility = View.GONE
+
+                    val photo = photos[0]
+                    if (photo.bitmap != null) {
+                        imgContent.setImageBitmap(photo.bitmap)
+                        binding.progressImage.visibility = View.GONE
+                    } else if (photo.hasError) {
+                        imgContent.setImageResource(R.color.colorPrimaryLight)
+                        binding.progressImage.visibility = View.GONE
+                    } else {
+                        imgContent.setImageResource(R.color.colorPrimaryLight)
+                        binding.progressImage.visibility = View.VISIBLE
+                    }
+
+                    // Click to open full-screen viewer
+                    containerSingleImage.setOnClickListener {
+                        onPhotoClick?.invoke(photos.map { it.hash }, 0)
+                    }
+                }
+                else -> {
+                    // Multiple photos - use grid
+                    containerSingleImage.visibility = View.GONE
+                    gridPhotos.visibility = View.VISIBLE
+
+                    val spanCount = if (photos.size == 2) 2 else 2
+                    gridPhotos.layoutManager = GridLayoutManager(context, spanCount)
+
+                    val photoItems = photos.map {
+                        PhotoGridAdapter.PhotoItem(
+                            hash = it.hash,
+                            bitmap = it.bitmap,
+                            isLoading = it.isLoading,
+                            hasError = it.hasError
+                        )
+                    }
+
+                    gridPhotos.adapter = PhotoGridAdapter(photoItems) { position ->
+                        onPhotoClick?.invoke(photos.map { it.hash }, position)
+                    }
+                }
             }
 
             // Apply mention highlighting to post text
@@ -297,9 +352,19 @@ class PostAdapter(
     private data class PostViewData(
         val author: com.perfectlunacy.bailiwick.models.db.Identity,
         val avatar: android.graphics.Bitmap,
-        val postImage: android.graphics.Bitmap?,
+        val photos: List<PhotoData>,
         val commentCount: Int,
         val reactions: List<EmojiCount>,
         val userReactions: Set<String>
+    )
+
+    /**
+     * Data for a single photo in a post.
+     */
+    private data class PhotoData(
+        val hash: String,
+        val bitmap: Bitmap?,
+        val isLoading: Boolean = false,
+        val hasError: Boolean = false
     )
 }
