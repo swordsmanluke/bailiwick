@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-01-14
 
-This directory contains design proposals addressing major architectural issues in Bailiwick, a decentralized social network built on IPFS.
+This directory contains design proposals addressing major architectural issues in Bailiwick, a decentralized social network built on Iroh.
 
 ## Proposals
 
@@ -184,7 +184,7 @@ Post A
 
 ### New Database Entities
 
-- `Interaction` - For reactions and tags (IPFS model exists, DB entity missing)
+- `Interaction` - For reactions and tags (model exists, DB entity missing)
 - `ThreadStats` - Cached reply counts for feed display
 
 ### Implementation Phases

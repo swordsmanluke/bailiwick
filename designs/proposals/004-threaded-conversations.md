@@ -26,13 +26,13 @@ data class Post(
 )
 ```
 
-**IPFS Model** (`IpfsPost.kt`):
+**Post Model** (`Post.kt`):
 ```kotlin
-data class IpfsPost(
+data class Post(
     val timestamp: Long,
     val parent_cid: ContentId?,  // ← Already exists!
     val text: String,
-    val files: List<IpfsFileDef>,
+    val files: List<FileDef>,
     val signature: String
 )
 ```
@@ -334,7 +334,7 @@ class ReplyComposerFragment : Fragment() {
 
         val reply = Post(
             authorId = currentIdentity.id,
-            cid = null,  // Assigned after IPFS upload
+            cid = null,  // Assigned after Iroh upload
             timestamp = System.currentTimeMillis(),
             parent = parentPost.cid,  // Link to parent
             text = replyText,
@@ -367,14 +367,14 @@ Replies are just posts with a non-null `parent`. No changes needed to `PostPubli
 ```kotlin
 // PostPublisher.kt - already works
 fun publish(post: Post, cipher: Encryptor): ContentId? {
-    val ipfsPost = IpfsPost(
+    val postData = PostData(
         timestamp = post.timestamp,
         parent_cid = post.parent,  // Already included
         text = post.text,
         files = getFileDefs(post),
         signature = post.signature
     )
-    return ipfsPost.toIpfs(cipher, ipfs)
+    return postData.upload(cipher, iroh)
 }
 ```
 
@@ -385,12 +385,12 @@ When downloading a post, also fetch its parent chain for context:
 ```kotlin
 // PostDownloader.kt enhancement
 fun download(cid: ContentId, identityId: Long, cipher: Encryptor) {
-    val ipfsPost = IpfsDeserializer.fromCid(cipher, ipfs, cid, IpfsPost::class.java)
+    val postData = Deserializer.fromCid(cipher, iroh, cid, PostData::class.java)
 
     // ... existing post save logic ...
 
     // If this is a reply, ensure we have the parent
-    ipfsPost.parent_cid?.let { parentCid ->
+    postData.parent_cid?.let { parentCid ->
         if (db.postDao().findByCid(parentCid) == null) {
             // Try to download parent (may be from different user)
             downloadParentChain(parentCid, cipher)
@@ -401,10 +401,10 @@ fun download(cid: ContentId, identityId: Long, cipher: Encryptor) {
 private fun downloadParentChain(cid: ContentId, cipher: Encryptor, depth: Int = 0) {
     if (depth > 5) return  // Limit recursion
 
-    val post = IpfsDeserializer.fromCid(cipher, ipfs, cid, IpfsPost::class.java)
+    val postData = Deserializer.fromCid(cipher, iroh, cid, PostData::class.java)
     // ... save post ...
 
-    post.parent_cid?.let { parentCid ->
+    postData.parent_cid?.let { parentCid ->
         if (db.postDao().findByCid(parentCid) == null) {
             downloadParentChain(parentCid, cipher, depth + 1)
         }
@@ -416,7 +416,7 @@ private fun downloadParentChain(cid: ContentId, cipher: Encryptor, depth: Int = 
 
 ### Interaction Entity
 
-The IPFS model exists but database entity is missing:
+The model exists but database entity is missing:
 
 ```kotlin
 // New: models/db/Interaction.kt
