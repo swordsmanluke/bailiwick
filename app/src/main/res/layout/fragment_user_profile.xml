@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".fragments.UserProfileFragment">
+
+    <data>
+        <variable
+            name="identity"
+            type="com.perfectlunacy.bailiwick.models.db.Identity" />
+        <variable
+            name="isOwnProfile"
+            type="Boolean" />
+    </data>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header with back button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorSurface"
+                android:elevation="@dimen/elevation_low"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/spacing_sm">
+
+                <ImageButton
+                    android:id="@+id/btn_back"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/back"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/colorTextPrimary" />
+
+                <TextView
+                    android:id="@+id/txt_header_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_sm"
+                    android:layout_weight="1"
+                    android:text="@string/profile"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline3" />
+
+                <ImageButton
+                    android:id="@+id/btn_edit_profile"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/edit_profile"
+                    android:src="@drawable/ic_edit"
+                    android:visibility="gone"
+                    app:tint="@color/colorTextPrimary"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
+            <!-- Profile Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/spacing_md"
+                app:cardCornerRadius="@dimen/corner_radius_md"
+                app:cardElevation="@dimen/elevation_low">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <!-- Avatar and Name Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+
+                        <ImageView
+                            android:id="@+id/img_avatar"
+                            android:layout_width="@dimen/avatar_xl"
+                            android:layout_height="@dimen/avatar_xl"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:clipToOutline="true"
+                            android:contentDescription="@string/profile_picture"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/avatar" />
+
+                        <TextView
+                            android:id="@+id/txt_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_md"
+                            android:text="@{identity.name}"
+                            android:textAppearance="@style/TextAppearance.Bailiwick.Headline2"
+                            tools:text="Username" />
+
+                        <TextView
+                            android:id="@+id/txt_node_id"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_xs"
+                            android:ellipsize="middle"
+                            android:maxWidth="250dp"
+                            android:singleLine="true"
+                            android:text="@{identity.owner}"
+                            android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                            android:textColor="@color/colorTextHint"
+                            tools:text="abc123...xyz789" />
+                    </LinearLayout>
+
+                    <!-- Subscribe/Unsubscribe Button (for other users) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_subscribe"
+                        style="@style/Widget.Bailiwick.Button.Primary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/subscribe"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_unsubscribe"
+                        style="@style/Widget.Bailiwick.Button.Secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/unsubscribe"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Circle Membership Section -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_circles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardCornerRadius="@dimen/corner_radius_md"
+                app:cardElevation="@dimen/elevation_low">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/circles"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Headline3" />
+
+                    <TextView
+                        android:id="@+id/txt_circles_hint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_xs"
+                        android:text="@string/circles_hint"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                        android:textColor="@color/colorTextSecondary" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/list_circles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:nestedScrollingEnabled="false"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_circle_filter" />
+
+                    <TextView
+                        android:id="@+id/txt_no_circles"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:text="@string/not_in_any_circles"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                        android:textColor="@color/colorTextHint"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- User's Posts Section -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardCornerRadius="@dimen/corner_radius_md"
+                app:cardElevation="@dimen/elevation_low">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/posts"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Headline3" />
+
+                    <TextView
+                        android:id="@+id/txt_post_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_xs"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                        android:textColor="@color/colorTextSecondary"
+                        tools:text="12 posts" />
+
+                    <ListView
+                        android:id="@+id/list_posts"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:divider="@android:color/transparent"
+                        android:dividerHeight="@dimen/spacing_sm"
+                        android:nestedScrollingEnabled="true"
+                        tools:listitem="@layout/post" />
+
+                    <TextView
+                        android:id="@+id/txt_no_posts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:text="@string/no_posts_yet"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                        android:textColor="@color/colorTextHint"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+</layout>

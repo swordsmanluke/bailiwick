@@ -90,10 +90,41 @@
     <string name="import_password_hint">Enter backup password</string>
     <string name="password_too_short">Password must be at least 8 characters</string>
     <string name="passwords_dont_match">Passwords don\'t match</string>
+    <string name="username_too_short">Username must be at least 4 characters</string>
+    <string name="username_helper">At least 4 characters</string>
+    <string name="password_helper">At least 8 characters</string>
+
+    <!-- Sign Up - Section Headers -->
+    <string name="section_profile">Your Profile</string>
+    <string name="section_credentials">Login Credentials</string>
+    <string name="tap_to_change_photo">Tap to add a photo</string>
+
+    <!-- Sign Up - States -->
+    <string name="creating_account">Creating your account…</string>
+    <string name="account_created">Account created!</string>
+    <string name="welcome_message">Welcome to Bailiwick, %s!</string>
+    <string name="account_creation_failed">Account creation failed</string>
+    <string name="generate_robot_avatar">Generate Robot Avatar</string>
 
     <!-- Settings -->
     <string name="settings">Settings</string>
     <string name="account">Account</string>
     <string name="privacy">Privacy</string>
     <string name="about">About</string>
+
+    <!-- User Profile -->
+    <string name="profile">Profile</string>
+    <string name="back">Back</string>
+    <string name="edit_profile">Edit profile</string>
+    <string name="subscribe">Subscribe</string>
+    <string name="unsubscribe">Unsubscribe</string>
+    <string name="circles">Circles</string>
+    <string name="circles_hint">Tap to add or remove from circles</string>
+    <string name="not_in_any_circles">Not in any circles</string>
+    <string name="posts">Posts</string>
+    <string name="no_posts_yet">No posts yet</string>
+    <string name="post_count">%d posts</string>
+    <string name="post_count_one">1 post</string>
+    <string name="added_to_circle">Added to %s</string>
+    <string name="removed_from_circle">Removed from %s</string>
 </resources>

@@ -30,6 +30,7 @@ import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.FilterPreferences
 import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
@@ -125,7 +126,8 @@ class ContentFragment : BailiwickFragment() {
 
         bwModel.viewModelScope.launch {
             val circles = withContext(Dispatchers.Default) {
-                bwModel.network.circles
+                // Filter out the "everyone" circle since it's redundant with the "All" option
+                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
             }
 
             circleFilterAdapter = CircleFilterAdapter(
@@ -302,6 +304,11 @@ class ContentFragment : BailiwickFragment() {
                     ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
             }
             binding.imgMyAvatar.setImageBitmap(avatar)
+
+            // Allow tap on own avatar to view own profile
+            binding.imgMyAvatar.setOnClickListener {
+                navigateToUserProfile(bwModel.network.me.id)
+            }
         }
     }
 
@@ -388,6 +395,16 @@ class ContentFragment : BailiwickFragment() {
             bwModel,
             requireContext(),
             ArrayList()
+        ) { userId ->
+            navigateToUserProfile(userId)
+        }
+    }
+
+    private fun navigateToUserProfile(userId: Long) {
+        val bundle = UserProfileFragment.newBundle(userId)
+        requireView().findNavController().navigate(
+            R.id.action_contentFragment_to_userProfileFragment,
+            bundle
         )
     }
 

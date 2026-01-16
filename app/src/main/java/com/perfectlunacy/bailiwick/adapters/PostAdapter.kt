@@ -23,7 +23,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.IndexOutOfBoundsException
 
-class PostAdapter(private val db: BailiwickDatabase, private val bwModel: BailiwickViewModel, private val context: Context, private val list: ArrayList<Post>): BaseAdapter() {
+class PostAdapter(
+    private val db: BailiwickDatabase,
+    private val bwModel: BailiwickViewModel,
+    private val context: Context,
+    private val list: ArrayList<Post>,
+    private val onAuthorClick: ((Long) -> Unit)? = null
+): BaseAdapter() {
     override fun getCount(): Int {
         return list.count()
     }
@@ -85,6 +91,15 @@ class PostAdapter(private val db: BailiwickDatabase, private val bwModel: Bailiw
             // Back on main thread - update UI
             binding.avatar.setImageBitmap(avatar)
             binding.txtAuthor.text = author.name
+
+            // Set up click listeners for author navigation
+            onAuthorClick?.let { clickHandler ->
+                val clickListener = View.OnClickListener {
+                    clickHandler(author.id)
+                }
+                binding.avatar.setOnClickListener(clickListener)
+                binding.txtAuthor.setOnClickListener(clickListener)
+            }
 
             // Display post image if available
             val imgContent = binding.imgSocialContent
