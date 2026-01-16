@@ -953,15 +953,349 @@ Generated from code review on 2026-01-07
 
 ---
 
+## Sprint 8: Post Management
+
+### BEAD-076: Post deletion
+**Priority:** High
+**Type:** Feature
+**Files:** `ContentPublisher.kt`, `ContentDownloader.kt`, `PostDao.kt`, UI components
+**Issue:** Users cannot delete their own posts (user story: "As a Poster I want to delete a Post so that no one can read it").
+**Reference:** `designs/protocol/files.md` - Delete CID action type
+**Acceptance Criteria:**
+- [ ] Add delete button/swipe action on own posts
+- [ ] Implement Delete CID action in ContentPublisher
+- [ ] Publish delete action to Iroh doc for subscribers to receive
+- [ ] Remove post from local database
+- [ ] Handle delete action in ContentDownloader (remove cached post)
+- [ ] Show confirmation dialog before deletion
+- [ ] Update UI to remove deleted post from feed
+
+---
+
+### BEAD-077: Post editing
+**Priority:** Medium
+**Type:** Feature
+**Files:** `Post.kt`, `ContentPublisher.kt`, `ContentFragment.kt`
+**Issue:** Users cannot edit their posts after publishing (user story: "As a Poster I want to edit a Post so that I can fix typos, etc").
+**Acceptance Criteria:**
+- [ ] Add edit button on own posts
+- [ ] Open post composer with existing content pre-filled
+- [ ] Publish updated post with same signature base but new timestamp
+- [ ] Decide: versioning strategy (replace vs. append edit history)
+- [ ] Update subscribers receive edited version
+- [ ] Show "edited" indicator on modified posts
+
+---
+
+### BEAD-078: Public posts (unencrypted)
+**Priority:** Medium
+**Type:** Feature
+**Files:** `ContentPublisher.kt`, `Post.kt`, `NewPostFragment`
+**Issue:** All posts are encrypted; users cannot make truly public posts (user story: "As a Poster I want to make a Post Public so that anyone can read it").
+**Reference:** `designs/design.md` - "Public Posts will be published in the clear, but signed by the original poster"
+**Acceptance Criteria:**
+- [ ] Add "Public" option when creating posts
+- [ ] Skip encryption for public posts, but still sign
+- [ ] Public posts visible without key exchange
+- [ ] Visual indicator for public vs private posts
+- [ ] Consider public feed separate from circle feeds
+
+---
+
+## Sprint 9: Video & Advanced Media
+
+### BEAD-079: Video capture and selection
+**Priority:** High
+**Type:** Feature
+**Files:** New `VideoPickerFragment`, `ContentFragment.kt`
+**Issue:** Users can only post text and photos, not video (user story: "As a Poster I want to Post video so that I can communicate in my preferred fashion").
+**Reference:** `designs/proposals/003-media-handling.md`
+**Acceptance Criteria:**
+- [ ] Add video button to post composer
+- [ ] Support video selection from gallery
+- [ ] Support video capture from camera
+- [ ] Show video thumbnail preview before posting
+- [ ] Display video duration
+- [ ] Enforce maximum video length (TBD - see open question in proposals)
+
+---
+
+### BEAD-080: Video transcoding
+**Priority:** High
+**Type:** Feature
+**Files:** New `VideoTranscoder.kt`, background service
+**Issue:** Raw video files are too large; need hardware-accelerated transcoding.
+**Reference:** `designs/proposals/003-media-handling.md` - Transcoder library recommendation
+**Acceptance Criteria:**
+- [ ] Integrate Transcoder library (MediaCodec-based)
+- [ ] Target 720p max resolution, 4-5 Mbps H.264
+- [ ] Run transcoding in foreground service with notification
+- [ ] Show progress indicator during transcoding
+- [ ] Generate thumbnail at upload time
+- [ ] Handle transcoding failures gracefully
+- [ ] Cancel transcoding if user backs out
+
+---
+
+### BEAD-081: Video playback
+**Priority:** High
+**Type:** Feature
+**Files:** `PostAdapter.kt`, `post.xml`, new `VideoPlayerFragment`
+**Issue:** No video playback capability in the app.
+**Reference:** `designs/proposals/003-media-handling.md` - ExoPlayer recommendation
+**Acceptance Criteria:**
+- [ ] Integrate ExoPlayer for video playback
+- [ ] Show video thumbnail in feed with play button overlay
+- [ ] Tap to play inline or full-screen
+- [ ] Playback controls (play/pause, seek, volume)
+- [ ] Handle buffering states
+- [ ] Pause when scrolling off-screen
+- [ ] Support landscape orientation in full-screen
+
+---
+
+## Sprint 10: Content Moderation & Safety
+
+### BEAD-082: Content warning / NSFW tagging by author
+**Priority:** High
+**Type:** Feature
+**Files:** Post creation UI, `Post.kt`, `PostAdapter.kt`
+**Issue:** Authors cannot tag their own content as NSFW/sensitive (user story: "As a Poster I want to be able to tag the type of content I am Posting").
+**Acceptance Criteria:**
+- [ ] Add content warning toggle when creating posts
+- [ ] Add optional warning text field
+- [ ] Store warning flag in post metadata
+- [ ] Display posts with warning collapsed by default
+- [ ] "Tap to reveal" interaction for warned content
+- [ ] Setting to auto-reveal all warned content
+
+---
+
+### BEAD-083: Content filtering preferences
+**Priority:** Medium
+**Type:** Feature
+**Files:** Settings UI, `ContentDownloader.kt`
+**Issue:** Users cannot control what types of content they download (user story: "As a User I want to control the types of content I download").
+**Acceptance Criteria:**
+- [ ] Settings for content type preferences (text, images, video)
+- [ ] Settings for content warning filtering (hide NSFW by default)
+- [ ] Apply filters during download (skip unwanted types)
+- [ ] Apply filters during display (hide but allow reveal)
+- [ ] Per-circle filter overrides
+
+---
+
+### BEAD-084: Report/flag content
+**Priority:** Medium
+**Type:** Feature
+**Files:** `PostAdapter.kt`, new reporting flow
+**Issue:** Users cannot report problematic content to their network (user story: "As a User I want to be able to report NSFW/L content").
+**Acceptance Criteria:**
+- [ ] Add "Report" option in post overflow menu
+- [ ] Report categories (NSFW, spam, harassment, etc.)
+- [ ] Reporting creates a Tag interaction visible to mutual contacts
+- [ ] Option to also block the author
+- [ ] Report stored locally for personal filtering
+
+---
+
+### BEAD-085: Blocklist sharing
+**Priority:** Low
+**Type:** Feature
+**Files:** New blocklist entities and UI
+**Issue:** Users cannot share or subscribe to blocklists (user story: "As a User I want to subscribe to my friends' block lists").
+**Reference:** `designs/design.md` mentions "bailiwick blocklist"
+**Acceptance Criteria:**
+- [ ] Data model for shareable blocklist
+- [ ] Option to publish personal blocklist to subscribers
+- [ ] UI to browse and subscribe to friends' blocklists
+- [ ] Merge subscribed blocklists with personal blocks
+- [ ] Option to override specific blocks from subscribed lists
+
+---
+
+## Sprint 11: Discovery & Social Graph
+
+### BEAD-086: Find friends (FOAF search)
+**Priority:** Medium
+**Type:** Feature
+**Files:** New search UI, network layer
+**Issue:** Users cannot find IRL friends on the network (user story: "As a User I want to be able to find my IRL friends").
+**Reference:** `designs/design.md` - FOAF records, flood search
+**Acceptance Criteria:**
+- [ ] Search UI with name input
+- [ ] Implement friend-of-friend (FOAF) search protocol
+- [ ] Request propagates through social graph
+- [ ] Display matching identities with mutual connection count
+- [ ] Respect privacy settings (users can opt out of being searchable)
+- [ ] Rate limiting to prevent abuse
+
+---
+
+### BEAD-087: Profile privacy settings
+**Priority:** Medium
+**Type:** Feature
+**Files:** Settings UI, `Identity.kt`, profile publishing
+**Issue:** Users cannot hide their profile data (user story: "As a User I want to be able to hide my profile data so that I can remain anonymous").
+**Reference:** `designs/design.md` - Identity metadata is optional
+**Acceptance Criteria:**
+- [ ] Privacy settings for profile visibility
+- [ ] Option to hide name from non-contacts
+- [ ] Option to hide avatar from non-contacts
+- [ ] Option to be excluded from FOAF searches
+- [ ] Publish minimal identity data based on settings
+
+---
+
+### BEAD-088: Third-party introductions
+**Priority:** Low
+**Type:** Feature
+**Files:** New `IntroduceFragment`, `ContentPublisher.kt`
+**Issue:** Users cannot introduce two of their contacts to each other.
+**Reference:** `designs/protocol/files.md` - Introduce action type, `designs/protocol/ux.md` - Introduce flow
+**Acceptance Criteria:**
+- [ ] "Introduce" option in contact menu
+- [ ] Select two or more contacts to introduce
+- [ ] Publish Introduce action to selected contacts
+- [ ] Recipients see introduction notification
+- [ ] Option to accept/decline introduction
+- [ ] Accepted introductions enable connection flow
+
+---
+
+## Sprint 12: Storage & Performance
+
+### BEAD-089: Storage usage display
+**Priority:** Medium
+**Type:** Feature
+**Files:** Settings UI, new storage utilities
+**Issue:** Users have no visibility into app storage usage (user story: "As a User I want to limit the amount of data stored on my device").
+**Acceptance Criteria:**
+- [ ] Settings screen showing total storage used
+- [ ] Breakdown by category (posts, media, cache)
+- [ ] Breakdown by contact (who uses most space)
+- [ ] Visual indicators (progress bars, charts)
+
+---
+
+### BEAD-090: Storage limits and cleanup
+**Priority:** Medium
+**Type:** Feature
+**Files:** `BlobCache.kt`, background service, settings
+**Issue:** No mechanism to limit or clean up storage.
+**Acceptance Criteria:**
+- [ ] Setting for maximum storage limit
+- [ ] Automatic cleanup when limit approached
+- [ ] LRU eviction policy for cached content
+- [ ] Manual "clear cache" option
+- [ ] Keep own posts, prioritize recent content
+- [ ] Re-download evicted content on demand
+
+---
+
+## Sprint 13: Account Recovery
+
+### BEAD-091: Trusted friends designation
+**Priority:** Low
+**Type:** Feature
+**Files:** Contact management UI, `Identity.kt`
+**Issue:** No mechanism to designate trusted friends for account recovery (design goal: "Account Recovery - maybe").
+**Reference:** `designs/design.md` - Trusted Friend concept
+**Acceptance Criteria:**
+- [ ] Option to mark contacts as "Trusted Friends"
+- [ ] Explanation of what trusted friend status means
+- [ ] Publish trusted friend list (encrypted)
+- [ ] Minimum trusted friends required for recovery (e.g., 3)
+
+---
+
+### BEAD-092: Account recovery via trusted friends
+**Priority:** Low
+**Type:** Feature
+**Files:** New recovery flow, key management
+**Issue:** Users cannot recover account if device is lost (user story: "As a User who has forgotten my password I want to be able to recover my private key").
+**Reference:** `designs/design.md` - "Keys may be updated by a plurality of a User's chosen Trusted Friends"
+**Acceptance Criteria:**
+- [ ] Recovery request flow (new device)
+- [ ] Notification to trusted friends
+- [ ] Trusted friends approve/sign recovery request
+- [ ] Threshold signatures (e.g., 3 of 5 trusted friends)
+- [ ] Generate new keys, publish key update
+- [ ] Migrate identity to new device
+
+---
+
+## Sprint 14: Mentions & Notifications
+
+### BEAD-093: @Mention support in posts
+**Priority:** Medium
+**Type:** Feature
+**Files:** Post composer, `Post.kt`, `PostAdapter.kt`
+**Issue:** Users cannot mention other users in posts.
+**Reference:** `designs/proposals/004-threaded-conversations.md` - @Mention support
+**Acceptance Criteria:**
+- [ ] Type "@" to trigger contact autocomplete
+- [ ] Store mentions as structured data in post
+- [ ] Render mentions as tappable links
+- [ ] Tap mention to view user profile
+- [ ] Consider privacy: mentions only work for mutual contacts
+
+---
+
+### BEAD-094: Mention notifications
+**Priority:** Medium
+**Type:** Feature
+**Files:** Notification system, `ContentDownloader.kt`
+**Issue:** Users don't know when they're mentioned.
+**Acceptance Criteria:**
+- [ ] Detect mentions of self when downloading posts
+- [ ] Create local notification for mentions
+- [ ] Tap notification to open mentioned post
+- [ ] Badge/indicator in app for unread mentions
+- [ ] Setting to enable/disable mention notifications
+
+---
+
+## Sprint 15: Protocol Enhancements
+
+### BEAD-095: Gossip manifest sync implementation
+**Priority:** Critical
+**Type:** Architecture
+**Files:** New gossip layer, manifest handling
+**Issue:** Current Doc-based sync is unreliable; proposal 007 (Gossip Manifest Sync) is marked "Active" but not tracked in backlog.
+**Reference:** `designs/proposals/007-gossip-manifest-sync.md`, `designs/proposals/index.md`
+**Acceptance Criteria:**
+- [ ] Implement Gossip-based manifest announcements
+- [ ] Replace Docs with Gossip for real-time notifications
+- [ ] Hierarchical manifest structure (user → circles)
+- [ ] Retain Blobs for content storage
+- [ ] See proposal 007 for detailed requirements
+
+---
+
+### BEAD-096: Subscription request UI
+**Priority:** Medium
+**Type:** Feature
+**Files:** New `SubscriptionRequestsFragment`, notification
+**Issue:** Users cannot see or manage subscription requests (user story: "As a User, I want to be able to see Subscription requests from other Users").
+**Acceptance Criteria:**
+- [ ] List view of pending subscription requests
+- [ ] Show requester identity info (if available)
+- [ ] Accept/decline buttons
+- [ ] Accepting triggers circle assignment flow
+- [ ] Notification for new subscription requests
+
+---
+
 ## Summary
 
 | Priority | Count | Resolved |
 |----------|-------|----------|
-| Critical | 8 | 8 |
-| High | 15 + 7 | 9 |
-| Medium | 16 + 7 | 15* |
-| Low | 17 | 17 |
-| **Total** | **70** | **49*** |
+| Critical | 8 + 1 | 8 |
+| High | 15 + 7 + 5 | 9 |
+| Medium | 16 + 7 + 10 | 15* |
+| Low | 17 + 5 | 17 |
+| **Total** | **91** | **49*** |
 
 *Note: BEAD-028 deferred due to Room/KAPT limitations.
 
@@ -989,6 +1323,30 @@ Generated from code review on 2026-01-07
 
 **Sprint 7 (Post Interactions & Media):**
 - BEAD-067 through BEAD-075
+
+**Sprint 8 (Post Management):**
+- BEAD-076 through BEAD-078 (delete, edit, public posts)
+
+**Sprint 9 (Video & Advanced Media):**
+- BEAD-079 through BEAD-081 (video capture, transcoding, playback)
+
+**Sprint 10 (Content Moderation & Safety):**
+- BEAD-082 through BEAD-085 (content warnings, filtering, blocklists)
+
+**Sprint 11 (Discovery & Social Graph):**
+- BEAD-086 through BEAD-088 (FOAF search, privacy, introductions)
+
+**Sprint 12 (Storage & Performance):**
+- BEAD-089 through BEAD-090 (storage display, limits, cleanup)
+
+**Sprint 13 (Account Recovery):**
+- BEAD-091 through BEAD-092 (trusted friends, recovery flow)
+
+**Sprint 14 (Mentions & Notifications):**
+- BEAD-093 through BEAD-094 (@mentions, mention notifications)
+
+**Sprint 15 (Protocol Enhancements):**
+- BEAD-095 through BEAD-096 (gossip sync, subscription requests)
 
 **Ongoing (Tech Debt):**
 - BEAD-034 through BEAD-050 (Low)
