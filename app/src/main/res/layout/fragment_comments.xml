@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".fragments.CommentsFragment">
+
+    <data>
+        <variable name="post" type="com.perfectlunacy.bailiwick.models.db.Post"/>
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground"
+        android:orientation="vertical">
+
+        <!-- Header with back button and title -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorSurface"
+            android:elevation="@dimen/elevation_low"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_sm">
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/colorTextPrimary" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_sm"
+                android:layout_weight="1"
+                android:text="@string/comments"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline2" />
+        </LinearLayout>
+
+        <View
+            style="@style/Widget.Bailiwick.Divider" />
+
+        <!-- Original Post Preview -->
+        <LinearLayout
+            android:id="@+id/post_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorSurface"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_md">
+
+            <ImageView
+                android:id="@+id/img_author_avatar"
+                android:layout_width="@dimen/avatar_sm"
+                android:layout_height="@dimen/avatar_sm"
+                android:background="@drawable/bg_avatar_circle"
+                android:clipToOutline="true"
+                android:contentDescription="@string/desc_user_avatar"
+                android:scaleType="centerCrop"
+                android:src="@drawable/avatar" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_sm"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txt_author_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Body1"
+                    android:textStyle="bold"
+                    tools:text="John Doe" />
+
+                <TextView
+                    android:id="@+id/txt_post_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:maxLines="3"
+                    android:ellipsize="end"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                    tools:text="This is the original post content that people are commenting on..." />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            style="@style/Widget.Bailiwick.Divider" />
+
+        <!-- Comments List -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_refresh"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/list_comments"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:padding="@dimen/spacing_sm"
+                tools:listitem="@layout/item_comment" />
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <View
+            style="@style/Widget.Bailiwick.Divider" />
+
+        <!-- Comment Composer -->
+        <LinearLayout
+            android:id="@+id/comment_composer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorSurface"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_sm">
+
+            <ImageView
+                android:id="@+id/img_my_avatar"
+                android:layout_width="@dimen/avatar_sm"
+                android:layout_height="@dimen/avatar_sm"
+                android:background="@drawable/bg_avatar_circle"
+                android:clipToOutline="true"
+                android:contentDescription="@string/your_avatar"
+                android:scaleType="centerCrop"
+                android:src="@drawable/avatar" />
+
+            <EditText
+                android:id="@+id/txt_comment_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/spacing_sm"
+                android:layout_weight="1"
+                android:background="@drawable/bg_edit_text"
+                android:hint="@string/write_comment"
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="4"
+                android:minHeight="@dimen/touch_target_min"
+                android:padding="@dimen/spacing_sm"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Body2" />
+
+            <ImageButton
+                android:id="@+id/btn_send_comment"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/add_comment"
+                android:src="@drawable/ic_send"
+                app:tint="@color/colorPrimary" />
+        </LinearLayout>
+    </LinearLayout>
+</layout>

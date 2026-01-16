@@ -482,6 +482,9 @@ class ContentFragment : BailiwickFragment() {
             onMentionClick = { username ->
                 navigateToUserByUsername(username)
             },
+            onCommentClick = { post ->
+                navigateToComments(post)
+            },
             currentUserId = bwModel.network.me.id
         )
     }
@@ -557,6 +560,14 @@ class ContentFragment : BailiwickFragment() {
         val bundle = UserProfileFragment.newBundle(userId)
         requireView().findNavController().navigate(
             R.id.action_contentFragment_to_userProfileFragment,
+            bundle
+        )
+    }
+
+    private fun navigateToComments(post: Post) {
+        val bundle = CommentsFragment.newBundle(post.id, post.blobHash)
+        requireView().findNavController().navigate(
+            R.id.action_contentFragment_to_commentsFragment,
             bundle
         )
     }

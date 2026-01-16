@@ -33,6 +33,7 @@ class PostAdapter(
     private val onAuthorClick: ((Long) -> Unit)? = null,
     private val onDeleteClick: ((Post) -> Unit)? = null,
     private val onMentionClick: ((String) -> Unit)? = null,
+    private val onCommentClick: ((Post) -> Unit)? = null,
     private val currentUserId: Long = -1
 ): BaseAdapter() {
 
@@ -77,7 +78,7 @@ class PostAdapter(
             if(post == null) { return@launch }
 
             // Load all data on background thread
-            val (author, avatar, postImage) = withContext(Dispatchers.Default) {
+            val (author, avatar, postImage, commentCount) = withContext(Dispatchers.Default) {
                 val author = db.identityDao().find(post.authorId)
                 val avatar = AvatarLoader.loadAvatar(author, context.filesDir.toPath())
                     ?: BitmapFactory.decodeStream(context.assets.open("avatar.png"))
@@ -102,7 +103,12 @@ class PostAdapter(
                     null
                 }
 
-                Triple(author, avatar, postBitmap)
+                // Get comment count if the post has a blob hash
+                val commentCount = post.blobHash?.let {
+                    db.postDao().replyCount(it)
+                } ?: 0
+
+                Quad(author, avatar, postBitmap, commentCount)
             }
 
             // Back on main thread - update UI
@@ -149,6 +155,17 @@ class PostAdapter(
                 binding.txtSocialContent.movementMethod = LinkMovementMethod.getInstance()
             }
 
+            // Set up comment button with count
+            val commentText = if (commentCount > 0) {
+                context.getString(R.string.comment_count, commentCount)
+            } else {
+                context.getString(R.string.comment)
+            }
+            binding.btnComment.text = commentText
+            binding.btnComment.setOnClickListener {
+                onCommentClick?.invoke(post)
+            }
+
             notifyDataSetChanged()
         }
 
@@ -179,4 +196,8 @@ class PostAdapter(
         const val TAG = "PostAdapter"
     }
 
+    /**
+     * Helper class to hold post view data loaded on background thread.
+     */
+    private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 }

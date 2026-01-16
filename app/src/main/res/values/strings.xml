@@ -48,6 +48,7 @@
     <string name="add_comment">Add comment</string>
     <string name="add_tag">Add tag</string>
     <string name="comments_count">%d comments</string>
+    <string name="comment_count">%d</string>
     <string name="no_comments">No comments yet</string>
     <string name="write_comment">Write a comment…</string>
 
@@ -135,4 +136,13 @@
 
     <!-- Mentions -->
     <string name="user_not_found">User @%s not found</string>
+
+    <!-- Comments -->
+    <string name="comments">Comments</string>
+    <string name="reply">Reply</string>
+    <string name="replies_count">%d replies</string>
+    <string name="reply_count_one">1 reply</string>
+    <string name="send_comment">Send</string>
+    <string name="comment_added">Comment added</string>
+    <string name="replying_to">Replying to %s</string>
 </resources>
