@@ -113,6 +113,29 @@ class ContentPublisher(
     }
 
     /**
+     * Store a reaction as an encrypted blob.
+     * @return The blob hash of the encrypted reaction.
+     */
+    suspend fun publishReaction(reaction: Reaction, cipher: Encryptor): BlobHash {
+        val irohReaction = IrohReaction(
+            postHash = reaction.postHash,
+            authorNodeId = reaction.authorNodeId,
+            emoji = reaction.emoji,
+            timestamp = reaction.timestamp,
+            signature = reaction.signature,
+            isRemoval = false
+        )
+
+        val hash = storeEncrypted(irohReaction, cipher)
+        
+        // Update reaction with its hash
+        db.reactionDao().updateHash(reaction.id, hash)
+
+        Log.i(TAG, "Published reaction: $hash (${reaction.emoji} on ${reaction.postHash})")
+        return hash
+    }
+
+    /**
      * Store all unpublished content as blobs.
      * Call this to prepare local changes for sync.
      */
@@ -131,10 +154,20 @@ class ContentPublisher(
             }
         }
 
+        // Publish unpublished reactions
+        val pendingReactions = db.reactionDao().inNeedOfSync()
+        for (reaction in pendingReactions) {
+            try {
+                publishReaction(reaction, cipher)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to publish reaction ${reaction.id}: ${e.message}")
+            }
+        }
+
         // Publish unpublished actions
         publishActions()
 
-        Log.i(TAG, "Published ${pendingPosts.size} pending posts")
+        Log.i(TAG, "Published ${pendingPosts.size} pending posts, ${pendingReactions.size} pending reactions")
     }
 
     /**

@@ -221,6 +221,41 @@ class ContentDownloader(
     }
 
     /**
+     * Download a reaction and store it.
+     */
+    suspend fun downloadReaction(hash: BlobHash, nodeId: NodeId, cipher: Encryptor) {
+        // Skip if already have it
+        if (db.reactionDao().reactionExists(hash)) {
+            Log.d(TAG, "Already have reaction $hash")
+            return
+        }
+
+        val irohReaction = downloadAndDecrypt<IrohReaction>(hash, nodeId, cipher, "reaction") ?: return
+
+        if (irohReaction.isRemoval) {
+            // Handle reaction removal
+            db.reactionDao().deleteReaction(
+                irohReaction.postHash,
+                irohReaction.authorNodeId,
+                irohReaction.emoji
+            )
+            Log.i(TAG, "Removed reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+        } else {
+            // Store the reaction
+            val reaction = Reaction(
+                postHash = irohReaction.postHash,
+                authorNodeId = irohReaction.authorNodeId,
+                emoji = irohReaction.emoji,
+                timestamp = irohReaction.timestamp,
+                signature = irohReaction.signature,
+                blobHash = hash
+            )
+            db.reactionDao().insert(reaction)
+            Log.i(TAG, "Downloaded reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+        }
+    }
+
+    /**
      * Find or create an identity for a node ID.
      */
     private fun findOrCreateIdentity(nodeId: NodeId): Identity {
