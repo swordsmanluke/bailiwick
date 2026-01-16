@@ -2,6 +2,18 @@
 
 This document defines the visual design system for the Bailiwick Android app.
 
+## Design Principles
+
+| Aspect | Choice | Rationale |
+|--------|--------|-----------|
+| **Aesthetic** | Minimal & Clean | Focus on content, reduce visual noise |
+| **Base System** | Material Design 3 | Native Android integration, modern patterns |
+| **Theme** | Light only | Simpler implementation, consistent experience |
+| **Colors** | Warm orange/amber | Energy, warmth, distinct from Facebook's blue |
+| **Corners** | 12dp default | Balanced softness, modern feel |
+| **Typography** | Roboto (system) | Native feel, no extra assets |
+| **Spacing** | 4dp grid | Tight but consistent rhythm |
+
 ## Color Palette
 
 ### Primary Colors
@@ -76,12 +88,14 @@ Based on a 4dp grid system:
 
 ## Corner Radii
 
+**Default: 12dp** (Medium) for cards, buttons, and containers.
+
 | Token | Value | Usage |
 |-------|-------|-------|
-| `corner_radius_sm` | 4dp | Tags, small chips |
-| `corner_radius_md` | 8dp | Cards, buttons, inputs |
-| `corner_radius_lg` | 12dp | Filter chips, reactions |
-| `corner_radius_xl` | 16dp | Large cards |
+| `corner_radius_sm` | 8dp | Tags, small elements |
+| `corner_radius_md` | 12dp | **Default** - cards, buttons, inputs |
+| `corner_radius_lg` | 16dp | Emphasized containers |
+| `corner_radius_xl` | 24dp | Pills, large rounded elements |
 | `corner_radius_circle` | 50dp | Avatars, circular buttons |
 
 ## Elevation
@@ -98,9 +112,9 @@ Based on a 4dp grid system:
 ### Buttons
 
 **Primary Button**
-- Background: Primary color
-- Text: Accent color
-- Corner radius: 8dp
+- Background: Primary color (`#ffc04a`)
+- Text: Accent color (`#3a3a3a`)
+- Corner radius: 12dp
 - Min height: 48dp
 - Horizontal padding: 16dp
 
@@ -108,7 +122,7 @@ Based on a 4dp grid system:
 - Background: Transparent
 - Border: Primary color, 1dp
 - Text: Primary color
-- Corner radius: 8dp
+- Corner radius: 12dp
 
 **Text Button**
 - Background: Transparent
@@ -118,8 +132,8 @@ Based on a 4dp grid system:
 ### Cards
 
 **Standard Card**
-- Background: Surface color
-- Corner radius: 8dp
+- Background: Surface color (`#ffffff`)
+- Corner radius: 12dp
 - Elevation: 2dp
 - Padding: 16dp
 
@@ -130,7 +144,7 @@ Based on a 4dp grid system:
 
 **Text Input**
 - Style: Outlined
-- Corner radius: 8dp
+- Corner radius: 12dp
 - Border: Primary color when focused
 - Padding: 12dp horizontal, 8dp vertical
 
@@ -138,18 +152,18 @@ Based on a 4dp grid system:
 
 **Filter Chip**
 - Height: 32dp
-- Corner radius: 12dp
+- Corner radius: 16dp (lg)
 - Background: `#f5f5f5` (inactive), `#fff3e0` (active)
 
 **Tag Chip**
 - Height: 24dp
-- Corner radius: 4dp
+- Corner radius: 8dp (sm)
 - Background: `#e3f2fd`
 - Text: `#1565c0`
 
 **Reaction Chip**
 - Height: 28dp
-- Corner radius: 12dp
+- Corner radius: 16dp (lg)
 - Background: `#f5f5f5`
 
 ### Avatars

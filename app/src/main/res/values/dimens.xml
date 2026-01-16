@@ -15,11 +15,11 @@
     <dimen name="list_item_padding_vertical">12dp</dimen>
     <dimen name="list_item_padding_horizontal">16dp</dimen>
 
-    <!-- Corner radii -->
-    <dimen name="corner_radius_sm">4dp</dimen>
-    <dimen name="corner_radius_md">8dp</dimen>
-    <dimen name="corner_radius_lg">12dp</dimen>
-    <dimen name="corner_radius_xl">16dp</dimen>
+    <!-- Corner radii (12dp default for cards, buttons, containers) -->
+    <dimen name="corner_radius_sm">8dp</dimen>
+    <dimen name="corner_radius_md">12dp</dimen>
+    <dimen name="corner_radius_lg">16dp</dimen>
+    <dimen name="corner_radius_xl">24dp</dimen>
     <dimen name="corner_radius_circle">50dp</dimen>
 
     <!-- Elevation -->
