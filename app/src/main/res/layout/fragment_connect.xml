@@ -43,24 +43,24 @@
                 android:orientation="vertical"
                 android:padding="@dimen/spacing_md">
 
-                <!-- Invite Friend Button -->
+                <!-- Introduce Yourself Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_conn_request"
                     style="@style/Widget.Bailiwick.Button.Primary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="@dimen/spacing_md"
-                    android:text="@string/invite_friend"
+                    android:text="@string/introduce_yourself"
                     app:icon="@drawable/ic_qr_code"
                     app:iconGravity="textStart" />
 
-                <!-- Accept Invitation Button -->
+                <!-- Scan Introduction Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_conn_accept"
                     style="@style/Widget.Bailiwick.Button.Secondary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/scan_invitation"
+                    android:text="@string/scan_introduction"
                     app:icon="@drawable/ic_camera"
                     app:iconGravity="textStart" />
             </LinearLayout>

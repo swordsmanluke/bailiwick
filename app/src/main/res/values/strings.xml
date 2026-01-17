@@ -68,8 +68,8 @@
     <string name="scan">Scan</string>
     <string name="from_images">From Images</string>
     <string name="send_response">Send Response</string>
-    <string name="invite_friend">Invite Friend</string>
-    <string name="scan_invitation">Scan Invitation</string>
+    <string name="introduce_yourself">Introduce Yourself</string>
+    <string name="scan_introduction">Scan Introduction</string>
     <string name="show_my_qr">Show My QR Code</string>
     <string name="waiting_for_scan">Waiting for them to scan…</string>
     <string name="connection_step_1">Step 1: Show your QR code</string>

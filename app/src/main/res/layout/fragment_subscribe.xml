@@ -26,7 +26,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/spacing_md"
-                android:text="@string/invite_friend"
+                android:text="@string/introduce_yourself"
                 android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
 
             <!-- Step Indicator -->
