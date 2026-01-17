@@ -1,6 +1,7 @@
 package com.perfectlunacy.bailiwick.workers
 
 import android.util.Log
+import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.models.db.*
@@ -300,6 +301,8 @@ class ContentDownloader(
                     irohReaction.emoji
                 )
                 Log.i(TAG, "Removed reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+                // Notify UI of reaction change
+                Bailiwick.reactionsUpdated.postValue(System.currentTimeMillis())
             } else {
                 // Store the reaction
                 val reaction = Reaction(
@@ -312,6 +315,8 @@ class ContentDownloader(
                 )
                 db.reactionDao().insert(reaction)
                 Log.i(TAG, "Downloaded reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+                // Notify UI of reaction change
+                Bailiwick.reactionsUpdated.postValue(System.currentTimeMillis())
             }
         } finally {
             reactionsInProgress.remove(hash)

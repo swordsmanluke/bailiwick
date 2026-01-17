@@ -21,6 +21,12 @@ class Bailiwick(
         private val lock = Any()
 
         /**
+         * LiveData that emits when reactions are updated (added/removed).
+         * Observers can use this to refresh their UI when reactions change.
+         */
+        val reactionsUpdated = androidx.lifecycle.MutableLiveData<Long>()
+
+        /**
          * Check if the Bailiwick singleton has been initialized.
          * Call this before getInstance() if initialization state is uncertain.
          */

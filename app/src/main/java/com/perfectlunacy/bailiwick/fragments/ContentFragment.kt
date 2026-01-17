@@ -424,6 +424,12 @@ class ContentFragment : BailiwickFragment() {
                 Log.d(TAG, "LiveData updated: ${posts.size} posts")
                 applyFilters(posts)
             }
+
+            // Observe reactions updates to refresh visible posts
+            Bailiwick.reactionsUpdated.observe(viewLifecycleOwner) { _ ->
+                Log.d(TAG, "Reactions updated, refreshing adapter")
+                adapter.ifPresent { it.notifyDataSetChanged() }
+            }
         }
     }
 

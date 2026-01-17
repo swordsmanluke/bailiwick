@@ -54,6 +54,9 @@ interface ReactionDao {
     @Query("SELECT * FROM reaction WHERE blobHash IS NULL")
     fun inNeedOfSync(): List<Reaction>
 
+    @Query("SELECT * FROM reaction WHERE authorNodeId = :nodeId AND blobHash IS NOT NULL")
+    fun myPublishedReactions(nodeId: NodeId): List<Reaction>
+
     @Query("SELECT EXISTS(SELECT 1 FROM reaction WHERE blobHash = :hash)")
     fun reactionExists(hash: BlobHash): Boolean
 

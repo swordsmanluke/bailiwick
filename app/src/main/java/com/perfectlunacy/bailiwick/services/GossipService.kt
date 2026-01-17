@@ -719,20 +719,16 @@ class GossipService : Service() {
                     )
                 }
 
-                // Build reaction entries for posts in this circle
-                val reactionEntries = mutableListOf<ReactionEntry>()
-                for (post in posts) {
-                    val postHash = post.blobHash ?: continue
-                    val reactions = db.reactionDao().reactionsForPost(postHash)
-                    for (reaction in reactions) {
-                        val reactionHash = reaction.blobHash ?: continue
-                        reactionEntries.add(ReactionEntry(
-                            hash = reactionHash,
-                            postHash = postHash,
-                            authorNodeId = reaction.authorNodeId,
-                            timestamp = reaction.timestamp
-                        ))
-                    }
+                // Build reaction entries - query all my published reactions
+                // (not just reactions on my posts, but all reactions I've made)
+                val myReactions = db.reactionDao().myPublishedReactions(nodeId)
+                val reactionEntries = myReactions.map { reaction ->
+                    ReactionEntry(
+                        hash = reaction.blobHash!!,  // Guaranteed non-null by query
+                        postHash = reaction.postHash,
+                        authorNodeId = reaction.authorNodeId,
+                        timestamp = reaction.timestamp
+                    )
                 }
 
                 // Get members
