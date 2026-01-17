@@ -96,6 +96,9 @@
         <action
             android:id="@+id/action_subscribeFragment_to_contentFragment"
             app:destination="@id/contentFragment" />
+        <action
+            android:id="@+id/action_subscribeFragment_to_acceptSubscriptionFragment"
+            app:destination="@id/acceptSubscriptionFragment" />
     </fragment>
     <fragment
         android:id="@+id/connectFragment"

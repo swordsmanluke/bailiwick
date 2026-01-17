@@ -76,6 +76,7 @@
     <string name="connection_step_2">Step 2: Have them scan it</string>
     <string name="connection_step_3">Step 3: Scan their QR code</string>
     <string name="qr_instructions">Have the other person scan this QR code with their Bailiwick app</string>
+    <string name="scan_their_invite">Scan Their Invite</string>
 
     <!-- Share Invitation -->
     <string name="share_invitation">Share Invitation</string>

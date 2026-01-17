@@ -15,6 +15,7 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.perfectlunacy.bailiwick.QRCode
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
@@ -29,7 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
 
 
 class IntroduceSelfFragment : BailiwickFragment() {
@@ -117,6 +117,10 @@ class IntroduceSelfFragment : BailiwickFragment() {
             }
             Log.d(TAG, "Sharing invitation QR: ${f.path}")
             startActivity(Intent.createChooser(sendIntent, getString(R.string.share_invitation_title)))
+        }
+
+        binding.btnScanTheirInvite.setOnClickListener {
+            findNavController().navigate(R.id.action_subscribeFragment_to_acceptSubscriptionFragment)
         }
 
         return binding.root
