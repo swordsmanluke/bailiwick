@@ -44,12 +44,6 @@ data class UserManifest(
     }
 }
 
-/**
- * Per-circle manifest, encrypted with the circle's AES key.
- *
- * Contains the list of posts in this circle along with member information.
- * Only posts from the last 30 days are included (see RETENTION_PERIOD_MS).
- */
 data class CircleManifest(
     /** Circle ID (local database ID) */
     val circleId: Int,
@@ -59,6 +53,9 @@ data class CircleManifest(
 
     /** List of posts in this circle, ordered by timestamp (newest first) */
     val posts: List<PostEntry>,
+
+    /** List of reactions to posts in this circle */
+    val reactions: List<ReactionEntry> = emptyList(),
 
     /** List of current member NodeIds */
     val members: List<NodeId>,
@@ -81,6 +78,26 @@ data class PostEntry(
 
     /** NodeId of the post author (for multi-author circles) */
     val authorNodeId: NodeId
+)
+
+
+/**
+ * Entry for a reaction in a circle manifest.
+ *
+ * Contains the minimal information needed to identify and fetch a reaction.
+ */
+data class ReactionEntry(
+    /** Hash of the encrypted reaction blob */
+    val hash: BlobHash,
+
+    /** Hash of the post being reacted to */
+    val postHash: BlobHash,
+
+    /** NodeId of the reaction author */
+    val authorNodeId: NodeId,
+
+    /** Reaction timestamp (for ordering and retention filtering) */
+    val timestamp: Long
 )
 
 /**
@@ -125,26 +142,48 @@ object ManifestUtils {
     }
 
     /**
+     * Filter reactions to only include those within the retention period.
+     *
+     * @param reactions List of reaction entries to filter
+     * @param retentionPeriodMs Retention period in milliseconds (default: 30 days)
+     * @param now Current timestamp (default: System.currentTimeMillis())
+     * @return Filtered list of reactions within the retention period
+     */
+    fun filterReactionsByRetention(
+        reactions: List<ReactionEntry>,
+        retentionPeriodMs: Long = UserManifest.RETENTION_PERIOD_MS,
+        now: Long = System.currentTimeMillis()
+    ): List<ReactionEntry> {
+        val cutoff = now - retentionPeriodMs
+        return reactions.filter { it.timestamp >= cutoff }
+    }
+
+    /**
      * Build a CircleManifest with retention filtering applied.
      *
      * @param circleId The circle ID
      * @param name The circle name
      * @param posts List of all posts (will be filtered)
+     * @param reactions List of reactions (will be filtered)
      * @param members List of member NodeIds
-     * @return CircleManifest with only posts within retention period
+     * @return CircleManifest with only posts/reactions within retention period
      */
     fun buildCircleManifest(
         circleId: Int,
         name: String,
         posts: List<PostEntry>,
+        reactions: List<ReactionEntry> = emptyList(),
         members: List<NodeId>
     ): CircleManifest {
         val filteredPosts = filterByRetention(posts)
             .sortedByDescending { it.timestamp }  // Newest first
+        val filteredReactions = filterReactionsByRetention(reactions)
+            .sortedByDescending { it.timestamp }
         return CircleManifest(
             circleId = circleId,
             name = name,
             posts = filteredPosts,
+            reactions = filteredReactions,
             members = members
         )
     }

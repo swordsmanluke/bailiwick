@@ -14,6 +14,7 @@ import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
 import com.perfectlunacy.bailiwick.crypto.KeyStorage
 import com.perfectlunacy.bailiwick.util.GsonProvider
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Downloads content from Iroh blobs.
@@ -34,6 +35,10 @@ class ContentDownloader(
 
     private val gson = GsonProvider.gson
     private val blobCache = BlobCache(cacheDir)
+    
+    // Track in-progress downloads to prevent race conditions
+    private val postsInProgress = ConcurrentHashMap.newKeySet<BlobHash>()
+    private val reactionsInProgress = ConcurrentHashMap.newKeySet<BlobHash>()
 
     /**
      * Downloads a blob from a peer and logs a warning if not found.
@@ -177,7 +182,7 @@ class ContentDownloader(
                 }
                 valid
             }
-            
+
             var successCount = 0
             var failCount = 0
             for ((index, file) in irohPost.files.withIndex()) {
@@ -190,13 +195,9 @@ class ContentDownloader(
                     Log.e(TAG, "Exception downloading file ${file.blobHash}: ${e.message}")
                 }
             }
-            
+
             Log.i(TAG, "POST $hash files: $successCount success, $failCount failed out of $fileCount total")
         }
-        Log.d(TAG, "Downloaded post $hash with ${irohPost.files.size} files")
-
-        // Notify about the new post
-        onNewPost?.invoke(hash, identity.name, nodeId)
     }
 
     /**
@@ -276,28 +277,44 @@ class ContentDownloader(
             return
         }
 
-        val irohReaction = downloadAndDecrypt<IrohReaction>(hash, nodeId, cipher, "reaction") ?: return
+        // Skip if download already in progress (race condition prevention)
+        if (!reactionsInProgress.add(hash)) {
+            Log.d(TAG, "Download already in progress for reaction $hash")
+            return
+        }
 
-        if (irohReaction.isRemoval) {
-            // Handle reaction removal
-            db.reactionDao().deleteReaction(
-                irohReaction.postHash,
-                irohReaction.authorNodeId,
-                irohReaction.emoji
-            )
-            Log.i(TAG, "Removed reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
-        } else {
-            // Store the reaction
-            val reaction = Reaction(
-                postHash = irohReaction.postHash,
-                authorNodeId = irohReaction.authorNodeId,
-                emoji = irohReaction.emoji,
-                timestamp = irohReaction.timestamp,
-                signature = irohReaction.signature,
-                blobHash = hash
-            )
-            db.reactionDao().insert(reaction)
-            Log.i(TAG, "Downloaded reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+        try {
+            // Double-check after acquiring the lock
+            if (db.reactionDao().reactionExists(hash)) {
+                Log.d(TAG, "Already have reaction $hash (after lock)")
+                return
+            }
+
+            val irohReaction = downloadAndDecrypt<IrohReaction>(hash, nodeId, cipher, "reaction") ?: return
+
+            if (irohReaction.isRemoval) {
+                // Handle reaction removal
+                db.reactionDao().deleteReaction(
+                    irohReaction.postHash,
+                    irohReaction.authorNodeId,
+                    irohReaction.emoji
+                )
+                Log.i(TAG, "Removed reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+            } else {
+                // Store the reaction
+                val reaction = Reaction(
+                    postHash = irohReaction.postHash,
+                    authorNodeId = irohReaction.authorNodeId,
+                    emoji = irohReaction.emoji,
+                    timestamp = irohReaction.timestamp,
+                    signature = irohReaction.signature,
+                    blobHash = hash
+                )
+                db.reactionDao().insert(reaction)
+                Log.i(TAG, "Downloaded reaction ${irohReaction.emoji} on ${irohReaction.postHash}")
+            }
+        } finally {
+            reactionsInProgress.remove(hash)
         }
     }
 

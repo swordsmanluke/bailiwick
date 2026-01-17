@@ -193,7 +193,8 @@ class CommentsFragment : BailiwickFragment() {
 
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val db = Bailiwick.getInstance().db
+                val bw = Bailiwick.getInstance()
+                val db = bw.db
                 val myIdentity = bwModel.network.me
 
                 val comment = Post(
@@ -206,7 +207,7 @@ class CommentsFragment : BailiwickFragment() {
                 )
 
                 // Sign the comment
-                val keyring = Bailiwick.getInstance().keyring
+                val keyring = bw.keyring
                 val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
                 comment.sign(signer, emptyList())
 

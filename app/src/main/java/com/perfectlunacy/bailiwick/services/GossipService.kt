@@ -387,7 +387,7 @@ class GossipService : Service() {
     }
 
     /**
-     * Process a circle manifest and download its posts.
+     * Process a circle manifest and download its posts and reactions.
      */
     private suspend fun processCircleManifest(
         circleManifestHash: String,
@@ -414,7 +414,7 @@ class GossipService : Service() {
                 return
             }
 
-            Log.i(TAG, "Circle ${circleManifest.name}: ${circleManifest.posts.size} posts")
+            Log.i(TAG, "Circle ${circleManifest.name}: ${circleManifest.posts.size} posts, ${circleManifest.reactions.size} reactions")
 
             // Download posts using keys received from peer
             val postCipher = EncryptorFactory.forPeer(bw.db.keyDao(), peerNodeId) { decrypted ->
@@ -428,6 +428,19 @@ class GossipService : Service() {
             }
             for (post in circleManifest.posts) {
                 contentDownloader?.downloadPost(post.hash, peerNodeId, postCipher)
+            }
+
+            // Download reactions using same cipher as posts
+            val reactionCipher = EncryptorFactory.forPeer(bw.db.keyDao(), peerNodeId) { decrypted ->
+                try {
+                    GsonProvider.gson.fromJson(String(decrypted), IrohReaction::class.java)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            for (reaction in circleManifest.reactions) {
+                contentDownloader?.downloadReaction(reaction.hash, peerNodeId, reactionCipher)
             }
 
         } catch (e: Exception) {
@@ -706,6 +719,22 @@ class GossipService : Service() {
                     )
                 }
 
+                // Build reaction entries for posts in this circle
+                val reactionEntries = mutableListOf<ReactionEntry>()
+                for (post in posts) {
+                    val postHash = post.blobHash ?: continue
+                    val reactions = db.reactionDao().reactionsForPost(postHash)
+                    for (reaction in reactions) {
+                        val reactionHash = reaction.blobHash ?: continue
+                        reactionEntries.add(ReactionEntry(
+                            hash = reactionHash,
+                            postHash = postHash,
+                            authorNodeId = reaction.authorNodeId,
+                            timestamp = reaction.timestamp
+                        ))
+                    }
+                }
+
                 // Get members
                 val memberIds = db.circleMemberDao().membersFor(circle.id)
                 val members = memberIds.mapNotNull { memberId ->
@@ -717,6 +746,7 @@ class GossipService : Service() {
                     circleId = circle.id.toInt(),
                     name = circle.name,
                     posts = postEntries,
+                    reactions = reactionEntries,
                     members = members
                 )
 
@@ -726,7 +756,7 @@ class GossipService : Service() {
                 val hash = iroh.storeBlob(manifestJson.toByteArray())
 
                 result[circle.id.toInt()] = hash
-                Log.d(TAG, "Built circle manifest for ${circle.name}: ${postEntries.size} posts")
+                Log.d(TAG, "Built circle manifest for ${circle.name}: ${postEntries.size} posts, ${reactionEntries.size} reactions")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to build manifest for circle ${circle.name}", e)
