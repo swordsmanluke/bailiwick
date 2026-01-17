@@ -103,21 +103,20 @@ class IntroduceSelfFragment : BailiwickFragment() {
             val imagefolder = File(requireContext().cacheDir, "images")
             imagefolder.mkdirs()
             val f = File(imagefolder, "connect_request.png")
-            val out = FileOutputStream(f)
-            binding.imgQrCode.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100,out)
-            out.flush()
-            out.close()
+            FileOutputStream(f).use { out ->
+                binding.imgQrCode.drawable.toBitmap().compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
             val uri = FileProvider.getUriForFile(requireContext(), "com.perfectlunacy.shareimage.fileprovider", f)
 
-            val sendIntent = Intent()
-            sendIntent.action = Intent.ACTION_SEND
-            sendIntent.putExtra(Intent.EXTRA_TEXT,
-                "Hi! Let's connect on Bailiwick: the pro-user social network!\n" +
-                        "You can find out more here: https://bailiwick.space")
-            Log.d(TAG, "Attaching ${f.path}")
-            sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
-            sendIntent.type = "image/png"
-            startActivity(sendIntent)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_invitation_subject))
+                putExtra(Intent.EXTRA_TEXT, getString(R.string.share_invitation_text))
+                putExtra(Intent.EXTRA_STREAM, uri)
+                type = "image/png"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            Log.d(TAG, "Sharing invitation QR: ${f.path}")
+            startActivity(Intent.createChooser(sendIntent, getString(R.string.share_invitation_title)))
         }
 
         return binding.root

@@ -77,6 +77,16 @@
     <string name="connection_step_3">Step 3: Scan their QR code</string>
     <string name="qr_instructions">Have the other person scan this QR code with their Bailiwick app</string>
 
+    <!-- Share Invitation -->
+    <string name="share_invitation">Share Invitation</string>
+    <string name="share_invitation_title">Share your invitation</string>
+    <string name="share_invitation_subject">Connect with me on Bailiwick</string>
+    <string name="share_invitation_text">Hi! Let\'s connect on Bailiwick, the pro-user social network.\n\nScan this QR code with your Bailiwick app to connect.\n\nDon\'t have Bailiwick? Learn more at https://bailiwick.space</string>
+    <string name="share_response">Share Response</string>
+    <string name="share_response_title">Share your response</string>
+    <string name="share_response_subject">My Bailiwick connect code</string>
+    <string name="share_response_text">Thanks for reaching out! Here\'s my connect code.\n\nScan this QR code with your Bailiwick app to complete the connection.</string>
+
     <!-- User -->
     <string name="desc_user_avatar">User Avatar</string>
     <string name="desc_photo_preview">Photo preview</string>
