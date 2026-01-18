@@ -140,6 +140,14 @@
     <string name="circles">Circles</string>
     <string name="circles_hint">Tap to add or remove from circles</string>
     <string name="not_in_any_circles">Not in any circles</string>
+    <string name="no_circles_yet">No circles yet</string>
+    <string name="circle_icon">Circle icon</string>
+    <string name="view_circle">View circle</string>
+
+    <plurals name="member_count">
+        <item quantity="one">%d member</item>
+        <item quantity="other">%d members</item>
+    </plurals>
     <string name="posts">Posts</string>
     <string name="no_posts_yet">No posts yet</string>
     <string name="post_count">%d posts</string>

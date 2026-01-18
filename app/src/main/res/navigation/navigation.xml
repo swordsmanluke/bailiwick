@@ -54,7 +54,15 @@
         <action
             android:id="@+id/action_contentFragment_to_photoViewerFragment"
             app:destination="@id/photoViewerFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_circlesFragment"
+            app:destination="@id/circlesFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/circlesFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.CirclesFragment"
+        android:label="fragment_circles"
+        tools:layout="@layout/fragment_circles" />
     <fragment
         android:id="@+id/userProfileFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.UserProfileFragment"

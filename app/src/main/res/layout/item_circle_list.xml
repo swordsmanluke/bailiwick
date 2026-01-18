@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_sm"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="@dimen/corner_radius_md"
+    app:cardElevation="@dimen/elevation_low">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md">
+
+        <!-- Circle Icon -->
+        <ImageView
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            android:background="@drawable/bg_avatar_circle"
+            android:contentDescription="@string/circle_icon"
+            android:padding="@dimen/spacing_sm"
+            android:src="@drawable/ic_group"
+            app:tint="@color/colorPrimary" />
+
+        <!-- Circle Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txt_circle_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline3"
+                tools:text="Friends" />
+
+            <TextView
+                android:id="@+id/txt_member_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                android:textColor="@color/colorTextSecondary"
+                tools:text="5 members" />
+        </LinearLayout>
+
+        <!-- Arrow Icon -->
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/view_circle"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="@color/colorTextHint" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
