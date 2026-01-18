@@ -74,6 +74,15 @@
                 android:orientation="horizontal"
                 android:paddingEnd="@dimen/spacing_sm"
                 tools:listitem="@layout/item_circle_filter" />
+
+            <ImageButton
+                android:id="@+id/btn_add_circle"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/create_circle"
+                android:src="@drawable/ic_plus_circle_outline"
+                app:tint="@color/colorPrimary" />
         </LinearLayout>
 
         <View

@@ -138,6 +138,9 @@
     <string name="subscribe">Subscribe</string>
     <string name="unsubscribe">Unsubscribe</string>
     <string name="circles">Circles</string>
+    <string name="create_circle">Create Circle</string>
+    <string name="circle_name">Circle Name</string>
+    <string name="circle_created">Circle created</string>
     <string name="circles_hint">Tap to add or remove from circles</string>
     <string name="not_in_any_circles">Not in any circles</string>
     <string name="no_circles_yet">No circles yet</string>

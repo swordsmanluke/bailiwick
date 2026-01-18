@@ -57,6 +57,9 @@
         <action
             android:id="@+id/action_contentFragment_to_circlesFragment"
             app:destination="@id/circlesFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_createCircleFragment"
+            app:destination="@id/createCircleFragment" />
     </fragment>
     <fragment
         android:id="@+id/circlesFragment"
@@ -133,5 +136,10 @@
         android:id="@+id/photoViewerFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.PhotoViewerFragment"
         android:label="Photo Viewer" />
+    <fragment
+        android:id="@+id/createCircleFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.CreateCircleFragment"
+        android:label="fragment_create_circle"
+        tools:layout="@layout/fragment_create_circle" />
 
 </navigation>

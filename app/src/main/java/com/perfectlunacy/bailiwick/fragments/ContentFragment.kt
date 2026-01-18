@@ -14,6 +14,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
@@ -83,6 +84,15 @@ class ContentFragment : BailiwickFragment() {
 
     override fun onResume() {
         super.onResume()
+
+        // Check for circle creation result
+        val savedStateHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        savedStateHandle?.get<Long>(CreateCircleFragment.RESULT_CIRCLE_ID)?.let { circleId ->
+            savedStateHandle.remove<Long>(CreateCircleFragment.RESULT_CIRCLE_ID)
+            onCircleCreated(circleId)
+            return
+        }
+
         refreshContent()
     }
 
@@ -150,6 +160,10 @@ class ContentFragment : BailiwickFragment() {
                 filterByCircle(selectedCircle)
             }
             binding.listCircles.adapter = circleFilterAdapter
+        }
+
+        binding.btnAddCircle.setOnClickListener {
+            requireView().findNavController().navigate(R.id.action_contentFragment_to_createCircleFragment)
         }
     }
 
@@ -422,6 +436,22 @@ class ContentFragment : BailiwickFragment() {
         // Trigger UI update from current LiveData value
         bwModel.postsLive.value?.let { posts ->
             applyFilters(posts)
+        }
+    }
+
+    private fun onCircleCreated(circleId: Long) {
+        bwModel.viewModelScope.launch {
+            val circles = withContext(Dispatchers.Default) {
+                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+            }
+            circleFilterAdapter?.updateCircles(circles)
+
+            // Find and select the new circle
+            val newCircle = circles.find { it.id == circleId }
+            if (newCircle != null) {
+                filterByCircle(newCircle)
+                circleFilterAdapter?.setSelectedCircle(circleId)
+            }
         }
     }
 
