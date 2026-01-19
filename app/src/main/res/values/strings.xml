@@ -136,6 +136,18 @@
     <string name="added_to_circle">Added to %s</string>
     <string name="removed_from_circle">Removed from %s</string>
 
+    <!-- Edit Identity -->
+    <string name="change_photo">Change Photo</string>
+    <string name="profile_information">Profile Information</string>
+    <string name="public_name_helper">This is how others see you</string>
+    <string name="changes_published_warning">Changes will be published to your contacts</string>
+    <string name="saving_changes">Saving changes…</string>
+    <string name="profile_updated">Profile updated</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_message">You have unsaved changes. Are you sure you want to discard them?</string>
+    <string name="discard">Discard</string>
+    <string name="keep_editing">Keep Editing</string>
+
     <!-- Delete Post -->
     <string name="delete_post_title">Delete Post</string>
     <string name="delete_post_confirm">Are you sure you want to delete this post? This cannot be undone.</string>
