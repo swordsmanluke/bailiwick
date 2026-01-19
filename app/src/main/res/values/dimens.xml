@@ -33,6 +33,7 @@
     <dimen name="avatar_sm">32dp</dimen>
     <dimen name="avatar_md">48dp</dimen>
     <dimen name="avatar_lg">64dp</dimen>
+    <dimen name="avatar_lg_with_ring">70dp</dimen>
     <dimen name="avatar_xl">96dp</dimen>
     <dimen name="avatar_profile">120dp</dimen>
 

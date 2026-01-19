@@ -27,7 +27,7 @@ import com.perfectlunacy.bailiwick.models.db.*
         PeerTopic::class,
         ManifestCache::class
     ],
-    version = 7,  // Added keyBytes to Key entity for reliable cross-device decryption
+    version = 8,  // Added isMuted field to User entity for contact muting
     exportSchema = true
 )
 abstract class BailiwickDatabase : RoomDatabase() {

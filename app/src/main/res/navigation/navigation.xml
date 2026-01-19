@@ -54,6 +54,9 @@
         <action
             android:id="@+id/action_contentFragment_to_photoViewerFragment"
             app:destination="@id/photoViewerFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_contactFragment"
+            app:destination="@id/contactFragment" />
     </fragment>
     <fragment
         android:id="@+id/userProfileFragment"
@@ -122,5 +125,16 @@
         android:id="@+id/photoViewerFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.PhotoViewerFragment"
         android:label="Photo Viewer" />
+
+    <fragment
+        android:id="@+id/contactFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.ContactFragment"
+        android:label="fragment_contact"
+        tools:layout="@layout/fragment_contact">
+        <argument
+            android:name="identity_id"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
 
 </navigation>
