@@ -1,0 +1,95 @@
+direction: right
+
+title: Circle Editor Interaction Flow {
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+entry: ContentFragment {
+  style.fill: "#e3f2fd"
+
+  filter_bar: Circle Filter Bar {
+    chip: "Friends" {
+      shape: rectangle
+      style.fill: "#bbdefb"
+    }
+  }
+}
+
+editor: EditCircleFragment {
+  style.fill: "#fff3e0"
+
+  load: Load circle data {
+    shape: rectangle
+  }
+
+  edit_name: Edit name {
+    shape: rectangle
+  }
+
+  search: Search contacts {
+    shape: rectangle
+  }
+
+  add: Add member {
+    shape: rectangle
+  }
+
+  remove: Remove member {
+    shape: rectangle
+  }
+
+  save: Save changes {
+    shape: rectangle
+    style.fill: "#4caf50"
+    style.font-color: "#ffffff"
+  }
+
+  delete: Delete circle {
+    shape: rectangle
+    style.fill: "#f44336"
+    style.font-color: "#ffffff"
+  }
+}
+
+confirm: Delete Confirmation {
+  style.fill: "#ffebee"
+
+  dialog: "Are you sure?" {
+    shape: rectangle
+  }
+}
+
+database: Database {
+  style.fill: "#e8f5e9"
+
+  circle_dao: CircleDao {
+    shape: cylinder
+  }
+
+  member_dao: CircleMemberDao {
+    shape: cylinder
+  }
+}
+
+result: ContentFragment {
+  style.fill: "#e3f2fd"
+
+  updated: Updated circle list {
+    shape: rectangle
+  }
+}
+
+entry.filter_bar.chip -> editor: "Long-press"
+editor.load -> database.circle_dao: "find(id)"
+editor.load -> database.member_dao: "membersFor(id)"
+
+editor.save -> database.circle_dao: "update(circle)"
+editor.save -> database.member_dao: "insert/delete"
+editor.save -> result: "Navigate back"
+
+editor.delete -> confirm
+confirm -> database.circle_dao: "Confirm: delete"
+confirm -> database.member_dao: "delete members"
+confirm -> result: "Navigate back"

@@ -1,0 +1,105 @@
+direction: down
+
+title: Circle Editor Screen Layout {
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+screen: EditCircleFragment {
+  style.fill: "#f5f5f5"
+
+  toolbar: Toolbar {
+    style.fill: "#1976d2"
+
+    back: "←" {
+      shape: circle
+      style.fill: "#ffffff"
+    }
+    title: "Edit Circle" {
+      style.font-color: "#ffffff"
+    }
+    overflow: "⋮" {
+      shape: circle
+      style.fill: "#ffffff"
+    }
+  }
+
+  content: Content Area {
+    style.fill: "#ffffff"
+
+    name_section: Circle Name Section {
+      style.fill: "#e3f2fd"
+
+      label: "Circle Name" {
+        style.font-size: 12
+      }
+      input: TextInputEditText {
+        shape: rectangle
+        style.fill: "#ffffff"
+      }
+    }
+
+    members_section: Members Section {
+      style.fill: "#e8f5e9"
+
+      header: "Members (3)" {
+        style.font-size: 14
+      }
+
+      search: Search contacts... {
+        shape: rectangle
+        style.fill: "#f5f5f5"
+      }
+
+      suggestions: Search Suggestions {
+        shape: rectangle
+        style.fill: "#ffffff"
+        style.stroke-dash: 3
+      }
+
+      member_list: Current Members {
+        shape: rectangle
+        style.fill: "#ffffff"
+
+        member1: "[Avatar] Alice    ✕" {
+          shape: rectangle
+        }
+        member2: "[Avatar] Bob      ✕" {
+          shape: rectangle
+        }
+        member3: "[Avatar] Carol    ✕" {
+          shape: rectangle
+        }
+      }
+
+      search -> suggestions: "Shows matches"
+    }
+  }
+
+  button_area: Button Area {
+    style.fill: "#fafafa"
+
+    save_btn: "Save Changes" {
+      shape: rectangle
+      style.fill: "#1976d2"
+      style.font-color: "#ffffff"
+    }
+  }
+
+  toolbar -> content
+  content -> button_area
+}
+
+overflow_menu: Overflow Menu {
+  style.fill: "#ffffff"
+  style.stroke: "#cccccc"
+
+  delete_option: "Delete Circle" {
+    style.font-color: "#d32f2f"
+  }
+}
+
+screen.toolbar.overflow -> overflow_menu: "Tap" {
+  style.stroke-dash: 3
+}
