@@ -17,7 +17,8 @@ class CircleFilterAdapter(
     private val context: Context,
     private var circles: List<Circle>,
     private var selectedCircleId: Long? = null,
-    private val onCircleSelected: (Circle?) -> Unit
+    private val onCircleSelected: (Circle?) -> Unit,
+    private val onCircleLongPress: ((Circle) -> Unit)? = null
 ) : RecyclerView.Adapter<CircleFilterAdapter.CircleViewHolder>() {
 
     // Add "All" as a virtual circle option
@@ -72,6 +73,16 @@ class CircleFilterAdapter(
                 val newSelection = if (circle.id == -1L) null else circle.id
                 setSelectedCircle(newSelection)
                 onCircleSelected(if (circle.id == -1L) null else circle)
+            }
+
+            // Long-press to edit circle (not available for "All" option)
+            if (circle.id != -1L && onCircleLongPress != null) {
+                itemView.setOnLongClickListener {
+                    onCircleLongPress.invoke(circle)
+                    true
+                }
+            } else {
+                itemView.setOnLongClickListener(null)
             }
         }
     }

@@ -137,7 +137,7 @@ class UserProfileFragment : BailiwickFragment() {
             binding.cardCircles.visibility = View.GONE  // Don't show circle membership for own profile
 
             binding.btnEditProfile.setOnClickListener {
-                Toast.makeText(context, "Edit profile coming soon", Toast.LENGTH_SHORT).show()
+                findNavController().navigate(R.id.action_userProfileFragment_to_editIdentityFragment)
             }
 
             binding.btnExportIdentity.setOnClickListener {
@@ -148,6 +148,7 @@ class UserProfileFragment : BailiwickFragment() {
             // Other user's profile - show circle membership and subscribe options
             binding.btnEditProfile.visibility = View.GONE
             binding.cardCircles.visibility = View.VISIBLE
+            binding.btnManageContact.visibility = View.VISIBLE
 
             // Determine if user is subscribed (in any circle)
             bwModel.viewModelScope.launch {
@@ -174,7 +175,20 @@ class UserProfileFragment : BailiwickFragment() {
             binding.btnUnsubscribe.setOnClickListener {
                 unsubscribeFromUser()
             }
+
+            // Manage Contact button - navigate to contact management
+            binding.btnManageContact.setOnClickListener {
+                navigateToContact()
+            }
         }
+    }
+
+    private fun navigateToContact() {
+        val bundle = ContactFragment.newBundle(userId)
+        findNavController().navigate(
+            R.id.action_userProfileFragment_to_contactFragment,
+            bundle
+        )
     }
 
     private fun setupCircleMembership(circles: List<Circle>, memberOfCircleIds: Set<Long>) {

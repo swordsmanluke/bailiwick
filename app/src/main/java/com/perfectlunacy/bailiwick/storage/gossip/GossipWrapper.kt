@@ -25,6 +25,9 @@ interface GossipMessageHandler {
     /** Called when a peer leaves the topic swarm */
     fun onPeerLeft(peerId: String) {}
 
+    /** Called when gossip lagged and messages may have been missed */
+    fun onLagged() {}
+
     /** Called when an error occurs */
     fun onError(error: String) {}
 }
@@ -208,6 +211,7 @@ class GossipWrapper private constructor(
                 }
                 MessageType.LAGGED -> {
                     Log.w(TAG, "Gossip lagged - some messages may have been missed")
+                    handler.onLagged()
                 }
                 MessageType.ERROR -> {
                     val error = msg.asError()

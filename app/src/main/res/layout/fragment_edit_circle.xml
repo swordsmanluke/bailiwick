@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".fragments.EditCircleFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground"
+        android:orientation="vertical">
+
+        <!-- Toolbar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/colorPrimary"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@android:color/white"
+            app:title="@string/edit_circle"
+            app:titleTextColor="@android:color/white">
+
+            <ImageButton
+                android:id="@+id/btn_menu"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_gravity="end"
+                android:layout_marginEnd="@dimen/spacing_sm"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/settings"
+                android:src="@drawable/ic_more_vert"
+                app:tint="@android:color/white" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md">
+
+                <!-- Circle Name Card -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.Bailiwick.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_circle_name"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/circle_name"
+                            app:errorEnabled="true">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/txt_circle_name"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:imeOptions="actionDone" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Members Section -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.Bailiwick.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <!-- Members Header -->
+                        <TextView
+                            android:id="@+id/txt_members_header"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:textAppearance="@style/TextAppearance.Bailiwick.Headline3"
+                            tools:text="Members (3)" />
+
+                        <!-- Search Input -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/layout_search"
+                            style="@style/Widget.Bailiwick.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            app:startIconDrawable="@drawable/ic_search">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/txt_search"
+                                style="@style/Widget.Bailiwick.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/search_contacts"
+                                android:inputType="text"
+                                android:imeOptions="actionSearch" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Search Suggestions -->
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/list_suggestions"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:background="@color/colorSurface"
+                            android:elevation="@dimen/elevation_low"
+                            android:maxHeight="150dp"
+                            android:visibility="gone"
+                            tools:itemCount="3"
+                            tools:listitem="@layout/item_contact_suggestion"
+                            tools:visibility="visible" />
+
+                        <!-- Current Members List -->
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/list_members"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            tools:itemCount="3"
+                            tools:listitem="@layout/item_circle_member" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Save Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save"
+            style="@style/Widget.Bailiwick.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/spacing_md"
+            android:enabled="false"
+            android:text="@string/save_changes" />
+
+    </LinearLayout>
+</layout>

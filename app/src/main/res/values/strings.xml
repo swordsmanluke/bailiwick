@@ -158,6 +158,31 @@
     <string name="added_to_circle">Added to %s</string>
     <string name="removed_from_circle">Removed from %s</string>
 
+    <!-- Circle Editor -->
+    <string name="edit_circle">Edit Circle</string>
+    <string name="members_count">Members (%d)</string>
+    <string name="search_contacts">Search contacts…</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="delete_circle">Delete Circle</string>
+    <string name="delete_circle_confirm">Are you sure you want to delete \"%s\"? This cannot be undone.</string>
+    <string name="circle_updated">Circle updated</string>
+    <string name="circle_deleted">Circle deleted</string>
+    <string name="cannot_delete_everyone">Cannot delete the default circle</string>
+    <string name="circle_name_required">Circle name is required</string>
+    <string name="remove_member">Remove member</string>
+
+    <!-- Edit Identity -->
+    <string name="change_photo">Change Photo</string>
+    <string name="profile_information">Profile Information</string>
+    <string name="public_name_helper">This is how others see you</string>
+    <string name="changes_published_warning">Changes will be published to your contacts</string>
+    <string name="saving_changes">Saving changes…</string>
+    <string name="profile_updated">Profile updated</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_message">You have unsaved changes. Are you sure you want to discard them?</string>
+    <string name="discard">Discard</string>
+    <string name="keep_editing">Keep Editing</string>
+
     <!-- Delete Post -->
     <string name="delete_post_title">Delete Post</string>
     <string name="delete_post_confirm">Are you sure you want to delete this post? This cannot be undone.</string>
@@ -182,4 +207,25 @@
     <string name="notification_new_post_single">New post from %s</string>
     <string name="notification_new_posts_single_author">%1$d new posts from %2$s</string>
     <string name="notification_new_posts_multiple_authors">%1$d new posts from %2$d people</string>
+
+    <!-- Contact Management -->
+    <string name="contact">Contact</string>
+    <string name="add_to_circle">Add to circle</string>
+    <string name="add_to_circle_hint">Add to circle…</string>
+    <string name="already_a_member">already a member</string>
+    <string name="remove_from_circle">Remove from circle</string>
+    <string name="mute_contact">Mute contact</string>
+    <string name="unmute_contact">Unmute contact</string>
+    <string name="mute_confirmation_title">Mute %s?</string>
+    <string name="mute_confirmation_message">You will stop receiving their posts, but they can still see your posts shared with their circles.</string>
+    <string name="muted">Muted</string>
+    <string name="muted_contact">Muted %s</string>
+    <string name="unmuted_contact">Unmuted %s</string>
+    <string name="delete_contact">Delete contact</string>
+    <string name="delete_contact_title">Delete Contact?</string>
+    <string name="delete_contact_message">This will permanently delete %s and remove them from all circles. All their posts will be removed from your device. This cannot be undone. A new introduction will be required to reconnect.</string>
+    <string name="deleted_contact">Deleted %s</string>
+    <string name="contact_load_error">Unable to load contact</string>
+    <string name="view_posts">View Posts</string>
+    <string name="manage_contact">Manage Contact</string>
 </resources>

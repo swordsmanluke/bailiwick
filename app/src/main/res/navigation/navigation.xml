@@ -60,6 +60,12 @@
         <action
             android:id="@+id/action_contentFragment_to_createCircleFragment"
             app:destination="@id/createCircleFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_contactFragment"
+            app:destination="@id/contactFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_editCircleFragment"
+            app:destination="@id/editCircleFragment" />
     </fragment>
     <fragment
         android:id="@+id/circlesFragment"
@@ -80,7 +86,18 @@
             app:destination="@id/contentFragment"
             app:popUpTo="@id/contentFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_userProfileFragment_to_editIdentityFragment"
+            app:destination="@id/editIdentityFragment" />
+        <action
+            android:id="@+id/action_userProfileFragment_to_contactFragment"
+            app:destination="@id/contactFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/editIdentityFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.EditIdentityFragment"
+        android:label="fragment_edit_identity"
+        tools:layout="@layout/fragment_edit_identity" />
     <fragment
         android:id="@+id/commentsFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.CommentsFragment"
@@ -141,5 +158,36 @@
         android:name="com.perfectlunacy.bailiwick.fragments.CreateCircleFragment"
         android:label="fragment_create_circle"
         tools:layout="@layout/fragment_create_circle" />
+
+    <fragment
+        android:id="@+id/contactFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.ContactFragment"
+        android:label="fragment_contact"
+        tools:layout="@layout/fragment_contact">
+        <argument
+            android:name="identity_id"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <action
+            android:id="@+id/action_contactFragment_to_userProfileFragment"
+            app:destination="@id/userProfileFragment" />
+        <action
+            android:id="@+id/action_contactFragment_to_editCircleFragment"
+            app:destination="@id/editCircleFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editCircleFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.EditCircleFragment"
+        android:label="fragment_edit_circle"
+        tools:layout="@layout/fragment_edit_circle">
+        <argument
+            android:name="circle_id"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <action
+            android:id="@+id/action_editCircleFragment_to_contactFragment"
+            app:destination="@id/contactFragment" />
+    </fragment>
 
 </navigation>

@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".fragments.EditIdentityFragment">
+
+    <data>
+        <variable
+            name="identity"
+            type="com.perfectlunacy.bailiwick.models.db.Identity" />
+    </data>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground">
+
+        <!-- Main Content -->
+        <LinearLayout
+            android:id="@+id/layout_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorSurface"
+                android:elevation="@dimen/elevation_low"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/spacing_sm">
+
+                <ImageButton
+                    android:id="@+id/btn_back"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/back"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/colorTextPrimary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_sm"
+                    android:layout_weight="1"
+                    android:text="@string/edit_profile"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Headline3" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_save"
+                    style="@style/Widget.Bailiwick.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/save" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <!-- Avatar Section Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Bailiwick.Card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical"
+                            android:padding="@dimen/spacing_md">
+
+                            <!-- Avatar with camera overlay -->
+                            <FrameLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="@dimen/spacing_sm">
+
+                                <ImageButton
+                                    android:id="@+id/btn_avatar"
+                                    android:layout_width="@dimen/avatar_profile"
+                                    android:layout_height="@dimen/avatar_profile"
+                                    android:background="@drawable/bg_avatar_circle"
+                                    android:clipToOutline="true"
+                                    android:contentDescription="@string/tap_to_change_photo"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/avatar" />
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_lg"
+                                    android:layout_height="@dimen/icon_lg"
+                                    android:layout_gravity="bottom|end"
+                                    android:background="@drawable/bg_avatar_circle"
+                                    android:contentDescription="@null"
+                                    android:padding="@dimen/spacing_xs"
+                                    android:src="@drawable/ic_camera"
+                                    app:tint="@color/colorTextSecondary" />
+                            </FrameLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="@dimen/spacing_md"
+                                android:text="@string/tap_to_change_photo"
+                                android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
+                                android:textColor="@color/colorPrimary" />
+
+                            <!-- Photo Options -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="@dimen/spacing_sm"
+                                android:text="@string/change_photo"
+                                android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                                android:textColor="@color/colorTextSecondary" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="@dimen/spacing_sm"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_camera"
+                                    style="@style/Widget.Bailiwick.Button.Secondary"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="@dimen/spacing_sm"
+                                    android:layout_weight="1"
+                                    android:text="@string/take_photo"
+                                    app:icon="@drawable/ic_camera"
+                                    app:iconGravity="textStart" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_gallery"
+                                    style="@style/Widget.Bailiwick.Button.Secondary"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/spacing_sm"
+                                    android:layout_weight="1"
+                                    android:text="@string/choose_photo"
+                                    app:icon="@drawable/ic_photo_library"
+                                    app:iconGravity="textStart" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_generate_avatar"
+                                style="@style/Widget.Bailiwick.Button.Text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/generate_robot_avatar" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Profile Information Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_information"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Headline3"
+                        android:textColor="@color/colorTextSecondary" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Bailiwick.Card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_md">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="@dimen/spacing_md">
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/layout_public_name"
+                                style="@style/Widget.Bailiwick.TextInputLayout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/public_name"
+                                app:helperText="@string/public_name_helper"
+                                app:helperTextEnabled="true">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/txt_public_name"
+                                    style="@style/Widget.Bailiwick.TextInputEditText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:imeOptions="actionDone"
+                                    android:inputType="textPersonName"
+                                    android:text="@{identity.name}" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Info Banner -->
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Bailiwick.Card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardBackgroundColor="@color/circleFilterActive">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="@dimen/spacing_md">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_md"
+                                android:layout_height="@dimen/icon_md"
+                                android:layout_marginEnd="@dimen/spacing_sm"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_notification"
+                                app:tint="@color/colorPrimaryDark" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/changes_published_warning"
+                                android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                                android:textColor="@color/colorPrimaryDark" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- Loading Overlay -->
+        <FrameLayout
+            android:id="@+id/overlay_loading"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorOverlay"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Bailiwick.Card"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                app:cardElevation="@dimen/elevation_high">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_xl">
+
+                    <ProgressBar
+                        android:layout_width="@dimen/icon_xl"
+                        android:layout_height="@dimen/icon_xl"
+                        android:indeterminateTint="@color/colorPrimary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/saving_changes"
+                        android:textAppearance="@style/TextAppearance.Bailiwick.Body1" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
+
+    </FrameLayout>
+</layout>

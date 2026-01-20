@@ -155,15 +155,53 @@ class ContentFragment : BailiwickFragment() {
             circleFilterAdapter = CircleFilterAdapter(
                 requireContext(),
                 circles,
-                filterByCircleId
-            ) { selectedCircle ->
-                filterByCircle(selectedCircle)
-            }
+                filterByCircleId,
+                onCircleSelected = { selectedCircle ->
+                    filterByCircle(selectedCircle)
+                },
+                onCircleLongPress = { circle ->
+                    navigateToEditCircle(circle.id)
+                }
+            )
             binding.listCircles.adapter = circleFilterAdapter
         }
 
         binding.btnAddCircle.setOnClickListener {
             requireView().findNavController().navigate(R.id.action_contentFragment_to_createCircleFragment)
+        }
+
+        // Observe result from EditCircleFragment
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Long>(
+            EditCircleFragment.RESULT_CIRCLE_ID
+        )?.observe(viewLifecycleOwner) { _ ->
+            reloadCircles()
+        }
+
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>(
+            EditCircleFragment.RESULT_DELETED
+        )?.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                filterByCircleId = null
+                filterPrefs.clearFilters()
+                reloadCircles()
+            }
+        }
+    }
+
+    private fun navigateToEditCircle(circleId: Long) {
+        val bundle = EditCircleFragment.newBundle(circleId)
+        requireView().findNavController().navigate(
+            R.id.action_contentFragment_to_editCircleFragment,
+            bundle
+        )
+    }
+
+    private fun reloadCircles() {
+        bwModel.viewModelScope.launch {
+            val circles = withContext(Dispatchers.Default) {
+                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+            }
+            circleFilterAdapter?.updateCircles(circles)
         }
     }
 
@@ -406,15 +444,18 @@ class ContentFragment : BailiwickFragment() {
 
     private fun displayAvatar(binding: FragmentContentBinding) {
         bwModel.viewModelScope.launch {
-            val avatar = withContext(Dispatchers.Default) {
-                AvatarLoader.loadAvatar(bwModel.network.me, requireContext().filesDir.toPath())
+            val (avatar, userId) = withContext(Dispatchers.Default) {
+                val me = bwModel.network.me
+                val loadedAvatar = AvatarLoader.loadAvatar(me, requireContext().filesDir.toPath())
                     ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+                Pair(loadedAvatar, me.id)
             }
             binding.imgMyAvatar.setImageBitmap(avatar)
 
             // Allow tap on own avatar to view own profile
+            // Use cached userId to avoid main thread DB access
             binding.imgMyAvatar.setOnClickListener {
-                navigateToUserProfile(bwModel.network.me.id)
+                navigateToUserProfile(userId)
             }
         }
     }
