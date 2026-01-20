@@ -36,6 +36,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 
@@ -105,6 +107,9 @@ class GossipService : Service() {
 
     // Track connected peers for status updates
     private val connectedPeers = ConcurrentHashMap.newKeySet<String>()
+
+    // Mutex to prevent concurrent publishManifest calls (race condition fix)
+    private val publishMutex = Mutex()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -245,7 +250,7 @@ class GossipService : Service() {
             Log.i(TAG, "Peer joined our topic: $peerId")
             connectedPeers.add(peerId)
             updateNotificationWithPeerCount()
-            
+
             // Publish our manifest so the new peer gets our latest state
             publishManifest()
         }
@@ -254,6 +259,12 @@ class GossipService : Service() {
             Log.i(TAG, "Peer left our topic: $peerId")
             connectedPeers.remove(peerId)
             updateNotificationWithPeerCount()
+        }
+
+        override fun onLagged() {
+            Log.w(TAG, "Gossip lagged on own topic - republishing manifest")
+            // Republish manifest to ensure peers have our latest state
+            publishManifest()
         }
     }
 
@@ -273,6 +284,13 @@ class GossipService : Service() {
 
         override fun onPeerLeft(peerId: String) {
             Log.d(TAG, "Peer $peerId left topic for $peerNodeId")
+        }
+
+        override fun onLagged() {
+            Log.w(TAG, "Gossip lagged on peer topic $peerNodeId - may have missed announcements")
+            // We can't request a manifest from the peer, but republishing ours
+            // may trigger them to respond with theirs (if they see us as a new peer)
+            publishManifest()
         }
 
         override fun onError(error: String) {
@@ -554,90 +572,99 @@ class GossipService : Service() {
     /**
      * Publish a manifest announcement to our topic.
      * Called when local content changes (new post, updated identity, etc.)
+     *
+     * Uses a mutex to prevent concurrent calls from causing version conflicts.
+     * Multiple rapid calls (e.g., posting multiple items quickly) would otherwise
+     * read the same version, increment it, and broadcast duplicate versions.
+     * The receiver skips versions it has already seen, causing content to be missed.
      */
     fun publishManifest() {
         scope.launch {
-            try {
-                val bw = Bailiwick.getInstance()
-                val db = bw.db
-                val iroh = bw.iroh
-                val ed25519Keyring = Ed25519Keyring.create(applicationContext)
+            // Use mutex to ensure only one publish runs at a time
+            // This prevents the race condition where multiple calls read the same version
+            publishMutex.withLock {
+                try {
+                    val bw = Bailiwick.getInstance()
+                    val db = bw.db
+                    val iroh = bw.iroh
+                    val ed25519Keyring = Ed25519Keyring.create(applicationContext)
 
-                // Build UserManifest
-                val nodeId = iroh.nodeId()
-                val identity = db.identityDao().findByOwner(nodeId)
-                if (identity == null) {
-                    Log.w(TAG, "No identity found, skipping manifest publish")
-                    return@launch
-                }
+                    // Build UserManifest
+                    val nodeId = iroh.nodeId()
+                    val identity = db.identityDao().findByOwner(nodeId)
+                    if (identity == null) {
+                        Log.w(TAG, "No identity found, skipping manifest publish")
+                        return@withLock
+                    }
 
-                // Ensure identity is published - publish if missing
-                var identityHash = identity.blobHash
-                if (identityHash == null) {
-                    Log.i(TAG, "Identity not published, publishing now...")
+                    // Ensure identity is published - publish if missing
+                    var identityHash = identity.blobHash
+                    if (identityHash == null) {
+                        Log.i(TAG, "Identity not published, publishing now...")
+                        val publisher = ContentPublisher(iroh, db)
+                        identityHash = publisher.publishIdentity(identity)
+                        Log.i(TAG, "Identity published: $identityHash")
+                    }
+
+                    // Get version from SharedPreferences and increment
+                    val prefs = applicationContext.getSharedPreferences("gossip_state", Context.MODE_PRIVATE)
+                    val currentVersion = prefs.getLong("manifest_version", 0)
+                    val newVersion = currentVersion + 1
+
+                    // Publish any pending actions to blob storage
                     val publisher = ContentPublisher(iroh, db)
-                    identityHash = publisher.publishIdentity(identity)
-                    Log.i(TAG, "Identity published: $identityHash")
+                    publisher.publishActions()
+
+                    // Build circle manifests
+                    val circleManifests = buildCircleManifests(nodeId, ed25519Keyring)
+
+                    // Build pending actions map
+                    val actions = buildActionsMap()
+
+                    val userManifest = UserManifest(
+                        version = newVersion,
+                        identityHash = identityHash,
+                        circleManifests = circleManifests,
+                        actions = actions
+                    )
+
+                    // Store manifest as unencrypted JSON for now
+                    // TODO: Implement proper encryption with shared keys
+                    val manifestJson = GsonProvider.gson.toJson(userManifest)
+                    val manifestHash = iroh.storeBlob(manifestJson.toByteArray())
+
+                    Log.i(TAG, "Stored manifest blob: $manifestHash")
+
+                    // Create signed announcement
+                    val signer = ed25519Keyring.signer()
+                    val signatureData = (manifestHash + newVersion.toString()).toByteArray()
+                    val signature = signer.signToString(signatureData)
+
+                    val announcement = ManifestAnnouncement(
+                        manifestHash = manifestHash,
+                        version = newVersion,
+                        signature = signature
+                    )
+
+                    val announcementJson = GsonProvider.gson.toJson(announcement)
+
+                    // Broadcast to own topic
+                    if (myTopicSubscription != null) {
+                        Log.d(TAG, "Broadcasting manifest to ${connectedPeers.size} connected peers")
+                        myTopicSubscription?.broadcast(announcementJson.toByteArray())
+                        Log.d(TAG, "Broadcast completed")
+                    } else {
+                        Log.w(TAG, "Cannot broadcast - no topic subscription")
+                    }
+
+                    // Update local version in SharedPreferences
+                    prefs.edit().putLong("manifest_version", newVersion).apply()
+
+                    Log.i(TAG, "Published manifest version $newVersion, hash ${manifestHash.take(16)}...")
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to publish manifest", e)
                 }
-
-                // Get version from SharedPreferences and increment
-                val prefs = applicationContext.getSharedPreferences("gossip_state", Context.MODE_PRIVATE)
-                val currentVersion = prefs.getLong("manifest_version", 0)
-                val newVersion = currentVersion + 1
-
-                // Publish any pending actions to blob storage
-                val publisher = ContentPublisher(iroh, db)
-                publisher.publishActions()
-
-                // Build circle manifests
-                val circleManifests = buildCircleManifests(nodeId, ed25519Keyring)
-
-                // Build pending actions map
-                val actions = buildActionsMap()
-
-                val userManifest = UserManifest(
-                    version = newVersion,
-                    identityHash = identityHash,
-                    circleManifests = circleManifests,
-                    actions = actions
-                )
-
-                // Store manifest as unencrypted JSON for now
-                // TODO: Implement proper encryption with shared keys
-                val manifestJson = GsonProvider.gson.toJson(userManifest)
-                val manifestHash = iroh.storeBlob(manifestJson.toByteArray())
-
-                Log.i(TAG, "Stored manifest blob: $manifestHash")
-
-                // Create signed announcement
-                val signer = ed25519Keyring.signer()
-                val signatureData = (manifestHash + newVersion.toString()).toByteArray()
-                val signature = signer.signToString(signatureData)
-
-                val announcement = ManifestAnnouncement(
-                    manifestHash = manifestHash,
-                    version = newVersion,
-                    signature = signature
-                )
-
-                val announcementJson = GsonProvider.gson.toJson(announcement)
-
-                // Broadcast to own topic
-                if (myTopicSubscription != null) {
-                    Log.d(TAG, "Broadcasting manifest to ${connectedPeers.size} connected peers")
-                    myTopicSubscription?.broadcast(announcementJson.toByteArray())
-                    Log.d(TAG, "Broadcast completed")
-                } else {
-                    Log.w(TAG, "Cannot broadcast - no topic subscription")
-                }
-
-                // Update local version in SharedPreferences
-                prefs.edit().putLong("manifest_version", newVersion).apply()
-
-                Log.i(TAG, "Published manifest version $newVersion, hash ${manifestHash.take(16)}...")
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to publish manifest", e)
             }
         }
     }
