@@ -15,9 +15,11 @@ import androidx.navigation.fragment.findNavController
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.databinding.FragmentEditIdentityBinding
 import com.perfectlunacy.bailiwick.models.db.Identity
+import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import com.perfectlunacy.bailiwick.util.PhotoPicker
 import com.perfectlunacy.bailiwick.util.RobotAvatarGenerator
+import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -229,8 +231,14 @@ class EditIdentityFragment : BailiwickFragment() {
 
                     Log.d(TAG, "Updated identity: name=$newName, avatarHash=$newAvatarHash")
 
-                    // Trigger republish of identity (via network layer)
-                    // The ContentPublisher will pick up the change on next publish cycle
+                    // Republish identity to Iroh blob storage (updates blobHash)
+                    val publisher = ContentPublisher(bwModel.iroh, bwModel.db)
+                    val newBlobHash = publisher.publishIdentity(updatedIdentity)
+                    Log.d(TAG, "Republished identity with new blobHash: $newBlobHash")
+
+                    // Trigger manifest sync to notify peers of updated identity
+                    GossipService.getInstance()?.publishManifest()
+                    Log.i(TAG, "Triggered manifest publish for identity update")
                 }
 
                 hideLoading()
