@@ -150,6 +150,12 @@ class AcceptIntroductionFragment : BailiwickFragment() {
             val bwActivity = activity as? BailiwickActivity ?: return@launch
             bwActivity.initState.first { it is InitState.Ready }
             setupModeObserver(binding)
+
+            // Check for pending test introduction (from debug intent)
+            BailiwickActivity.consumePendingTestIntroduction()?.let { introductionJson ->
+                Log.d("AcceptIntro", "Processing pending test introduction")
+                processIntroduction(introductionJson)
+            }
         }
 
         return binding.root

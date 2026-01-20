@@ -1,5 +1,6 @@
 package com.perfectlunacy.bailiwick
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
@@ -42,12 +43,37 @@ class BailiwickActivity : AppCompatActivity() {
         // Restore saved state to preserve navigation and registerForActivityResult contracts
         super.onCreate(savedInstanceState)
 
+        // Check for test introduction intent (debug builds only)
+        handleTestIntroductionIntent(intent)
+
         // Show UI immediately - splash screen will display while we initialize
         showDisplay()
 
         // Initialize asynchronously
         lifecycleScope.launch {
             initBailiwick()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        // Handle test introduction intent if app is already running
+        intent?.let { handleTestIntroductionIntent(it) }
+    }
+
+    /**
+     * Handles test introduction intents for E2E testing.
+     * Only enabled in debug builds to allow bypassing QR code scanning.
+     */
+    private fun handleTestIntroductionIntent(intent: Intent) {
+        if (!BuildConfig.DEBUG) return
+
+        if (intent.action == ACTION_TEST_INTRODUCTION) {
+            val introductionJson = intent.getStringExtra(EXTRA_INTRODUCTION_JSON)
+            if (introductionJson != null) {
+                Log.d(TAG, "Received test introduction intent")
+                setPendingTestIntroduction(introductionJson)
+            }
         }
     }
 
@@ -156,6 +182,18 @@ class BailiwickActivity : AppCompatActivity() {
     companion object {
         const val TAG = "BailiwickActivity"
 
+        /**
+         * Intent action for test introductions (debug builds only).
+         * Allows E2E tests to bypass QR code scanning.
+         */
+        const val ACTION_TEST_INTRODUCTION = "com.perfectlunacy.bailiwick.TEST_INTRODUCTION"
+
+        /**
+         * Intent extra key for the Introduction JSON payload.
+         * The JSON should be the encrypted Introduction data (same format as QR code content).
+         */
+        const val EXTRA_INTRODUCTION_JSON = "introduction_json"
+
         // Pending QR scan result - stored statically to survive Activity recreation
         @Volatile
         var pendingQrResult: String? = null
@@ -168,6 +206,21 @@ class BailiwickActivity : AppCompatActivity() {
         fun consumePendingQrResult(): String? {
             val result = pendingQrResult
             pendingQrResult = null
+            return result
+        }
+
+        // Pending test introduction - stored statically to survive Activity recreation
+        @Volatile
+        var pendingTestIntroduction: String? = null
+            private set
+
+        fun setPendingTestIntroduction(introductionJson: String) {
+            pendingTestIntroduction = introductionJson
+        }
+
+        fun consumePendingTestIntroduction(): String? {
+            val result = pendingTestIntroduction
+            pendingTestIntroduction = null
             return result
         }
     }
