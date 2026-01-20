@@ -10,6 +10,7 @@ import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.storage.iroh.IrohWrapper
+import com.perfectlunacy.bailiwick.testing.TestAccountHelper
 import com.perfectlunacy.bailiwick.util.NotificationHelper
 import com.perfectlunacy.bailiwick.viewmodels.BailiwickViewModel
 import com.perfectlunacy.bailiwick.viewmodels.BailwickViewModelFactory
@@ -103,6 +104,13 @@ class BailiwickActivity : AppCompatActivity() {
 
                 Log.i(TAG, "Starting Bailiwick initialization...")
 
+                // Apply pending test account secret key BEFORE Iroh init (debug builds only)
+                // This ensures Iroh uses the imported key for node identity
+                val hasTestAccount = TestAccountHelper.applyPendingTestAccountKey(applicationContext)
+                if (hasTestAccount) {
+                    Log.i(TAG, "Applied test account secret key")
+                }
+
                 // Initialize Iroh node
                 val iroh = IrohWrapper.create(applicationContext)
                 Log.d(TAG, "Iroh initialized")
@@ -114,6 +122,16 @@ class BailiwickActivity : AppCompatActivity() {
                 // Initialize database with fallback to destructive migration (no users to migrate)
                 val bwDb = getBailiwickDb(applicationContext)
                 Log.d(TAG, "Database initialized")
+
+                // Create test account records if a test account key was applied (debug builds only)
+                // This must happen AFTER DB init and AFTER Iroh init (to verify NodeId)
+                if (TestAccountHelper.hasPendingTestAccountRecords()) {
+                    val nodeId = iroh.nodeId()
+                    val created = TestAccountHelper.createTestAccountRecords(bwDb, nodeId)
+                    if (created) {
+                        Log.i(TAG, "Test account records created successfully")
+                    }
+                }
 
                 // Initialize network layer
                 val bwNetwork = BailiwickNetworkImpl(

@@ -22,6 +22,26 @@
                 <action android:name="com.perfectlunacy.bailiwick.TEST_INTRODUCTION" />
             </intent-filter>
         </receiver>
+
+        <!--
+        BroadcastReceiver for E2E test account import.
+        Allows tests to pre-seed known test accounts (Alice, Bob) via adb broadcast.
+
+        Usage:
+        adb shell am broadcast -a com.perfectlunacy.bailiwick.TEST_ACCOUNT_IMPORT \
+            - -es account_json '{"secretKey":"base64...","nodeId":"abc...","username":"alice","displayName":"Alice","password":"test123"}' \
+            -n com.perfectlunacy.bailiwick/.testing.TestAccountReceiver
+
+        Then start the app:
+        adb shell am start -n com.perfectlunacy.bailiwick/.BailiwickActivity
+        -->
+        <receiver
+            android:name=".testing.TestAccountReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.perfectlunacy.bailiwick.TEST_ACCOUNT_IMPORT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
