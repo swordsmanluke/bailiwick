@@ -431,15 +431,18 @@ class ContentFragment : BailiwickFragment() {
 
     private fun displayAvatar(binding: FragmentContentBinding) {
         bwModel.viewModelScope.launch {
-            val avatar = withContext(Dispatchers.Default) {
-                AvatarLoader.loadAvatar(bwModel.network.me, requireContext().filesDir.toPath())
+            val (avatar, userId) = withContext(Dispatchers.Default) {
+                val me = bwModel.network.me
+                val loadedAvatar = AvatarLoader.loadAvatar(me, requireContext().filesDir.toPath())
                     ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+                Pair(loadedAvatar, me.id)
             }
             binding.imgMyAvatar.setImageBitmap(avatar)
 
             // Allow tap on own avatar to view own profile
+            // Use cached userId to avoid main thread DB access
             binding.imgMyAvatar.setOnClickListener {
-                navigateToUserProfile(bwModel.network.me.id)
+                navigateToUserProfile(userId)
             }
         }
     }
