@@ -72,7 +72,15 @@
             app:destination="@id/contentFragment"
             app:popUpTo="@id/contentFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_userProfileFragment_to_editIdentityFragment"
+            app:destination="@id/editIdentityFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/editIdentityFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.EditIdentityFragment"
+        android:label="fragment_edit_identity"
+        tools:layout="@layout/fragment_edit_identity" />
     <fragment
         android:id="@+id/commentsFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.CommentsFragment"
