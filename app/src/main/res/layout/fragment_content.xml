@@ -14,64 +14,59 @@
         android:background="@color/colorBackground"
         android:orientation="vertical">
 
-        <!-- Header with logo and peer ID -->
+        <!-- Header with User ID and Circle selector -->
         <LinearLayout
-            android:id="@+id/nav_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/colorSurface"
-            android:elevation="@dimen/elevation_low"
-            android:orientation="horizontal"
-            android:padding="@dimen/spacing_sm">
-
-            <ImageButton
-                android:id="@+id/btn_refresh"
-                android:layout_width="@dimen/avatar_md"
-                android:layout_height="@dimen/avatar_md"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/profile_picture"
-                android:scaleType="fitCenter"
-                android:src="@drawable/img_bailiwick_icon" />
-
-            <TextView
-                android:id="@+id/txt_peer"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/spacing_sm"
-                android:layout_weight="1"
-                android:ellipsize="middle"
-                android:gravity="center_vertical"
-                android:singleLine="true"
-                android:textAppearance="@style/TextAppearance.Bailiwick.Caption" />
-        </LinearLayout>
-
-        <!-- Circle Filter Bar -->
-        <LinearLayout
-            android:id="@+id/filter_bar"
+            android:id="@+id/header_bar"
             android:layout_width="match_parent"
             android:layout_height="@dimen/filter_bar_height"
             android:background="@color/colorSurface"
+            android:elevation="@dimen/elevation_low"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="@dimen/spacing_md"
+            android:paddingStart="@dimen/spacing_sm"
             android:paddingEnd="@dimen/spacing_sm">
 
-            <TextView
-                android:id="@+id/txt_filter_label"
+            <!-- User Identity (tap to edit) -->
+            <LinearLayout
+                android:id="@+id/layout_user_identity"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_label"
-                android:textAppearance="@style/TextAppearance.Bailiwick.Caption"
-                android:textColor="@color/colorTextHint" />
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingEnd="@dimen/spacing_sm">
 
+                <ImageView
+                    android:id="@+id/img_header_avatar"
+                    android:layout_width="@dimen/avatar_sm"
+                    android:layout_height="@dimen/avatar_sm"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:clipToOutline="true"
+                    android:contentDescription="@string/your_avatar"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/avatar" />
+
+                <TextView
+                    android:id="@+id/txt_user_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_xs"
+                    android:ellipsize="end"
+                    android:maxWidth="100dp"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                    tools:text="My Name" />
+            </LinearLayout>
+
+            <!-- Circle selector (swipe to change, long press to edit) -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/list_circles"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/spacing_sm"
                 android:layout_weight="1"
                 android:clipToPadding="false"
                 android:orientation="horizontal"
+                android:paddingStart="@dimen/spacing_sm"
                 android:paddingEnd="@dimen/spacing_sm"
                 tools:listitem="@layout/item_circle_filter" />
 
@@ -81,37 +76,6 @@
                 android:layout_height="@dimen/touch_target_min"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/create_circle"
-                android:src="@drawable/ic_plus_circle_outline"
-                app:tint="@color/colorPrimary" />
-        </LinearLayout>
-
-        <View
-            style="@style/Widget.Bailiwick.Divider" />
-
-        <!-- User Filter (horizontal scroll of avatars) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/colorSurface"
-            android:orientation="horizontal"
-            android:paddingVertical="@dimen/spacing_sm">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/list_users"
-                android:layout_width="0dp"
-                android:layout_height="@dimen/avatar_md"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:orientation="horizontal"
-                android:paddingStart="@dimen/spacing_md"
-                tools:listitem="@layout/user_button" />
-
-            <ImageButton
-                android:id="@+id/btn_add_subscription"
-                android:layout_width="@dimen/touch_target_min"
-                android:layout_height="@dimen/touch_target_min"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/add_connection"
                 android:src="@drawable/ic_plus_circle_outline"
                 app:tint="@color/colorPrimary" />
         </LinearLayout>

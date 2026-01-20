@@ -66,6 +66,9 @@
         <action
             android:id="@+id/action_contentFragment_to_editCircleFragment"
             app:destination="@id/editCircleFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_editIdentityFragment"
+            app:destination="@id/editIdentityFragment" />
     </fragment>
     <fragment
         android:id="@+id/circlesFragment"

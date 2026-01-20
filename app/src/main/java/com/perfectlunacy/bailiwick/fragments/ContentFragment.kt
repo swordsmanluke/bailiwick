@@ -24,7 +24,6 @@ import com.perfectlunacy.bailiwick.adapters.CircleFilterAdapter
 import com.perfectlunacy.bailiwick.adapters.MentionSuggestionsAdapter
 import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
-import com.perfectlunacy.bailiwick.adapters.UserButtonAdapter
 import com.perfectlunacy.bailiwick.util.MentionParser
 import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.Action
@@ -112,17 +111,10 @@ class ContentFragment : BailiwickFragment() {
         // Restore filter state
         restoreFilterState()
 
+        setupHeader(binding)
         setupCircleFilter(binding)
-        setupUserFilter(binding)
         setupPostComposer(binding)
         setupPostList(binding)
-
-        bwModel.viewModelScope.launch {
-            val nodeId = withContext(Dispatchers.Default) {
-                Bailiwick.getInstance().iroh?.nodeId() ?: "not initialized"
-            }
-            binding.txtPeer.text = nodeId
-        }
 
         return binding.root
     }
@@ -205,38 +197,32 @@ class ContentFragment : BailiwickFragment() {
         }
     }
 
-    private fun setupUserFilter(binding: FragmentContentBinding) {
-        val layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        binding.listUsers.layoutManager = layoutManager
-
+    private fun setupHeader(binding: FragmentContentBinding) {
+        // Load and display user info in header
         bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                val users = bwModel.getUsers()
-                withContext(Dispatchers.Main) {
-                    binding.listUsers.adapter = UserButtonAdapter(requireContext(), users) { selectedUser ->
-                        filterPostsByUser(selectedUser)
-                    }
-                }
-                displayAvatar(binding)
+            val (avatar, userName) = withContext(Dispatchers.Default) {
+                val me = bwModel.network.me
+                val loadedAvatar = AvatarLoader.loadAvatar(me, requireContext().filesDir.toPath())
+                    ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
+                Pair(loadedAvatar, me.name)
             }
+            binding.imgHeaderAvatar.setImageBitmap(avatar)
+            binding.txtUserName.text = userName
+        }
+
+        // Tap on user identity to edit
+        binding.layoutUserIdentity.setOnClickListener {
+            navigateToEditIdentity()
         }
     }
 
+    private fun navigateToEditIdentity() {
+        requireView().findNavController().navigate(R.id.action_contentFragment_to_editIdentityFragment)
+    }
+
     private fun setupPostComposer(binding: FragmentContentBinding) {
-        binding.btnRefresh.setOnClickListener {
-            refreshContent()
-        }
-
-        // Long-press to force re-download all files (hidden sync feature)
-        binding.btnRefresh.setOnLongClickListener {
-            Toast.makeText(requireContext(), "Force re-downloading all images...", Toast.LENGTH_SHORT).show()
-            GossipService.getInstance()?.forceRedownloadFiles()
-            true
-        }
-
-        binding.btnAddSubscription.setOnClickListener {
-            requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
-        }
+        // Display user avatar in post composer
+        displayAvatar(binding)
 
         binding.btnAddImage.setOnClickListener {
             showPhotoOptions()
@@ -444,18 +430,16 @@ class ContentFragment : BailiwickFragment() {
 
     private fun displayAvatar(binding: FragmentContentBinding) {
         bwModel.viewModelScope.launch {
-            val (avatar, userId) = withContext(Dispatchers.Default) {
+            val avatar = withContext(Dispatchers.Default) {
                 val me = bwModel.network.me
-                val loadedAvatar = AvatarLoader.loadAvatar(me, requireContext().filesDir.toPath())
+                AvatarLoader.loadAvatar(me, requireContext().filesDir.toPath())
                     ?: BitmapFactory.decodeStream(requireContext().assets.open("avatar.png"))
-                Pair(loadedAvatar, me.id)
             }
             binding.imgMyAvatar.setImageBitmap(avatar)
 
-            // Allow tap on own avatar to view own profile
-            // Use cached userId to avoid main thread DB access
+            // Tap on own avatar in post composer to edit identity
             binding.imgMyAvatar.setOnClickListener {
-                navigateToUserProfile(userId)
+                navigateToEditIdentity()
             }
         }
     }
