@@ -68,14 +68,25 @@
     <string name="scan">Scan</string>
     <string name="from_images">From Images</string>
     <string name="send_response">Send Response</string>
-    <string name="invite_friend">Invite Friend</string>
-    <string name="scan_invitation">Scan Invitation</string>
+    <string name="introduce_yourself">Introduce Yourself</string>
+    <string name="scan_introduction">Scan Introduction</string>
     <string name="show_my_qr">Show My QR Code</string>
     <string name="waiting_for_scan">Waiting for them to scan…</string>
     <string name="connection_step_1">Step 1: Show your QR code</string>
     <string name="connection_step_2">Step 2: Have them scan it</string>
     <string name="connection_step_3">Step 3: Scan their QR code</string>
     <string name="qr_instructions">Have the other person scan this QR code with their Bailiwick app</string>
+    <string name="scan_their_invite">Scan Their Invite</string>
+
+    <!-- Share Invitation -->
+    <string name="share_invitation">Share Invitation</string>
+    <string name="share_invitation_title">Share your invitation</string>
+    <string name="share_invitation_subject">Connect with me on Bailiwick</string>
+    <string name="share_invitation_text">Hi! Let\'s connect on Bailiwick, the pro-user social network.\n\nScan this QR code with your Bailiwick app to connect.\n\nDon\'t have Bailiwick? Learn more at https://bailiwick.space</string>
+    <string name="share_response">Share Response</string>
+    <string name="share_response_title">Share your response</string>
+    <string name="share_response_subject">My Bailiwick connect code</string>
+    <string name="share_response_text">Thanks for reaching out! Here\'s my connect code.\n\nScan this QR code with your Bailiwick app to complete the connection.</string>
 
     <!-- User -->
     <string name="desc_user_avatar">User Avatar</string>
@@ -127,8 +138,19 @@
     <string name="subscribe">Subscribe</string>
     <string name="unsubscribe">Unsubscribe</string>
     <string name="circles">Circles</string>
+    <string name="create_circle">Create Circle</string>
+    <string name="circle_name">Circle Name</string>
+    <string name="circle_created">Circle created</string>
     <string name="circles_hint">Tap to add or remove from circles</string>
     <string name="not_in_any_circles">Not in any circles</string>
+    <string name="no_circles_yet">No circles yet</string>
+    <string name="circle_icon">Circle icon</string>
+    <string name="view_circle">View circle</string>
+
+    <plurals name="member_count">
+        <item quantity="one">%d member</item>
+        <item quantity="other">%d members</item>
+    </plurals>
     <string name="posts">Posts</string>
     <string name="no_posts_yet">No posts yet</string>
     <string name="post_count">%d posts</string>
@@ -138,7 +160,6 @@
 
     <!-- Circle Editor -->
     <string name="edit_circle">Edit Circle</string>
-    <string name="circle_name">Circle Name</string>
     <string name="members_count">Members (%d)</string>
     <string name="search_contacts">Search contacts…</string>
     <string name="save_changes">Save Changes</string>

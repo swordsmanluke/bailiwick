@@ -28,7 +28,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/spacing_lg"
-                android:text="@string/scan_invitation"
+                android:text="@string/scan_introduction"
                 android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
 
             <!-- Step Indicator -->
@@ -122,13 +122,15 @@
                     android:scaleType="fitCenter" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Done Button -->
+            <!-- Share Response Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_send"
                 style="@style/Widget.Bailiwick.Button.Primary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/confirm" />
+                android:text="@string/share_response"
+                app:icon="@drawable/ic_share"
+                app:iconGravity="textStart" />
         </LinearLayout>
     </FrameLayout>
 </layout>

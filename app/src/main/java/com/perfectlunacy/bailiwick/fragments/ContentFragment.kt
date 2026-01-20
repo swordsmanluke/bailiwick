@@ -84,6 +84,15 @@ class ContentFragment : BailiwickFragment() {
 
     override fun onResume() {
         super.onResume()
+
+        // Check for circle creation result
+        val savedStateHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        savedStateHandle?.get<Long>(CreateCircleFragment.RESULT_CIRCLE_ID)?.let { circleId ->
+            savedStateHandle.remove<Long>(CreateCircleFragment.RESULT_CIRCLE_ID)
+            onCircleCreated(circleId)
+            return
+        }
+
         refreshContent()
     }
 
@@ -155,6 +164,10 @@ class ContentFragment : BailiwickFragment() {
                 }
             )
             binding.listCircles.adapter = circleFilterAdapter
+        }
+
+        binding.btnAddCircle.setOnClickListener {
+            requireView().findNavController().navigate(R.id.action_contentFragment_to_createCircleFragment)
         }
 
         // Observe result from EditCircleFragment
@@ -467,6 +480,22 @@ class ContentFragment : BailiwickFragment() {
         }
     }
 
+    private fun onCircleCreated(circleId: Long) {
+        bwModel.viewModelScope.launch {
+            val circles = withContext(Dispatchers.Default) {
+                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+            }
+            circleFilterAdapter?.updateCircles(circles)
+
+            // Find and select the new circle
+            val newCircle = circles.find { it.id == circleId }
+            if (newCircle != null) {
+                filterByCircle(newCircle)
+                circleFilterAdapter?.setSelectedCircle(circleId)
+            }
+        }
+    }
+
     private fun filterByCircle(circle: Circle?) {
         Log.d(TAG, "Filtering by circle: ${circle?.name}")
         filterByCircleId = circle?.id
@@ -661,9 +690,10 @@ class ContentFragment : BailiwickFragment() {
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val me = bwModel.network.me
+                val db = bwModel.db
 
                 // Check if already reacted with this emoji
-                val existing = bwModel.db.reactionDao().findReaction(postHash, me.owner, emoji)
+                val existing = db.reactionDao().findReaction(postHash, me.owner, emoji)
                 if (existing != null) {
                     Log.d(TAG, "Already reacted with $emoji")
                     return@withContext
@@ -678,8 +708,32 @@ class ContentFragment : BailiwickFragment() {
                     blobHash = null
                 )
 
-                bwModel.db.reactionDao().insert(reaction)
+                db.reactionDao().insert(reaction)
                 Log.i(TAG, "Added reaction $emoji to post $postHash")
+
+                // Find the post's circle to get the correct cipher
+                val circleId = db.circlePostDao().circlesForPost(post.id).firstOrNull()
+                    ?: bwModel.network.circles.first().id
+
+                // Publish reaction to Iroh blob storage
+                try {
+                    val cipher = try {
+                        EncryptorFactory.forCircle(db.keyDao(), circleId)
+                    } catch (e: IllegalStateException) {
+                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
+                        NoopEncryptor()
+                    }
+
+                    val publisher = ContentPublisher(bwModel.iroh, db)
+                    val reactionHash = publisher.publishReaction(reaction, cipher)
+                    Log.i(TAG, "Published reaction ${reaction.id} to Iroh with hash: $reactionHash")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to publish reaction to Iroh: ${e.message}")
+                }
+
+                // Trigger manifest sync to notify peers
+                GossipService.getInstance()?.publishManifest()
+                Log.i(TAG, "Triggered manifest publish for reaction")
             }
 
             // Refresh the adapter to show new reaction
@@ -698,8 +752,42 @@ class ContentFragment : BailiwickFragment() {
         bwModel.viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val me = bwModel.network.me
-                bwModel.db.reactionDao().deleteReaction(postHash, me.owner, emoji)
+                val db = bwModel.db
+
+                // Find the reaction before deleting
+                val reaction = db.reactionDao().findReaction(postHash, me.owner, emoji)
+                if (reaction == null) {
+                    Log.d(TAG, "Reaction not found to remove")
+                    return@withContext
+                }
+
+                // Find the post's circle to get the correct cipher
+                val circleId = db.circlePostDao().circlesForPost(post.id).firstOrNull()
+                    ?: bwModel.network.circles.first().id
+
+                // Publish reaction removal to Iroh blob storage
+                try {
+                    val cipher = try {
+                        EncryptorFactory.forCircle(db.keyDao(), circleId)
+                    } catch (e: IllegalStateException) {
+                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
+                        NoopEncryptor()
+                    }
+
+                    val publisher = ContentPublisher(bwModel.iroh, db)
+                    publisher.publishReaction(reaction, cipher, isRemoval = true)
+                    Log.i(TAG, "Published reaction removal for $emoji on $postHash")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to publish reaction removal to Iroh: ${e.message}")
+                }
+
+                // Delete locally
+                db.reactionDao().deleteReaction(postHash, me.owner, emoji)
                 Log.i(TAG, "Removed reaction $emoji from post $postHash")
+
+                // Trigger manifest sync to notify peers
+                GossipService.getInstance()?.publishManifest()
+                Log.i(TAG, "Triggered manifest publish for reaction removal")
             }
 
             // Refresh the adapter to show updated reactions

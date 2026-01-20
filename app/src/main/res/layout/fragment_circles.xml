@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".fragments.CirclesFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/colorBackground"
+        android:orientation="vertical">
+
+        <!-- Header with back button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorSurface"
+            android:elevation="@dimen/elevation_low"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_sm">
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/colorTextPrimary" />
+
+            <TextView
+                android:id="@+id/txt_header_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_sm"
+                android:layout_weight="1"
+                android:text="@string/circles"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Headline3" />
+        </LinearLayout>
+
+        <!-- Circles List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list_circles"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:padding="@dimen/spacing_md"
+            tools:itemCount="5"
+            tools:listitem="@layout/item_circle_list" />
+
+        <!-- Empty State -->
+        <TextView
+            android:id="@+id/txt_no_circles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="@dimen/spacing_xl"
+            android:gravity="center"
+            android:text="@string/no_circles_yet"
+            android:textAppearance="@style/TextAppearance.Bailiwick.Body1"
+            android:textColor="@color/colorTextHint"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+</layout>

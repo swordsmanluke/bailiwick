@@ -26,7 +26,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/spacing_md"
-                android:text="@string/invite_friend"
+                android:text="@string/introduce_yourself"
                 android:textAppearance="@style/TextAppearance.Bailiwick.Headline1" />
 
             <!-- Step Indicator -->
@@ -151,13 +151,34 @@
                 android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
                 android:textColor="@color/colorTextSecondary" />
 
-            <!-- Continue Button -->
+<!-- Share Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_request"
                 style="@style/Widget.Bailiwick.Button.Primary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/connection_step_2" />
+                android:text="@string/share_invitation"
+                app:icon="@drawable/ic_share"
+                app:iconGravity="textStart" />
+
+            <!-- Step 2 Indicator -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_lg"
+                android:layout_marginBottom="@dimen/spacing_md"
+                android:gravity="center"
+                android:text="@string/connection_step_2"
+                android:textAppearance="@style/TextAppearance.Bailiwick.Body2"
+                android:textColor="@color/colorTextSecondary" />
+
+            <!-- Scan Their Invite Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_scan_their_invite"
+                style="@style/Widget.Bailiwick.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scan_their_invite" />
 
         </LinearLayout>
     </ScrollView>

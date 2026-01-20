@@ -135,15 +135,14 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 f
             )
 
-            val sendIntent = Intent()
-            sendIntent.action = Intent.ACTION_SEND
-            sendIntent.putExtra(
-                Intent.EXTRA_TEXT,
-                "Thanks for reaching out! Here's my connect code."
-            )
-            sendIntent.putExtra(Intent.EXTRA_STREAM, uri)
-            sendIntent.type = "image/png"
-            startActivity(sendIntent)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_response_subject))
+                putExtra(Intent.EXTRA_TEXT, getString(R.string.share_response_text))
+                putExtra(Intent.EXTRA_STREAM, uri)
+                type = "image/png"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(sendIntent, getString(R.string.share_response_title)))
         }
 
         // Wait for initialization before accessing bwModel (handles Activity recreation)

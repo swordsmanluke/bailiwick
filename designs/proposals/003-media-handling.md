@@ -15,7 +15,7 @@ Enable display of images and video in posts. The current implementation has imag
 
 **What Works:**
 - `PostFile` entity stores file CID + MIME type
-- `IpfsFileDef` in IPFS model supports file references
+- `FileDef` in post model supports file references
 - Files download to `bwcache/` directory
 - Encryption/decryption pipeline works for files
 
@@ -37,8 +37,8 @@ img_content.visibility = View.GONE  // Always hidden!
 ### Current Data Model
 
 ```kotlin
-// IpfsPost.kt
-data class IpfsFileDef(val mimeType: String, val cid: ContentId)
+// FileDef.kt
+data class FileDef(val mimeType: String, val cid: ContentId)
 
 // PostFile.kt
 @Entity
@@ -218,7 +218,7 @@ Transcoder.into(outputPath)
 │     ↓                                                            │
 │  5. Encrypt video file                                          │
 │     ↓                                                            │
-│  6. Upload to IPFS                                              │
+│  6. Upload to Iroh                                              │
 │     • Chunk large files                                         │
 │     • Show upload progress                                      │
 │     ↓                                                            │
@@ -332,10 +332,10 @@ data class PostFile(
 }
 ```
 
-### Enhanced IPFS Model
+### Enhanced Post Model
 
 ```kotlin
-data class IpfsFileDef(
+data class FileDef(
     val mimeType: String,
     val cid: ContentId,
     val meta: MediaMetadata? = null
@@ -424,7 +424,7 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
 
 1. Add image picker to post composition
 2. Resize large images (max 2048px)
-3. Encrypt and upload to IPFS
+3. Encrypt and upload to Iroh
 4. Store in PostFile
 
 ### Phase 3: Video Playback (2 weeks)
@@ -447,7 +447,7 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
 1. Database migration for new fields
 2. Extract metadata during upload
 3. Generate blurHash
-4. Update IPFS model
+4. Update post model
 
 ## Battery Considerations
 

@@ -69,18 +69,18 @@ Check in with your family when you want. Don’t “bump” controversial posts 
 * Relationship graph is stored individually. I know who my friends/subscribers are. External clients can only see my graph if I choose to publish it.
 
 * Graph can be stored in local DB cache, but also written encrypted to the DHT. Can decrypt it with a private key.
-What about no graph? When you become friends, your device permanently stores their IPNS key. Accessing that key to find new posts is the entirety of your “graph”.
+What about no graph? When you become friends, your device permanently stores their NodeId. Accessing their content via that NodeId to find new posts is the entirety of your "graph".
 
 * You cannot search across friends of friends to find the one “Tang Chan” you went to high school with without the cooperation of the devices on the network. Might be ok. Works like a flood search. Theoretically, after 6 steps, you could find anyone on the network.
 
-* Bad actor constantly publishes posts to try to saturate the network’s data / storage
-IPFS already handles this
+* Bad actor constantly publishes posts to try to saturate the network's data / storage
+Iroh already handles this
 How would an encrypted RSS work?
 
-* Every user has a dedicated key (IPNS) that points to a document listing their current posts. The last, say, 100 are maintained in the doc. Deletion happens automatically at the discretion of each client.
+* Every user has a dedicated manifest (announced via Gossip) that lists their current posts. The last, say, 100 are maintained in the manifest. Deletion happens automatically at the discretion of each client.
 
 * How should throttling work?
-May not be necessary, as it’s mostly handled at the IPFS-level
+May not be necessary, as it's mostly handled at the Iroh-level
 How will Android devices feel about turning into servers?
 Seems to be OK...
 
@@ -89,7 +89,7 @@ Existing DHT algorithms split files into ‘chunks’, which are then distribute
 
 * DDOS protection for individual devices?
 Can we hide IPs from non-friends?
-IPFS protects itself from some types of attack, but you could still point a botnet at a single peer and flood them.
+Iroh protects itself from some types of attack, but you could still point a botnet at a single peer and flood them.
 
 * As the network grows, traffic will grow exponentially - how to keep it manageable?
 Bundle network update messages?
@@ -157,7 +157,7 @@ Within the DHT, updates from users are stored at DHT-addresses and are not direc
 Upon receiving a Chunk, a client must be unable to determine the Originating User. That linking should only be possible if they have been granted access to the chunk’s contents by the Originating User. 
 
 ## Identity
-Identity is provided via Public Key/Private Key. Public Keys are linked to a UUID in the DHT. In IPFS, this is managed via IPNS. The user’s hashed Public key always points to a record containing information about the client, including an optional IPFS record the client may retrieve.
+Identity is provided via Public Key/Private Key. Public Keys are linked to a UUID in the DHT. In Iroh, this is managed via the user's NodeId. The user's public key always points to a record containing information about the client, including content the client may retrieve.
 
 Keys may be updated by a plurality of a User’s chosen Trusted Friends. A Key Update message must be signed by this plurality, whose signatures are compared to a previously generated/updated Trusted Signatories list. 
 
@@ -172,9 +172,9 @@ An optional FOAF doc for public/semi-public identification
 Timestamps associated with each
 
 {
-	“feeds”: [ <ipfs/group1>, <ipfs/group2>, … ],
-	“interactions”: <ipfs/interactions>,
-	“identity”: <ipfs/foo.foaf?>
+	"feeds": [ <cid/group1>, <cid/group2>, … ],
+	"interactions": <cid/interactions>,
+	"identity": <cid/foo.foaf?>
 }
 
 ```
@@ -182,7 +182,7 @@ Not sure if an RSS feed is actually the best idea for us. RSS gives advantages i
 
 Might be best to just return a literal list of links and a timestamp. e.g.
 {
-"posts":["ipfs/1", "ipfs/2", ...],
+"posts":["cid/1", "cid/2", ...],
 "updated": <unixutcts>
 }
 ```
@@ -196,7 +196,7 @@ The Group feed is an RSS document pointing to a list of Posts. This example is i
 <?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
 <channel>
- <link>ipfs/UUID</link>
+ <link>cid/UUID</link>
  <description>UUID</description>
  <copyright>2021 User All rights reserved</copyright>
  <lastBuildDate>Mon, 06 Sep 2020 00:01:00 +0000 </lastBuildDate>
@@ -204,7 +204,7 @@ The Group feed is an RSS document pointing to a list of Posts. This example is i
 
  <item>
   <description>post</description>
-  <link>ipfs/UUID</link>
+  <link>cid/UUID</link>
   <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
  </item>
 
@@ -285,7 +285,7 @@ When an Originating User moves a Subscriber between Circles, the Subscriber is n
 
 
 ### Subscribing to another User
-In order to subscribe to other users’ content, your client needs to know the other user’s public key identity. In order to provide access to another user, you must know their public key in order to give them keys. Subscriptions, then, come down to the exchange of public identifiers. In IPFS, the public id of a user is the hash of their public key. Using IPNS, a modifiable directory of files may be stored in this location.
+In order to subscribe to other users' content, your client needs to know the other user's public key identity. In order to provide access to another user, you must know their public key in order to give them keys. Subscriptions, then, come down to the exchange of public identifiers. In Iroh, the public id of a user is their NodeId (derived from their Ed25519 public key). Using Iroh's Gossip protocol, manifest updates are announced to subscribers.
 Decentralized out-of-band Subscription
 There’s not a convenient and privacy-protecting way to create a decentralized lookup, especially for a User’s first subscription. So what if we generate a single-use token that sends identifying information out of band in a QR code or similar? 
 

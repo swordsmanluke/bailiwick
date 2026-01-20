@@ -55,9 +55,9 @@ Encryption: AES w/Poster’s Basic Key
 Required: Yes
 Layout:
 {
-  	“feeds”: [ <ipfs/group1>, <ipfs/group2>, … ],
-	“interactions”: <ipfs/interactions>,
-	“identity”: <cid>
+  	"feeds": [ <cid/group1>, <cid/group2>, … ],
+	"interactions": <cid/interactions>,
+	"identity": <cid>
 }
 
 
