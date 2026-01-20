@@ -34,4 +34,7 @@ interface CircleDao {
 
     @Update
     fun update(circle: Circle)
+
+    @Delete
+    fun delete(circle: Circle)
 }

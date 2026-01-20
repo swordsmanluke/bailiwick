@@ -136,6 +136,20 @@
     <string name="added_to_circle">Added to %s</string>
     <string name="removed_from_circle">Removed from %s</string>
 
+    <!-- Circle Editor -->
+    <string name="edit_circle">Edit Circle</string>
+    <string name="circle_name">Circle Name</string>
+    <string name="members_count">Members (%d)</string>
+    <string name="search_contacts">Search contacts…</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="delete_circle">Delete Circle</string>
+    <string name="delete_circle_confirm">Are you sure you want to delete \"%s\"? This cannot be undone.</string>
+    <string name="circle_updated">Circle updated</string>
+    <string name="circle_deleted">Circle deleted</string>
+    <string name="cannot_delete_everyone">Cannot delete the default circle</string>
+    <string name="circle_name_required">Circle name is required</string>
+    <string name="remove_member">Remove member</string>
+
     <!-- Edit Identity -->
     <string name="change_photo">Change Photo</string>
     <string name="profile_information">Profile Information</string>

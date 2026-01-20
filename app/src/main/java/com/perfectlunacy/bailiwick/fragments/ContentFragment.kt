@@ -14,6 +14,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
@@ -145,11 +146,49 @@ class ContentFragment : BailiwickFragment() {
             circleFilterAdapter = CircleFilterAdapter(
                 requireContext(),
                 circles,
-                filterByCircleId
-            ) { selectedCircle ->
-                filterByCircle(selectedCircle)
-            }
+                filterByCircleId,
+                onCircleSelected = { selectedCircle ->
+                    filterByCircle(selectedCircle)
+                },
+                onCircleLongPress = { circle ->
+                    navigateToEditCircle(circle.id)
+                }
+            )
             binding.listCircles.adapter = circleFilterAdapter
+        }
+
+        // Observe result from EditCircleFragment
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Long>(
+            EditCircleFragment.RESULT_CIRCLE_ID
+        )?.observe(viewLifecycleOwner) { _ ->
+            reloadCircles()
+        }
+
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>(
+            EditCircleFragment.RESULT_DELETED
+        )?.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                filterByCircleId = null
+                filterPrefs.clearFilters()
+                reloadCircles()
+            }
+        }
+    }
+
+    private fun navigateToEditCircle(circleId: Long) {
+        val bundle = EditCircleFragment.newBundle(circleId)
+        requireView().findNavController().navigate(
+            R.id.action_contentFragment_to_editCircleFragment,
+            bundle
+        )
+    }
+
+    private fun reloadCircles() {
+        bwModel.viewModelScope.launch {
+            val circles = withContext(Dispatchers.Default) {
+                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+            }
+            circleFilterAdapter?.updateCircles(circles)
         }
     }
 

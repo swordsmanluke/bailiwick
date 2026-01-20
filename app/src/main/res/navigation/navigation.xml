@@ -57,6 +57,9 @@
         <action
             android:id="@+id/action_contentFragment_to_contactFragment"
             app:destination="@id/contactFragment" />
+        <action
+            android:id="@+id/action_contentFragment_to_editCircleFragment"
+            app:destination="@id/editCircleFragment" />
     </fragment>
     <fragment
         android:id="@+id/userProfileFragment"
@@ -141,6 +144,17 @@
         tools:layout="@layout/fragment_contact">
         <argument
             android:name="identity_id"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editCircleFragment"
+        android:name="com.perfectlunacy.bailiwick.fragments.EditCircleFragment"
+        android:label="fragment_edit_circle"
+        tools:layout="@layout/fragment_edit_circle">
+        <argument
+            android:name="circle_id"
             app:argType="long"
             android:defaultValue="-1L" />
     </fragment>
