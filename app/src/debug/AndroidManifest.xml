@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+    Debug-only manifest additions.
+    This manifest is merged with the main manifest only in debug builds.
+    -->
+
+    <application>
+        <!--
+        BroadcastReceiver for E2E test introductions.
+        Allows tests to bypass QR code scanning via adb broadcast.
+
+        Usage:
+        adb shell am broadcast -a com.perfectlunacy.bailiwick.TEST_INTRODUCTION \
+            - -es introduction_json '{"encrypted":"data"}' \
+            -n com.perfectlunacy.bailiwick/.testing.TestIntroductionReceiver
+        -->
+        <receiver
+            android:name=".testing.TestIntroductionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.perfectlunacy.bailiwick.TEST_INTRODUCTION" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

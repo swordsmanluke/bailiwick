@@ -34,6 +34,7 @@ import com.perfectlunacy.bailiwick.models.db.User
 import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.qr.QREncoder
 import com.perfectlunacy.bailiwick.services.GossipService
+import com.perfectlunacy.bailiwick.testing.TestIntroductionReceiver
 import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
@@ -151,8 +152,8 @@ class AcceptIntroductionFragment : BailiwickFragment() {
             bwActivity.initState.first { it is InitState.Ready }
             setupModeObserver(binding)
 
-            // Check for pending test introduction (from debug intent)
-            BailiwickActivity.consumePendingTestIntroduction()?.let { introductionJson ->
+            // Check for pending test introduction (from debug broadcast receiver)
+            TestIntroductionReceiver.consumePendingTestIntroduction()?.let { introductionJson ->
                 Log.d("AcceptIntro", "Processing pending test introduction")
                 processIntroduction(introductionJson)
             }
