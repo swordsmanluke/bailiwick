@@ -17,7 +17,8 @@ import com.perfectlunacy.bailiwick.models.db.Identity
  */
 class CircleMemberAdapter(
     private val context: Context,
-    private val onRemoveClick: (Identity) -> Unit
+    private val onRemoveClick: (Identity) -> Unit,
+    private val onMemberClick: ((Identity) -> Unit)? = null
 ) : RecyclerView.Adapter<CircleMemberAdapter.MemberViewHolder>() {
 
     private val members = mutableListOf<MemberItem>()
@@ -83,6 +84,11 @@ class CircleMemberAdapter(
 
             btnRemove.setOnClickListener {
                 onRemoveClick(item.identity)
+            }
+
+            // Click on row to view contact details
+            itemView.setOnClickListener {
+                onMemberClick?.invoke(item.identity)
             }
         }
     }

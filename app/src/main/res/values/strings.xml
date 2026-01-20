@@ -205,4 +205,6 @@
     <string name="delete_contact_message">This will permanently delete %s and remove them from all circles. All their posts will be removed from your device. This cannot be undone. A new introduction will be required to reconnect.</string>
     <string name="deleted_contact">Deleted %s</string>
     <string name="contact_load_error">Unable to load contact</string>
+    <string name="view_posts">View Posts</string>
+    <string name="manage_contact">Manage Contact</string>
 </resources>

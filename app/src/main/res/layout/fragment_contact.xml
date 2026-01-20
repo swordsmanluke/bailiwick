@@ -125,6 +125,18 @@
                         android:textColor="@color/colorTextHint"
                         android:visibility="gone"
                         tools:visibility="visible" />
+
+                    <!-- View Posts button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_view_posts"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/view_posts"
+                        app:icon="@drawable/ic_post"
+                        app:iconGravity="textStart" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

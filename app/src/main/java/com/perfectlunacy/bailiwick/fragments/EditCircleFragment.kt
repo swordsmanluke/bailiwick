@@ -76,9 +76,15 @@ class EditCircleFragment : BailiwickFragment() {
     }
 
     private fun setupAdapters() {
-        memberAdapter = CircleMemberAdapter(requireContext()) { identity ->
-            onRemoveMember(identity)
-        }
+        memberAdapter = CircleMemberAdapter(
+            requireContext(),
+            onRemoveClick = { identity ->
+                onRemoveMember(identity)
+            },
+            onMemberClick = { identity ->
+                navigateToContact(identity)
+            }
+        )
         binding.listMembers.layoutManager = LinearLayoutManager(requireContext())
         binding.listMembers.adapter = memberAdapter
 
@@ -343,6 +349,14 @@ class EditCircleFragment : BailiwickFragment() {
         } else {
             findNavController().popBackStack()
         }
+    }
+
+    private fun navigateToContact(identity: Identity) {
+        val bundle = ContactFragment.newBundle(identity.id)
+        findNavController().navigate(
+            R.id.action_editCircleFragment_to_contactFragment,
+            bundle
+        )
     }
 
     override fun onDestroyView() {

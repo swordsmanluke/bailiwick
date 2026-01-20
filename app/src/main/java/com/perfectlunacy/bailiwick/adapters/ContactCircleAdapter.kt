@@ -16,7 +16,8 @@ import com.perfectlunacy.bailiwick.models.db.Circle
 class ContactCircleAdapter(
     private val context: Context,
     private var circles: MutableList<Circle>,
-    private val onRemoveClicked: (Circle, Int) -> Unit
+    private val onRemoveClick: (Circle, Int) -> Unit,
+    private val onCircleClick: ((Circle) -> Unit)? = null
 ) : RecyclerView.Adapter<ContactCircleAdapter.CircleViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CircleViewHolder {
@@ -27,9 +28,10 @@ class ContactCircleAdapter(
 
     override fun onBindViewHolder(holder: CircleViewHolder, position: Int) {
         val circle = circles[position]
-        holder.bind(circle) {
-            onRemoveClicked(circle, position)
-        }
+        holder.bind(circle,
+            onRemove = { onRemoveClick(circle, position) },
+            onClick = { onCircleClick?.invoke(circle) }
+        )
     }
 
     override fun getItemCount(): Int = circles.size
@@ -55,10 +57,13 @@ class ContactCircleAdapter(
         private val txtCircleName: TextView = itemView.findViewById(R.id.txt_circle_name)
         private val btnRemove: ImageButton = itemView.findViewById(R.id.btn_remove)
 
-        fun bind(circle: Circle, onRemove: () -> Unit) {
+        fun bind(circle: Circle, onRemove: () -> Unit, onClick: () -> Unit) {
             txtCircleName.text = circle.name
             btnRemove.setOnClickListener {
                 onRemove()
+            }
+            itemView.setOnClickListener {
+                onClick()
             }
         }
     }

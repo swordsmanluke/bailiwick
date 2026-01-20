@@ -85,6 +85,10 @@ class ContactFragment : BailiwickFragment() {
         binding.btnDelete.setOnClickListener {
             user?.let { showDeleteConfirmation(it) }
         }
+
+        binding.btnViewPosts.setOnClickListener {
+            navigateToUserProfile()
+        }
     }
 
     private fun loadContactData() {
@@ -244,12 +248,32 @@ class ContactFragment : BailiwickFragment() {
 
         circleAdapter = ContactCircleAdapter(
             requireContext(),
-            memberCircles
-        ) { circle, position ->
-            removeFromCircle(circle, position)
-        }
+            memberCircles,
+            onRemoveClick = { circle, position ->
+                removeFromCircle(circle, position)
+            },
+            onCircleClick = { circle ->
+                navigateToEditCircle(circle)
+            }
+        )
 
         binding.listCircles.adapter = circleAdapter
+    }
+
+    private fun navigateToEditCircle(circle: Circle) {
+        val bundle = EditCircleFragment.newBundle(circle.id)
+        findNavController().navigate(
+            R.id.action_contactFragment_to_editCircleFragment,
+            bundle
+        )
+    }
+
+    private fun navigateToUserProfile() {
+        val bundle = UserProfileFragment.newBundle(identityId)
+        findNavController().navigate(
+            R.id.action_contactFragment_to_userProfileFragment,
+            bundle
+        )
     }
 
     private fun addToCircle(circle: Circle) {

@@ -138,6 +138,16 @@
                         android:text="@string/unsubscribe"
                         android:visibility="gone" />
 
+                    <!-- Manage Contact (for other users) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_manage_contact"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:text="@string/manage_contact"
+                        android:visibility="gone" />
+
                     <!-- Export Identity (own profile only) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_export_identity"
