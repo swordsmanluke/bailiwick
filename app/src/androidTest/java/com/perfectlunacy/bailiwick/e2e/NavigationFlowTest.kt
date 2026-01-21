@@ -22,8 +22,8 @@ import org.junit.runner.RunWith
  * - Feed (ContentFragment) - with header_bar, layout_user_identity, list_circles
  * - EditIdentity (EditIdentityFragment) - accessed via avatar tap
  * - CreateCircle (CreateCircleFragment) - accessed via btn_add_circle
- * - Contact (ContactFragment)
  * - EditCircle (EditCircleFragment)
+ * - UserProfile (UserProfileFragment)
  *
  * These tests require a logged-in user state to verify navigation flows.
  *

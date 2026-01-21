@@ -13,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Integration tests for the data operations used by ContactFragment.
+ * Integration tests for contact-related database operations.
  * Tests the database operations for:
  * - Loading contact data (user + identities)
  * - Muting/unmuting contacts
@@ -263,7 +263,7 @@ class ContactDataTest {
         assertEquals(2, db.circleMemberDao().circlesFor(identityId1).size)
         assertEquals(1, db.postDao().postsFor(identityId1).size)
 
-        // Execute full delete workflow (as done in ContactFragment)
+        // Execute full delete contact workflow
         // 1. Remove from all circles
         val memberCircles = db.circleMemberDao().circlesFor(identityId1)
         memberCircles.forEach { circleId ->

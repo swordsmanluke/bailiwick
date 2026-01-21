@@ -17,13 +17,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * E2E navigation tests specifically for Contact and Circle management screens.
+ * E2E navigation tests specifically for Circle management screens.
  *
  * Tests navigation flows:
- * - Contact -> UserProfile (View Posts)
- * - Contact -> EditCircle (tap circle in list)
- * - UserProfile -> Contact (Manage Contact)
- * - EditCircle -> Contact (tap member)
+ * - EditCircle -> UserProfile (tap member)
+ * - UserProfile -> EditCircle (via circle membership)
  *
  * Note: These tests require existing contacts and circles in the database.
  * They will be skipped if no contacts are available.

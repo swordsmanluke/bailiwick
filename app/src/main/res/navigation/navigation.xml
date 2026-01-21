@@ -61,9 +61,6 @@
             android:id="@+id/action_contentFragment_to_createCircleFragment"
             app:destination="@id/createCircleFragment" />
         <action
-            android:id="@+id/action_contentFragment_to_contactFragment"
-            app:destination="@id/contactFragment" />
-        <action
             android:id="@+id/action_contentFragment_to_editCircleFragment"
             app:destination="@id/editCircleFragment" />
         <action
@@ -92,9 +89,6 @@
         <action
             android:id="@+id/action_userProfileFragment_to_editIdentityFragment"
             app:destination="@id/editIdentityFragment" />
-        <action
-            android:id="@+id/action_userProfileFragment_to_contactFragment"
-            app:destination="@id/contactFragment" />
     </fragment>
     <fragment
         android:id="@+id/editIdentityFragment"
@@ -163,23 +157,6 @@
         tools:layout="@layout/fragment_create_circle" />
 
     <fragment
-        android:id="@+id/contactFragment"
-        android:name="com.perfectlunacy.bailiwick.fragments.ContactFragment"
-        android:label="fragment_contact"
-        tools:layout="@layout/fragment_contact">
-        <argument
-            android:name="identity_id"
-            app:argType="long"
-            android:defaultValue="-1L" />
-        <action
-            android:id="@+id/action_contactFragment_to_userProfileFragment"
-            app:destination="@id/userProfileFragment" />
-        <action
-            android:id="@+id/action_contactFragment_to_editCircleFragment"
-            app:destination="@id/editCircleFragment" />
-    </fragment>
-
-    <fragment
         android:id="@+id/editCircleFragment"
         android:name="com.perfectlunacy.bailiwick.fragments.EditCircleFragment"
         android:label="fragment_edit_circle"
@@ -189,8 +166,8 @@
             app:argType="long"
             android:defaultValue="-1L" />
         <action
-            android:id="@+id/action_editCircleFragment_to_contactFragment"
-            app:destination="@id/contactFragment" />
+            android:id="@+id/action_editCircleFragment_to_userProfileFragment"
+            app:destination="@id/userProfileFragment" />
     </fragment>
 
 </navigation>

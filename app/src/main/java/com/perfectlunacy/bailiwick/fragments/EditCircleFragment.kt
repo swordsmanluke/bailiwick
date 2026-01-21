@@ -82,7 +82,7 @@ class EditCircleFragment : BailiwickFragment() {
                 onRemoveMember(identity)
             },
             onMemberClick = { identity ->
-                navigateToContact(identity)
+                navigateToUserProfile(identity)
             }
         )
         binding.listMembers.layoutManager = LinearLayoutManager(requireContext())
@@ -351,10 +351,10 @@ class EditCircleFragment : BailiwickFragment() {
         }
     }
 
-    private fun navigateToContact(identity: Identity) {
-        val bundle = ContactFragment.newBundle(identity.id)
+    private fun navigateToUserProfile(identity: Identity) {
+        val bundle = UserProfileFragment.newBundle(identity.id)
         findNavController().navigate(
-            R.id.action_editCircleFragment_to_contactFragment,
+            R.id.action_editCircleFragment_to_userProfileFragment,
             bundle
         )
     }
