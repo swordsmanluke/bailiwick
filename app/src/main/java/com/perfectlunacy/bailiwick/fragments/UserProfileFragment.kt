@@ -129,11 +129,9 @@ class UserProfileFragment : BailiwickFragment() {
 
     private fun updateProfileUI(isOwnProfile: Boolean) {
         if (isOwnProfile) {
-            // Own profile - show edit and export buttons, hide subscribe buttons
+            // Own profile - show edit and export buttons
             binding.btnEditProfile.visibility = View.VISIBLE
             binding.btnExportIdentity.visibility = View.VISIBLE
-            binding.btnSubscribe.visibility = View.GONE
-            binding.btnUnsubscribe.visibility = View.GONE
             binding.cardCircles.visibility = View.GONE  // Don't show circle membership for own profile
 
             binding.btnEditProfile.setOnClickListener {
@@ -145,36 +143,10 @@ class UserProfileFragment : BailiwickFragment() {
             }
         } else {
             binding.btnExportIdentity.visibility = View.GONE
-            // Other user's profile - show circle membership and subscribe options
+            // Other user's profile - show circle membership
             binding.btnEditProfile.visibility = View.GONE
             binding.cardCircles.visibility = View.VISIBLE
             binding.btnManageContact.visibility = View.VISIBLE
-
-            // Determine if user is subscribed (in any circle)
-            bwModel.viewModelScope.launch {
-                val isSubscribed = withContext(Dispatchers.Default) {
-                    val circles = bwModel.db.circleMemberDao().circlesFor(userId)
-                    circles.isNotEmpty()
-                }
-
-                if (isSubscribed) {
-                    binding.btnSubscribe.visibility = View.GONE
-                    binding.btnUnsubscribe.visibility = View.VISIBLE
-                } else {
-                    binding.btnSubscribe.visibility = View.VISIBLE
-                    binding.btnUnsubscribe.visibility = View.GONE
-                }
-            }
-
-            // Subscribe button - adds to first circle
-            binding.btnSubscribe.setOnClickListener {
-                subscribeToUser()
-            }
-
-            // Unsubscribe button - removes from all circles
-            binding.btnUnsubscribe.setOnClickListener {
-                unsubscribeFromUser()
-            }
 
             // Manage Contact button - navigate to contact management
             binding.btnManageContact.setOnClickListener {
@@ -232,59 +204,6 @@ class UserProfileFragment : BailiwickFragment() {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
             circleMembershipAdapter?.updateMembership(circle.id, isMember)
-
-            // Update subscribe/unsubscribe button visibility
-            updateSubscribeButtonState()
-        }
-    }
-
-    private fun subscribeToUser() {
-        bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                // Add to first available circle
-                val firstCircle = bwModel.network.circles
-                    .filter { it.name != EVERYONE_CIRCLE }
-                    .firstOrNull()
-
-                if (firstCircle != null) {
-                    bwModel.db.circleMemberDao().insert(CircleMember(firstCircle.id, userId))
-                }
-            }
-
-            Toast.makeText(context, R.string.subscribe, Toast.LENGTH_SHORT).show()
-            loadUserProfile()  // Refresh the view
-        }
-    }
-
-    private fun unsubscribeFromUser() {
-        bwModel.viewModelScope.launch {
-            withContext(Dispatchers.Default) {
-                // Remove from all circles
-                val memberOfCircles = bwModel.db.circleMemberDao().circlesFor(userId)
-                memberOfCircles.forEach { circleId ->
-                    bwModel.db.circleMemberDao().delete(circleId, userId)
-                }
-            }
-
-            Toast.makeText(context, R.string.unsubscribe, Toast.LENGTH_SHORT).show()
-            loadUserProfile()  // Refresh the view
-        }
-    }
-
-    private fun updateSubscribeButtonState() {
-        bwModel.viewModelScope.launch {
-            val isSubscribed = withContext(Dispatchers.Default) {
-                val circles = bwModel.db.circleMemberDao().circlesFor(userId)
-                circles.isNotEmpty()
-            }
-
-            if (isSubscribed) {
-                binding.btnSubscribe.visibility = View.GONE
-                binding.btnUnsubscribe.visibility = View.VISIBLE
-            } else {
-                binding.btnSubscribe.visibility = View.VISIBLE
-                binding.btnUnsubscribe.visibility = View.GONE
-            }
         }
     }
 

@@ -118,26 +118,6 @@
                             tools:text="abc123...xyz789" />
                     </LinearLayout>
 
-                    <!-- Subscribe/Unsubscribe Button (for other users) -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_subscribe"
-                        style="@style/Widget.Bailiwick.Button.Primary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_md"
-                        android:text="@string/subscribe"
-                        android:visibility="gone"
-                        tools:visibility="visible" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_unsubscribe"
-                        style="@style/Widget.Bailiwick.Button.Secondary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_md"
-                        android:text="@string/unsubscribe"
-                        android:visibility="gone" />
-
                     <!-- Manage Contact (for other users) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_manage_contact"
