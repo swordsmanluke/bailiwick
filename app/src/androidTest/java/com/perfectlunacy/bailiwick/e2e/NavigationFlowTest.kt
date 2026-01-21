@@ -72,91 +72,26 @@ class NavigationFlowTest {
         }
 
         // Verify feed screen elements are displayed
-        onView(withId(R.id.btn_refresh)).check(matches(isDisplayed()))
+        onView(withId(R.id.header_bar)).check(matches(isDisplayed()))
         onView(withId(R.id.list_circles)).check(matches(isDisplayed()))
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
     }
 
     @Test
-    fun feedScreen_addConnectionButtonNavigatesToConnectScreen() {
+    fun feedScreen_addCircleButtonNavigatesToCreateCircleScreen() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return // Skip if not logged in
         }
 
-        // Click add subscription/connection button
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Click add circle button
+        onView(withId(R.id.btn_add_circle)).perform(click())
 
         waitForView()
 
-        // Verify we're on the Connect screen
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
-        onView(withId(R.id.btn_conn_accept)).check(matches(isDisplayed()))
-    }
-
-    // =====================
-    // Connect Screen Tests
-    // =====================
-
-    @Test
-    fun connectScreen_introduceYourselfNavigatesToIntroduceSelfScreen() {
-        waitForView(3000)
-
-        if (isViewDisplayed(withId(R.id.btn_sign_up))) {
-            return
-        }
-
-        // Navigate to Connect screen
-        onView(withId(R.id.btn_add_subscription)).perform(click())
-        waitForView()
-
-        // Click "Introduce Yourself"
-        onView(withId(R.id.btn_conn_request)).perform(click())
-        waitForView()
-
-        // Verify we're on IntroduceSelf screen (has QR code display)
-        onView(withId(R.id.img_qr_code)).check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun connectScreen_scanIntroductionNavigatesToAcceptIntroductionScreen() {
-        waitForView(3000)
-
-        if (isViewDisplayed(withId(R.id.btn_sign_up))) {
-            return
-        }
-
-        // Navigate to Connect screen
-        onView(withId(R.id.btn_add_subscription)).perform(click())
-        waitForView()
-
-        // Click "Scan Introduction"
-        onView(withId(R.id.btn_conn_accept)).perform(click())
-        waitForView()
-
-        // Verify we're on AcceptIntroduction screen (has scan button)
-        onView(withId(R.id.btn_scan)).check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun connectScreen_backNavigatesToFeed() {
-        waitForView(3000)
-
-        if (isViewDisplayed(withId(R.id.btn_sign_up))) {
-            return
-        }
-
-        // Navigate to Connect screen
-        onView(withId(R.id.btn_add_subscription)).perform(click())
-        waitForView()
-
-        // Press back
-        pressBack()
-        waitForView()
-
-        // Verify we're back on Feed screen
-        onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
+        // Verify we're on the CreateCircle screen
+        onView(withId(R.id.txt_circle_name)).check(matches(isDisplayed()))
     }
 
     // =====================
@@ -164,35 +99,15 @@ class NavigationFlowTest {
     // =====================
 
     @Test
-    fun feedScreen_avatarClickNavigatesToOwnProfile() {
+    fun feedScreen_avatarClickNavigatesToEditIdentity() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Click own avatar in post composer
+        // Click own avatar in post composer - now navigates directly to EditIdentity
         onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-
-        // Verify we're on UserProfile screen (own profile shows edit button)
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun userProfile_editButtonNavigatesToEditIdentity() {
-        waitForView(3000)
-
-        if (isViewDisplayed(withId(R.id.btn_sign_up))) {
-            return
-        }
-
-        // Navigate to own profile
-        onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-
-        // Click edit button
-        onView(withId(R.id.btn_edit_profile)).perform(click())
         waitForView()
 
         // Verify we're on EditIdentity screen
@@ -201,36 +116,30 @@ class NavigationFlowTest {
     }
 
     @Test
-    fun editIdentity_backNavigatesToUserProfile() {
+    fun feedScreen_headerAvatarClickNavigatesToEditIdentity() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Navigate to EditIdentity
-        onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).perform(click())
+        // Click user identity in header
+        onView(withId(R.id.layout_user_identity)).perform(click())
         waitForView()
 
-        // Click back button
-        onView(withId(R.id.btn_back)).perform(click())
-        waitForView()
-
-        // Verify we're back on UserProfile
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
+        // Verify we're on EditIdentity screen
+        onView(withId(R.id.txt_public_name)).check(matches(isDisplayed()))
     }
 
     @Test
-    fun userProfile_backNavigatesToFeed() {
+    fun editIdentity_backNavigatesToFeed() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Navigate to own profile
+        // Navigate to EditIdentity via post composer avatar
         onView(withId(R.id.img_my_avatar)).perform(click())
         waitForView()
 
@@ -247,58 +156,38 @@ class NavigationFlowTest {
     // =====================
 
     @Test
-    fun navigationFlow_feedToProfileToEditAndBack() {
+    fun navigationFlow_feedToEditIdentityAndBack() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Step 1: Feed -> UserProfile
-        onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-
-        // Step 2: UserProfile -> EditIdentity
-        onView(withId(R.id.btn_edit_profile)).perform(click())
+        // Step 1: Feed -> EditIdentity (via header)
+        onView(withId(R.id.layout_user_identity)).perform(click())
         waitForView()
         onView(withId(R.id.txt_public_name)).check(matches(isDisplayed()))
 
-        // Step 3: EditIdentity -> UserProfile (back)
-        onView(withId(R.id.btn_back)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-
-        // Step 4: UserProfile -> Feed (back)
+        // Step 2: EditIdentity -> Feed (back)
         onView(withId(R.id.btn_back)).perform(click())
         waitForView()
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
     }
 
     @Test
-    fun navigationFlow_feedToConnectToIntroduceAndBack() {
+    fun navigationFlow_feedToCreateCircleAndBack() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Step 1: Feed -> Connect
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Step 1: Feed -> CreateCircle
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
+        onView(withId(R.id.txt_circle_name)).check(matches(isDisplayed()))
 
-        // Step 2: Connect -> IntroduceSelf
-        onView(withId(R.id.btn_conn_request)).perform(click())
-        waitForView()
-        onView(withId(R.id.img_qr_code)).check(matches(isDisplayed()))
-
-        // Step 3: IntroduceSelf -> Connect (back)
-        pressBack()
-        waitForView()
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
-
-        // Step 4: Connect -> Feed (back)
+        // Step 2: CreateCircle -> Feed (back)
         pressBack()
         waitForView()
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
@@ -319,8 +208,8 @@ class NavigationFlowTest {
         // Verify circle filter is displayed
         onView(withId(R.id.list_circles)).check(matches(isDisplayed()))
 
-        // Verify filter label is displayed
-        onView(withId(R.id.txt_filter_label)).check(matches(isDisplayed()))
+        // Verify header bar is displayed (replaces old filter label)
+        onView(withId(R.id.header_bar)).check(matches(isDisplayed()))
     }
 
     // =====================
@@ -347,15 +236,15 @@ class NavigationFlowTest {
     // =====================
 
     @Test
-    fun systemBackButton_fromConnectReturnToFeed() {
+    fun systemBackButton_fromCreateCircleReturnToFeed() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Navigate to Connect
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Navigate to CreateCircle
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
 
         // Press system back
@@ -367,14 +256,14 @@ class NavigationFlowTest {
     }
 
     @Test
-    fun systemBackButton_fromProfileReturnToFeed() {
+    fun systemBackButton_fromEditIdentityReturnToFeed() {
         waitForView(3000)
 
         if (isViewDisplayed(withId(R.id.btn_sign_up))) {
             return
         }
 
-        // Navigate to Profile
+        // Navigate to EditIdentity via post composer avatar
         onView(withId(R.id.img_my_avatar)).perform(click())
         waitForView()
 
@@ -384,27 +273,5 @@ class NavigationFlowTest {
 
         // Verify back on Feed
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun systemBackButton_fromEditIdentityReturnToProfile() {
-        waitForView(3000)
-
-        if (isViewDisplayed(withId(R.id.btn_sign_up))) {
-            return
-        }
-
-        // Navigate to EditIdentity
-        onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).perform(click())
-        waitForView()
-
-        // Press system back
-        pressBack()
-        waitForView()
-
-        // Verify back on Profile
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
     }
 }

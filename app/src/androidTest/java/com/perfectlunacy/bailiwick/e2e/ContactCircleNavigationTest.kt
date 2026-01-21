@@ -63,14 +63,14 @@ class ContactCircleNavigationTest {
 
         // This test requires navigating to a contact, which requires existing data
         // For now, just verify the navigation infrastructure exists by checking
-        // that ContactFragment class is properly set up in navigation.xml
+        // that CreateCircle screen is accessible
 
-        // Navigate to Connect screen as a proxy test
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Navigate to CreateCircle screen as a proxy test
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
 
         // Verify navigation works
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
+        onView(withId(R.id.txt_circle_name)).check(matches(isDisplayed()))
 
         // Go back
         pressBack()
@@ -83,7 +83,7 @@ class ContactCircleNavigationTest {
         if (skipIfNotLoggedIn()) return
 
         // Navigate somewhere and back to verify navigation stack works
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
         pressBack()
         waitForView()
@@ -105,15 +105,17 @@ class ContactCircleNavigationTest {
     }
 
     // =====================
-    // User Filter Tests
+    // Header Tests
     // =====================
 
     @Test
-    fun feedScreen_userFilterListExists() {
+    fun feedScreen_headerElementsExist() {
         if (skipIfNotLoggedIn()) return
 
-        // User filter list (avatars) exists on feed
-        onView(withId(R.id.list_users)).check(matches(isDisplayed()))
+        // Header bar with user identity and circles exists on feed
+        onView(withId(R.id.header_bar)).check(matches(isDisplayed()))
+        onView(withId(R.id.layout_user_identity)).check(matches(isDisplayed()))
+        onView(withId(R.id.list_circles)).check(matches(isDisplayed()))
     }
 
     // =====================
@@ -129,42 +131,22 @@ class ContactCircleNavigationTest {
         // Step 1: Start at Feed
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
 
-        // Step 2: Go to Profile
+        // Step 2: Go to EditIdentity (via post composer avatar)
         onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-
-        // Step 3: Go to EditIdentity
-        onView(withId(R.id.btn_edit_profile)).perform(click())
         waitForView()
         onView(withId(R.id.btn_avatar)).check(matches(isDisplayed()))
 
-        // Step 4: Back to Profile
-        onView(withId(R.id.btn_back)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-
-        // Step 5: Back to Feed
+        // Step 3: Back to Feed
         onView(withId(R.id.btn_back)).perform(click())
         waitForView()
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
 
-        // Step 6: Go to Connect
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Step 4: Go to CreateCircle
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
+        onView(withId(R.id.txt_circle_name)).check(matches(isDisplayed()))
 
-        // Step 7: Go to IntroduceSelf
-        onView(withId(R.id.btn_conn_request)).perform(click())
-        waitForView()
-        onView(withId(R.id.img_qr_code)).check(matches(isDisplayed()))
-
-        // Step 8: Back to Connect
-        pressBack()
-        waitForView()
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
-
-        // Step 9: Back to Feed
+        // Step 5: Back to Feed
         pressBack()
         waitForView()
         onView(withId(R.id.btn_post)).check(matches(isDisplayed()))
@@ -176,14 +158,14 @@ class ContactCircleNavigationTest {
 
         // Rapidly navigate through screens to test stability
         repeat(3) {
-            // Profile and back
+            // EditIdentity and back
             onView(withId(R.id.img_my_avatar)).perform(click())
             waitForView(500)
             pressBack()
             waitForView(500)
 
-            // Connect and back
-            onView(withId(R.id.btn_add_subscription)).perform(click())
+            // CreateCircle and back
+            onView(withId(R.id.btn_add_circle)).perform(click())
             waitForView(500)
             pressBack()
             waitForView(500)
@@ -197,21 +179,13 @@ class ContactCircleNavigationTest {
     fun navigationFlow_backStackIsPreserved() {
         if (skipIfNotLoggedIn()) return
 
-        // Navigate deep and verify back stack
+        // Navigate and verify back stack
 
-        // Feed -> Connect
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Feed -> EditIdentity
+        onView(withId(R.id.layout_user_identity)).perform(click())
         waitForView()
 
-        // Connect -> IntroduceSelf
-        onView(withId(R.id.btn_conn_request)).perform(click())
-        waitForView()
-
-        // Now press back twice to get to Feed
-        pressBack()
-        waitForView()
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed())) // On Connect
-
+        // Now press back to get to Feed
         pressBack()
         waitForView()
         onView(withId(R.id.btn_post)).check(matches(isDisplayed())) // On Feed
@@ -225,17 +199,15 @@ class ContactCircleNavigationTest {
     fun feedScreen_allMainElementsVisible() {
         if (skipIfNotLoggedIn()) return
 
-        // Header
-        onView(withId(R.id.btn_refresh)).check(matches(isDisplayed()))
-        onView(withId(R.id.txt_peer)).check(matches(isDisplayed()))
+        // Header with user identity and circle selector
+        onView(withId(R.id.header_bar)).check(matches(isDisplayed()))
+        onView(withId(R.id.layout_user_identity)).check(matches(isDisplayed()))
+        onView(withId(R.id.img_header_avatar)).check(matches(isDisplayed()))
+        onView(withId(R.id.txt_user_name)).check(matches(isDisplayed()))
 
         // Circle filter
-        onView(withId(R.id.txt_filter_label)).check(matches(isDisplayed()))
         onView(withId(R.id.list_circles)).check(matches(isDisplayed()))
-
-        // User filter
-        onView(withId(R.id.list_users)).check(matches(isDisplayed()))
-        onView(withId(R.id.btn_add_subscription)).check(matches(isDisplayed()))
+        onView(withId(R.id.btn_add_circle)).check(matches(isDisplayed()))
 
         // Post composer
         onView(withId(R.id.img_my_avatar)).check(matches(isDisplayed()))
@@ -248,32 +220,11 @@ class ContactCircleNavigationTest {
     }
 
     @Test
-    fun userProfileScreen_ownProfileElementsVisible() {
-        if (skipIfNotLoggedIn()) return
-
-        // Navigate to own profile
-        onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-
-        // Header
-        onView(withId(R.id.btn_back)).check(matches(isDisplayed()))
-
-        // Profile info
-        onView(withId(R.id.img_avatar)).check(matches(isDisplayed()))
-        onView(withId(R.id.txt_name)).check(matches(isDisplayed()))
-
-        // Own profile actions
-        onView(withId(R.id.btn_edit_profile)).check(matches(isDisplayed()))
-    }
-
-    @Test
     fun editIdentityScreen_allElementsVisible() {
         if (skipIfNotLoggedIn()) return
 
-        // Navigate to EditIdentity
+        // Navigate to EditIdentity via post composer avatar
         onView(withId(R.id.img_my_avatar)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_edit_profile)).perform(click())
         waitForView()
 
         // Header
@@ -288,29 +239,14 @@ class ContactCircleNavigationTest {
     }
 
     @Test
-    fun connectScreen_allElementsVisible() {
+    fun createCircleScreen_allElementsVisible() {
         if (skipIfNotLoggedIn()) return
 
-        // Navigate to Connect
-        onView(withId(R.id.btn_add_subscription)).perform(click())
+        // Navigate to CreateCircle
+        onView(withId(R.id.btn_add_circle)).perform(click())
         waitForView()
 
-        // Connection options
-        onView(withId(R.id.btn_conn_request)).check(matches(isDisplayed()))
-        onView(withId(R.id.btn_conn_accept)).check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun introduceSelfScreen_qrCodeVisible() {
-        if (skipIfNotLoggedIn()) return
-
-        // Navigate to IntroduceSelf
-        onView(withId(R.id.btn_add_subscription)).perform(click())
-        waitForView()
-        onView(withId(R.id.btn_conn_request)).perform(click())
-        waitForView()
-
-        // QR code should be displayed
-        onView(withId(R.id.img_qr_code)).check(matches(isDisplayed()))
+        // Circle name input should be displayed
+        onView(withId(R.id.txt_circle_name)).check(matches(isDisplayed()))
     }
 }
