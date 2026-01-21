@@ -8,7 +8,9 @@ import android.widget.Toast
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.perfectlunacy.bailiwick.Keyring
 import com.perfectlunacy.bailiwick.R
+import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.databinding.FragmentCreateCircleBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,7 +45,15 @@ class CreateCircleFragment : BailiwickFragment() {
                 val circle = withContext(Dispatchers.IO) {
                     val identity = bwModel.network.myIdentities.firstOrNull()
                         ?: return@withContext null
-                    bwModel.network.createCircle(name, identity)
+                    val newCircle = bwModel.network.createCircle(name, identity)
+
+                    // Generate encryption key for this circle - CRITICAL for security
+                    val ctx = context ?: return@withContext newCircle
+                    val filesDir = ctx.filesDir.toPath()
+                    val rsaCipher = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
+                    Keyring.generateAesKey(bwModel.db.keyDao(), filesDir, newCircle.id, rsaCipher)
+
+                    newCircle
                 }
 
                 if (circle != null) {
