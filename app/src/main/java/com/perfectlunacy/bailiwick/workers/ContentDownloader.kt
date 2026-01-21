@@ -79,6 +79,10 @@ class ContentDownloader(
         val existing = db.identityDao().findByHash(hash)
         if (existing != null) {
             Log.d(TAG, "Already have identity $hash")
+            // Still check if profile picture needs downloading (may have failed before)
+            existing.profilePicHash?.let { picHash ->
+                downloadPublicBlob(picHash, nodeId)
+            }
             return
         }
 
