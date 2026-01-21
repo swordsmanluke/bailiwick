@@ -372,7 +372,8 @@ class ContentFragment : BailiwickFragment() {
 
                 val signer = RsaSignature(keyring.publicKey, keyring.privateKey)
                 newPost.sign(signer, postFiles)
-                val circId = bwModel.network.circles.first().id
+                // Post to the selected circle, or default to first circle if none selected
+                val circId = filterByCircleId ?: bwModel.network.circles.first().id
                 bwModel.network.storePost(circId, newPost)
 
                 // Insert PostFiles into database with the post ID
