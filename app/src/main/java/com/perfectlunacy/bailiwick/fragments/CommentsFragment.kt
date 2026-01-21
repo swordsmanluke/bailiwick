@@ -13,7 +13,6 @@ import android.util.Log
 import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.CommentAdapter
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.databinding.FragmentCommentsBinding
 import com.perfectlunacy.bailiwick.models.db.Post
@@ -231,12 +230,7 @@ class CommentsFragment : BailiwickFragment() {
 
                 // Publish comment to Iroh blob storage with circle key encryption
                 try {
-                    val cipher = try {
-                        EncryptorFactory.forCircle(db.keyDao(), circleId)
-                    } catch (e: IllegalStateException) {
-                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
-                        NoopEncryptor()
-                    }
+                    val cipher = EncryptorFactory.forCircle(db.keyDao(), circleId)
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     val commentHash = publisher.publishPost(comment, circleId, cipher)

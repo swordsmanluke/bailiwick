@@ -25,7 +25,6 @@ import com.perfectlunacy.bailiwick.adapters.MentionSuggestionsAdapter
 import com.perfectlunacy.bailiwick.adapters.PhotoPreviewAdapter
 import com.perfectlunacy.bailiwick.adapters.PostAdapter
 import com.perfectlunacy.bailiwick.util.MentionParser
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.models.db.Action
 import com.perfectlunacy.bailiwick.storage.BlobCache
 import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
@@ -387,12 +386,7 @@ class ContentFragment : BailiwickFragment() {
 
                 // Publish post to Iroh blob storage with circle key encryption
                 try {
-                    val cipher = try {
-                        EncryptorFactory.forCircle(db.keyDao(), circId)
-                    } catch (e: IllegalStateException) {
-                        Log.w(TAG, "No key for circle $circId, using noop: ${e.message}")
-                        NoopEncryptor()
-                    }
+                    val cipher = EncryptorFactory.forCircle(db.keyDao(), circId)
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     val postHash = publisher.publishPost(newPost, circId, cipher)
@@ -705,12 +699,7 @@ class ContentFragment : BailiwickFragment() {
 
                 // Publish reaction to Iroh blob storage
                 try {
-                    val cipher = try {
-                        EncryptorFactory.forCircle(db.keyDao(), circleId)
-                    } catch (e: IllegalStateException) {
-                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
-                        NoopEncryptor()
-                    }
+                    val cipher = EncryptorFactory.forCircle(db.keyDao(), circleId)
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     val reactionHash = publisher.publishReaction(reaction, cipher)
@@ -755,12 +744,7 @@ class ContentFragment : BailiwickFragment() {
 
                 // Publish reaction removal to Iroh blob storage
                 try {
-                    val cipher = try {
-                        EncryptorFactory.forCircle(db.keyDao(), circleId)
-                    } catch (e: IllegalStateException) {
-                        Log.w(TAG, "No key for circle $circleId, using noop: ${e.message}")
-                        NoopEncryptor()
-                    }
+                    val cipher = EncryptorFactory.forCircle(db.keyDao(), circleId)
 
                     val publisher = ContentPublisher(bwModel.iroh, db)
                     publisher.publishReaction(reaction, cipher, isRemoval = true)
