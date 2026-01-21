@@ -101,6 +101,9 @@ interface PostDao {
     @Query("SELECT EXISTS( SELECT 1 FROM post WHERE blobHash = :hash)")
     fun postExists(hash: BlobHash): Boolean
 
+    @Query("SELECT * FROM post WHERE signature = :signature LIMIT 1")
+    fun findBySignature(signature: String): Post?
+
     @Query("UPDATE post SET blobHash = :hash WHERE id = :id")
     fun updateHash(id: Long, hash: BlobHash)
 

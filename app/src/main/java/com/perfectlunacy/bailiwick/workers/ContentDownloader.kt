@@ -131,6 +131,17 @@ class ContentDownloader(
         // Find or create identity for this author
         val identity = findOrCreateIdentity(nodeId)
 
+        // Also check by signature to catch locally-created posts that haven't synced yet
+        val existingBySignature = db.postDao().findBySignature(irohPost.signature)
+        if (existingBySignature != null) {
+            Log.d(TAG, "Post with signature already exists (id=${existingBySignature.id}), updating hash")
+            // Update the existing post's hash if it was null (locally created but not yet synced)
+            if (existingBySignature.blobHash == null) {
+                db.postDao().updateHash(existingBySignature.id, hash)
+            }
+            return
+        }
+
         val post = Post(
             authorId = identity.id,
             blobHash = hash,

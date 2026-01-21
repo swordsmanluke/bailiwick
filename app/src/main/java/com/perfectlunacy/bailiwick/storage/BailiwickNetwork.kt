@@ -108,6 +108,15 @@ class BailiwickNetworkImpl(
 
     override fun storePost(circleId: Long, post: Post) {
         val circlePostDao = db.circlePostDao()
+
+        // Check for duplicate by signature to avoid inserting the same post twice
+        val existing = db.postDao().findBySignature(post.signature)
+        if (existing != null) {
+            Log.d(TAG, "Post with signature already exists (id=${existing.id}), skipping insert")
+            post.id = existing.id
+            return
+        }
+
         val postId = db.postDao().insert(post)
         post.id = postId  // Update the post's ID so callers can use it
         circlePostDao.insert(CirclePost(circleId, postId))
