@@ -71,6 +71,15 @@
                 tools:listitem="@layout/item_circle_filter" />
 
             <ImageButton
+                android:id="@+id/btn_add_connection"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/add_connection"
+                android:src="@drawable/ic_qr_code"
+                app:tint="@color/colorPrimary" />
+
+            <ImageButton
                 android:id="@+id/btn_add_circle"
                 android:layout_width="@dimen/touch_target_min"
                 android:layout_height="@dimen/touch_target_min"

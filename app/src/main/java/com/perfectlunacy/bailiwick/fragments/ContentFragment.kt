@@ -162,6 +162,10 @@ class ContentFragment : BailiwickFragment() {
             requireView().findNavController().navigate(R.id.action_contentFragment_to_createCircleFragment)
         }
 
+        binding.btnAddConnection.setOnClickListener {
+            requireView().findNavController().navigate(R.id.action_contentFragment_to_connectFragment)
+        }
+
         // Observe result from EditCircleFragment
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Long>(
             EditCircleFragment.RESULT_CIRCLE_ID
