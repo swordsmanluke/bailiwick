@@ -19,16 +19,15 @@ import org.junit.runner.RunWith
 
 /**
  * E2E navigation flow tests that verify navigation between all UI screens:
- * - Feed (ContentFragment)
- * - UserProfile (UserProfileFragment)
- * - EditIdentity (EditIdentityFragment)
+ * - Feed (ContentFragment) - with header_bar, layout_user_identity, list_circles
+ * - EditIdentity (EditIdentityFragment) - accessed via avatar tap
+ * - CreateCircle (CreateCircleFragment) - accessed via btn_add_circle
  * - Contact (ContactFragment)
  * - EditCircle (EditCircleFragment)
- * - Connect (ConnectFragment)
- * - IntroduceSelf (IntroduceSelfFragment)
- * - AcceptIntroduction (AcceptIntroductionFragment)
  *
  * These tests require a logged-in user state to verify navigation flows.
+ *
+ * Updated for Feed UI redesign: removed user filter bar and old header elements.
  */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
