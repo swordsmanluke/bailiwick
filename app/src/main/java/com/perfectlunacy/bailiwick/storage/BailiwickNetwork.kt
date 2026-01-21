@@ -54,7 +54,7 @@ class BailiwickNetworkImpl(
         get() = db.postDao().all()
 
     override val postsLive: LiveData<List<Post>>
-        get() = db.postDao().allLive()
+        get() = db.postDao().topLevelPostsLive()
 
     override fun accountExists(): Boolean {
         val identities = db.identityDao().identitiesFor(nodeId)

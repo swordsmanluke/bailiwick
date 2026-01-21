@@ -73,6 +73,13 @@ interface PostDao {
     @Query("SELECT * FROM post ORDER BY timestamp DESC")
     fun allLive(): LiveData<List<Post>>
 
+    /**
+     * Get only top-level posts (not comments/replies) for the feed.
+     * Comments have a non-null parentHash and should only appear under their parent post.
+     */
+    @Query("SELECT * FROM post WHERE parentHash IS NULL ORDER BY timestamp DESC")
+    fun topLevelPostsLive(): LiveData<List<Post>>
+
     @Query("SELECT * FROM post WHERE blobHash IS NULL")
     fun inNeedOfSync(): List<Post>
 
