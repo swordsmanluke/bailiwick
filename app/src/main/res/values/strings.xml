@@ -169,6 +169,7 @@
     <string name="circle_deleted">Circle deleted</string>
     <string name="cannot_delete_everyone">Cannot delete the default circle</string>
     <string name="circle_name_required">Circle name is required</string>
+    <string name="identity">Identity</string>
     <string name="remove_member">Remove member</string>
 
     <!-- Edit Identity -->

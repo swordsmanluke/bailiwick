@@ -66,6 +66,23 @@
                         android:textAppearance="@style/TextAppearance.Bailiwick.Headline2" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Identity Selector -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_identity"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:hint="@string/identity">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/dropdown_identity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:padding="@dimen/spacing_md" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <!-- Members Header -->
                 <TextView
                     android:id="@+id/txt_members_header"

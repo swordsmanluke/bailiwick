@@ -32,6 +32,9 @@ interface CircleDao {
     @Query("UPDATE circle SET blobHash = :hash WHERE id = :id")
     fun storeHash(id: Long, hash: BlobHash)
 
+    @Query("UPDATE circle SET identityId = :identityId WHERE id = :id")
+    fun updateIdentity(id: Long, identityId: Long)
+
     @Update
     fun update(circle: Circle)
 

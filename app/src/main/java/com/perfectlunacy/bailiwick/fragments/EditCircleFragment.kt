@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -34,12 +35,15 @@ class EditCircleFragment : BailiwickFragment() {
     private var circleId: Long = -1L
     private var circle: Circle? = null
     private var originalName: String = ""
+    private var originalIdentityId: Long = -1L
 
     private val addedMemberIds = mutableSetOf<Long>()
     private val removedMemberIds = mutableSetOf<Long>()
     private var originalMemberIds = setOf<Long>()
 
     private var allContacts: List<Identity> = emptyList()
+    private var userIdentities: List<Identity> = emptyList()
+    private var selectedIdentityId: Long = -1L
     private var memberAdapter: CircleMemberAdapter? = null
     private var searchAdapter: ContactSearchAdapter? = null
 
@@ -119,25 +123,49 @@ class EditCircleFragment : BailiwickFragment() {
 
     private fun loadCircleData() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val (loadedCircle, memberIds, contacts) = withContext(Dispatchers.IO) {
+            val (loadedCircle, memberIds, contacts, ownIdentities) = withContext(Dispatchers.IO) {
                 val c = bwModel.db.circleDao().find(circleId)
                 val mIds = bwModel.db.circleMemberDao().membersFor(circleId).toSet()
                 val allIdentities = bwModel.db.identityDao().all()
                     .filter { it.owner != bwModel.network.nodeId }
-                Triple(c, mIds, allIdentities)
+                val myIdentities = bwModel.db.identityDao().identitiesFor(bwModel.network.nodeId)
+                Quadruple(c, mIds, allIdentities, myIdentities)
             }
 
             circle = loadedCircle
             originalName = loadedCircle?.name ?: ""
+            originalIdentityId = loadedCircle?.identityId ?: -1L
+            selectedIdentityId = originalIdentityId
             originalMemberIds = memberIds
             allContacts = contacts
+            userIdentities = ownIdentities
 
             binding.txtCircleName.setText(originalName)
             binding.toolbar.title = originalName
 
+            setupIdentityDropdown()
             loadMembers(memberIds)
         }
     }
+
+    private fun setupIdentityDropdown() {
+        val identityNames = userIdentities.map { it.name }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, identityNames)
+        binding.dropdownIdentity.setAdapter(adapter)
+
+        // Set current selection
+        val currentIndex = userIdentities.indexOfFirst { it.id == selectedIdentityId }
+        if (currentIndex >= 0 && currentIndex < identityNames.size) {
+            binding.dropdownIdentity.setText(identityNames[currentIndex], false)
+        }
+
+        binding.dropdownIdentity.setOnItemClickListener { _, _, position, _ ->
+            selectedIdentityId = userIdentities[position].id
+            updateSaveButtonState()
+        }
+    }
+
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
     private fun loadMembers(memberIds: Set<Long>) {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -232,13 +260,15 @@ class EditCircleFragment : BailiwickFragment() {
         val currentName = binding.txtCircleName.text?.toString() ?: ""
         val nameChanged = currentName != originalName
         val membersChanged = addedMemberIds.isNotEmpty() || removedMemberIds.isNotEmpty()
+        val identityChanged = selectedIdentityId != originalIdentityId
 
-        binding.btnSave.isEnabled = (nameChanged || membersChanged) && currentName.isNotBlank()
+        binding.btnSave.isEnabled = (nameChanged || membersChanged || identityChanged) && currentName.isNotBlank()
     }
 
     private fun hasChanges(): Boolean {
         val currentName = binding.txtCircleName.text?.toString() ?: ""
-        return currentName != originalName || addedMemberIds.isNotEmpty() || removedMemberIds.isNotEmpty()
+        val identityChanged = selectedIdentityId != originalIdentityId
+        return currentName != originalName || addedMemberIds.isNotEmpty() || removedMemberIds.isNotEmpty() || identityChanged
     }
 
     private fun saveChanges() {
@@ -258,6 +288,11 @@ class EditCircleFragment : BailiwickFragment() {
                 circle?.let {
                     it.name = newName
                     bwModel.db.circleDao().update(it)
+                }
+
+                // Update identity if changed
+                if (selectedIdentityId != originalIdentityId && selectedIdentityId > 0) {
+                    bwModel.db.circleDao().updateIdentity(circleId, selectedIdentityId)
                 }
 
                 // Add new members
