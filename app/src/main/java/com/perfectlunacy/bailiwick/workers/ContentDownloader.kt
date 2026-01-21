@@ -28,6 +28,7 @@ class ContentDownloader(
     private val iroh: IrohNode,
     private val db: BailiwickDatabase,
     private val cacheDir: File,
+    private val blobsDir: File,
     private val onNewPost: ((postHash: String, authorName: String, authorNodeId: String) -> Unit)? = null
 ) {
     companion object {
@@ -255,17 +256,26 @@ class ContentDownloader(
     }
 
     /**
-     * Download a public blob to cache without decryption.
+     * Download a public blob to the blobs directory without decryption.
      * Used for public content like profile pictures.
+     * Stores to blobsDir so AvatarLoader can find them.
      */
     suspend fun downloadPublicBlob(hash: BlobHash, nodeId: NodeId) {
-        if (blobCache.exists(hash)) {
-            Log.d(TAG, "Already have blob $hash in cache")
+        val blobFile = File(blobsDir, hash)
+        if (blobFile.exists() && blobFile.length() > 0) {
+            Log.d(TAG, "Already have blob $hash in blobs dir")
             return
         }
 
         val data = downloadBlobOrLog(hash, nodeId, "blob") ?: return
-        blobCache.store(hash, data)
+        
+        try {
+            blobsDir.mkdirs()
+            blobFile.writeBytes(data)
+            Log.d(TAG, "Stored public blob $hash (${data.size} bytes)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to write public blob $hash: ${e.message}")
+        }
     }
 
     /**

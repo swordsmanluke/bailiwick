@@ -15,7 +15,6 @@ import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.BailiwickActivity
 import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.ciphers.Ed25519Keyring
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.crypto.EncryptorFactory
 import com.perfectlunacy.bailiwick.crypto.KeyEncryption
 import com.perfectlunacy.bailiwick.crypto.KeyStorage
@@ -148,7 +147,7 @@ class GossipService : Service() {
                 Log.i(TAG, "Initializing Gossip subscriptions")
 
                 // Create ContentDownloader for processing received manifests
-                contentDownloader = ContentDownloader(iroh, db, bw.cacheDir) { postHash, authorName, authorNodeId ->
+                contentDownloader = ContentDownloader(iroh, db, bw.cacheDir, filesDir) { postHash, authorName, authorNodeId ->
                     // Notify user about new posts
                     NotificationHelper.onNewPost(applicationContext, postHash, authorName, authorNodeId)
                 }
