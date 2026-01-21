@@ -21,8 +21,8 @@ class CircleFilterAdapter(
     private val onCircleLongPress: ((Circle) -> Unit)? = null
 ) : RecyclerView.Adapter<CircleFilterAdapter.CircleViewHolder>() {
 
-    // Add "All" as a virtual circle option
-    private val allOption = Circle("All", -1, null).apply { id = -1 }
+    // Virtual option to show posts from all circles (clears the filter)
+    private val showAllOption = Circle("Show All", -1, null).apply { id = -1 }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CircleViewHolder {
         val view = LayoutInflater.from(context)
@@ -31,11 +31,11 @@ class CircleFilterAdapter(
     }
 
     override fun onBindViewHolder(holder: CircleViewHolder, position: Int) {
-        val circle = if (position == 0) allOption else circles[position - 1]
+        val circle = if (position == 0) showAllOption else circles[position - 1]
         holder.bind(circle, circle.id == (selectedCircleId ?: -1))
     }
 
-    override fun getItemCount(): Int = circles.size + 1  // +1 for "All" option
+    override fun getItemCount(): Int = circles.size + 1  // +1 for "Show All" option
 
     fun updateCircles(newCircles: List<Circle>) {
         circles = newCircles

@@ -12,7 +12,6 @@ import com.perfectlunacy.bailiwick.R
 import com.perfectlunacy.bailiwick.adapters.CircleListAdapter
 import com.perfectlunacy.bailiwick.databinding.FragmentCirclesBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,9 +58,8 @@ class CirclesFragment : BailiwickFragment() {
     private fun loadCircles() {
         bwModel.viewModelScope.launch {
             val circlesWithCounts = withContext(Dispatchers.Default) {
-                // Get all circles except the "everyone" circle
+                // Get all circles
                 val circles = bwModel.network.circles
-                    .filter { it.name != EVERYONE_CIRCLE }
 
                 // Get member counts for each circle
                 circles.map { circle ->

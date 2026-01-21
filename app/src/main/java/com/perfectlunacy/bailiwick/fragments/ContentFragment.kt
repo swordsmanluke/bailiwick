@@ -36,7 +36,6 @@ import com.perfectlunacy.bailiwick.models.db.PostFile
 import com.perfectlunacy.bailiwick.models.db.Reaction
 import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.signatures.RsaSignature
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.storage.FilterPreferences
 import com.perfectlunacy.bailiwick.workers.ContentPublisher
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
@@ -139,8 +138,7 @@ class ContentFragment : BailiwickFragment() {
 
         bwModel.viewModelScope.launch {
             val circles = withContext(Dispatchers.Default) {
-                // Filter out the "everyone" circle since it's redundant with the "All" option
-                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+                bwModel.network.circles
             }
 
             circleFilterAdapter = CircleFilterAdapter(
@@ -194,7 +192,7 @@ class ContentFragment : BailiwickFragment() {
     private fun reloadCircles() {
         bwModel.viewModelScope.launch {
             val circles = withContext(Dispatchers.Default) {
-                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+                bwModel.network.circles
             }
             circleFilterAdapter?.updateCircles(circles)
         }
@@ -472,7 +470,7 @@ class ContentFragment : BailiwickFragment() {
     private fun onCircleCreated(circleId: Long) {
         bwModel.viewModelScope.launch {
             val circles = withContext(Dispatchers.Default) {
-                bwModel.network.circles.filter { it.name != EVERYONE_CIRCLE }
+                bwModel.network.circles
             }
             circleFilterAdapter?.updateCircles(circles)
 

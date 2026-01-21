@@ -7,7 +7,7 @@ import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Subscription
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import java.security.MessageDigest
 
@@ -126,7 +126,7 @@ object TestAccountHelper {
 
         // Create default "everyone" circle
         val circle = Circle(
-            name = EVERYONE_CIRCLE,
+            name = ALL_CIRCLE,
             identityId = identityId,
             blobHash = null
         )

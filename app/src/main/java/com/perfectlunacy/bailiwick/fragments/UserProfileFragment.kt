@@ -24,7 +24,7 @@ import com.perfectlunacy.bailiwick.databinding.FragmentUserProfileBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
 import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import kotlinx.coroutines.Dispatchers
@@ -97,9 +97,8 @@ class UserProfileFragment : BailiwickFragment() {
                 val posts = bwModel.db.postDao().postsFor(user.id)
                     .sortedByDescending { it.timestamp }
 
-                // Get circles (only the user's own circles for membership management)
+                // Get circles for membership management
                 val circles = bwModel.network.circles
-                    .filter { it.name != EVERYONE_CIRCLE }
 
                 // Get which circles this user is a member of
                 val memberOfCircleIds = bwModel.db.circleMemberDao()

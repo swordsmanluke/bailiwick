@@ -216,10 +216,7 @@ class CommentsFragment : BailiwickFragment() {
                 val circleId = if (parentPost != null) {
                     // Get circles the parent post belongs to
                     val parentCircles = db.circlePostDao().circlesForPost(parentPost.id)
-                    // Use the first non-"everyone" circle, or fall back to first circle
-                    val everyoneCircle = bwModel.network.circles.find { it.name == "everyone" }
-                    parentCircles.firstOrNull { it != everyoneCircle?.id }
-                        ?: parentCircles.firstOrNull()
+                    parentCircles.firstOrNull()
                         ?: bwModel.network.circles.first().id
                 } else {
                     // Fallback: use first circle (shouldn't happen normally)

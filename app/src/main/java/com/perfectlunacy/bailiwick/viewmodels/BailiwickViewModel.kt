@@ -10,7 +10,7 @@ import com.perfectlunacy.bailiwick.fragments.AcceptIntroductionFragment
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Post
 import com.perfectlunacy.bailiwick.storage.BailiwickNetwork
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.BailiwickDatabase
 import com.perfectlunacy.bailiwick.storage.iroh.IrohNode
 
@@ -51,7 +51,7 @@ class BailiwickViewModel(
         posts.forEach { post ->
             Log.d(TAG, "  Post ${post.id}: authorId=${post.authorId}, text=${post.text?.take(30)}...")
         }
-        content.getOrPut(EVERYONE_CIRCLE) { mutableSetOf() }.addAll(posts)
+        content.getOrPut(ALL_CIRCLE) { mutableSetOf() }.addAll(posts)
 
 //        Log.i(TAG, "Retrieved ${sub.actions.count()} Actions")
 //        sub.actions.forEach { processAction(sub.peerId, it) }

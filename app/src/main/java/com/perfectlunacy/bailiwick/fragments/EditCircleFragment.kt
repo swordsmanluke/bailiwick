@@ -20,7 +20,7 @@ import com.perfectlunacy.bailiwick.databinding.FragmentEditCircleBinding
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
 import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -282,7 +282,7 @@ class EditCircleFragment : BailiwickFragment() {
         popup.menuInflater.inflate(R.menu.menu_edit_circle, popup.menu)
 
         // Hide delete option for "everyone" circle
-        if (circle?.name == EVERYONE_CIRCLE) {
+        if (circle?.name == ALL_CIRCLE) {
             popup.menu.findItem(R.id.action_delete)?.isVisible = false
         }
 
@@ -301,7 +301,7 @@ class EditCircleFragment : BailiwickFragment() {
     private fun showDeleteConfirmation() {
         val circleName = circle?.name ?: return
 
-        if (circleName == EVERYONE_CIRCLE) {
+        if (circleName == ALL_CIRCLE) {
             Toast.makeText(context, R.string.cannot_delete_everyone, Toast.LENGTH_SHORT).show()
             return
         }

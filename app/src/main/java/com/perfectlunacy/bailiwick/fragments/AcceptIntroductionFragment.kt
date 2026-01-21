@@ -35,7 +35,7 @@ import com.perfectlunacy.bailiwick.models.Introduction
 import com.perfectlunacy.bailiwick.qr.QREncoder
 import com.perfectlunacy.bailiwick.services.GossipService
 import com.perfectlunacy.bailiwick.testing.TestIntroductionReceiver
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import com.perfectlunacy.bailiwick.util.GsonProvider
@@ -284,15 +284,15 @@ class AcceptIntroductionFragment : BailiwickFragment() {
                 // Store the new user and their key (now Ed25519 for v2)
                 db.userDao().insert(User(intro.peerId, intro.publicKey))
 
-                // Create an Action with our "everyone" key
-                val everyoneId = bwModel.network.circles.find { it.name == EVERYONE_CIRCLE }?.id ?: 0
-                
+                // Create an Action with our "All" circle key (new contacts are added to All circle by default)
+                val allCircleId = bwModel.network.circles.find { it.name == ALL_CIRCLE }?.id ?: 0
+
                 // Get the circle key - need a cipher for Keyring.keyForCircle
                 val rsa = RsaWithAesEncryptor(bwModel.keyring.privateKey, bwModel.keyring.publicKey)
                 val circKey = Keyring.keyForCircle(
                     db.keyDao(),
                     filesDir,
-                    everyoneId.toInt(),
+                    allCircleId.toInt(),
                     rsa
                 )
 

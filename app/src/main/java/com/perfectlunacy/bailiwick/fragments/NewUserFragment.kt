@@ -23,7 +23,7 @@ import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.Subscription
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.NodeId
 import com.perfectlunacy.bailiwick.util.PhotoPicker
 import com.perfectlunacy.bailiwick.util.RobotAvatarGenerator
@@ -362,7 +362,7 @@ class NewUserFragment : BailiwickFragment() {
 
         db.subscriptionDao().insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
 
-        val circle = Circle(EVERYONE_CIRCLE, identityId, null)
+        val circle = Circle(ALL_CIRCLE, identityId, null)
         val circleId = db.circleDao().insert(circle)
 
         // Create a key for this circle

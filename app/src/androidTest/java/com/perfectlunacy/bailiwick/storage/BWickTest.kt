@@ -43,8 +43,8 @@ class BWickTest {
         val identity = Identity(null, peerId, "StarBuck", null)
         val identityId = db.identityDao().insert(identity)
 
-        val everyone = Circle("everyone", identityId, null)
-        val circleId = db.circleDao().insert(everyone)
+        val allCircle = Circle("All", identityId, null)
+        val circleId = db.circleDao().insert(allCircle)
 
         db.circleMemberDao().insert(CircleMember(circleId, identityId))
 
@@ -82,32 +82,31 @@ class BWickTest {
     }
 
     @Test
-    fun storePost_toNonEveryoneCircle_insertsPostOnlyOnce() {
-        // BEAD-002: Verify that storing a post to a circle other than "everyone"
-        // does not insert the post twice into the database
+    fun storePost_insertsPostOnlyToSpecifiedCircle() {
+        // Posts are only stored in the specified circle, not auto-added to "All"
         val myPeerId = "myPeerId"
         newAccount(myPeerId, "Test User", "")
         val me = db.identityDao().identitiesFor(myPeerId).first()
 
         val bw = BailiwickNetworkImpl(db, myPeerId, context.filesDir.toPath())
         val friendsCircle = bw.createCircle("friends", me)
-        val everyoneCircle = bw.circles.find { it.name == "everyone" }!!
+        val allCircle = bw.circles.find { it.name == "All" }!!
 
         // Precondition: no posts exist
         assertEquals("Precondition failed: posts should be empty", 0, bw.posts.count())
 
-        // Store a post to the "friends" circle (not "everyone")
+        // Store a post to the "friends" circle
         val post = buildPost(me)
         bw.storePost(friendsCircle.id, post)
 
         // The post should exist exactly once in the database
         assertEquals("Post was inserted multiple times!", 1, bw.posts.count())
 
-        // The post should be accessible from both circles
+        // The post should only be in friends circle, not auto-added to All
         assertTrue("Post should be in friends circle",
             bw.circlePosts(friendsCircle.id).any { it.signature == post.signature })
-        assertTrue("Post should also be in everyone circle",
-            bw.circlePosts(everyoneCircle.id).any { it.signature == post.signature })
+        assertFalse("Post should NOT be auto-added to All circle",
+            bw.circlePosts(allCircle.id).any { it.signature == post.signature })
     }
 
     @Test
@@ -125,26 +124,22 @@ class BWickTest {
         val bw = BailiwickNetworkImpl(db, myPeerId, context.filesDir.toPath())
         val friendCirc = bw.createCircle("BestFriends", me)
         val coworkersCirc = bw.createCircle("Cow Orkers", me) // IRL, this would be tied to my "professional" profile
-        val everyoneCirc =  bw.circles.find { it.name == "everyone" }!!
+        val allCirc = bw.circles.find { it.name == "All" }!!
 
         // I'm in all of my own circles, of course
         db.circleMemberDao().insert(CircleMember(friendCirc.id, me.id))
-        db.circleMemberDao().insert(CircleMember(everyoneCirc.id, me.id))
+        db.circleMemberDao().insert(CircleMember(allCirc.id, me.id))
         db.circleMemberDao().insert(CircleMember(coworkersCirc.id, me.id))
 
         // Hugh is a coworker. Not in the 'best friends' circle
         db.circleMemberDao().insert(CircleMember(coworkersCirc.id, you.id))
-        db.circleMemberDao().insert(CircleMember(everyoneCirc.id, you.id))
+        db.circleMemberDao().insert(CircleMember(allCirc.id, you.id))
 
-        // My posts get tied to the circle they're posted in.
-        //...and to the 'everyone' circle because that's how it works.
+        // Posts are tied only to the circle they're posted in (no longer auto-added to All)
         bw.storePost(friendCirc.id, myPost)
 
         // Your posts get inserted. I'll find them in circles I've added your Post's author to
         db.postDao().insert(yourPost)
-
-        // All posts should be in the 'everyone' circle
-        assertTrue(bw.circlePosts(everyoneCirc.id).containsAll(listOf(myPost, yourPost)))
 
         // Only Hugh's post is in the coworkers' circle (I haven't posted there!)
         assertTrue("Hugh's post is missing from Cow Orkers!", bw.circlePosts(coworkersCirc.id).contains(yourPost))
@@ -163,7 +158,7 @@ class BWickTest {
         db.userDao().insert(user)
         db.subscriptionDao().insert(Subscription(nodeId, 0)) // Always subscribed to ourselves
 
-        val circle = Circle("everyone", identityId, null)
+        val circle = Circle("All", identityId, null)
         val circleId = db.circleDao().insert(circle)
 
         db.circleMemberDao().insert(CircleMember(circleId, identityId))

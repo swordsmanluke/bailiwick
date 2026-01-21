@@ -21,7 +21,6 @@ import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.CircleMember
 import com.perfectlunacy.bailiwick.models.db.Identity
 import com.perfectlunacy.bailiwick.models.db.User
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
 import com.perfectlunacy.bailiwick.util.AvatarLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -121,7 +120,6 @@ class ContactFragment : BailiwickFragment() {
 
                 // Get all circles (excluding "everyone")
                 val allCircles = bwModel.network.circles
-                    .filter { it.name != EVERYONE_CIRCLE }
 
                 // Get circles the user is a member of
                 val memberOfCircleIds = bwModel.db.circleMemberDao()
@@ -330,7 +328,6 @@ class ContactFragment : BailiwickFragment() {
         bwModel.viewModelScope.launch {
             val (allCircles, memberCircles) = withContext(Dispatchers.Default) {
                 val allCircles = bwModel.network.circles
-                    .filter { it.name != EVERYONE_CIRCLE }
 
                 val memberOfCircleIds = bwModel.db.circleMemberDao()
                     .circlesFor(identityId)

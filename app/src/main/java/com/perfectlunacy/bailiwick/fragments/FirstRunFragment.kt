@@ -22,7 +22,7 @@ import com.perfectlunacy.bailiwick.databinding.FragmentFirstRunBinding
 import com.perfectlunacy.bailiwick.models.db.Account
 import com.perfectlunacy.bailiwick.models.db.Circle
 import com.perfectlunacy.bailiwick.models.db.Identity
-import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.EVERYONE_CIRCLE
+import com.perfectlunacy.bailiwick.storage.BailiwickNetworkImpl.Companion.ALL_CIRCLE
 import com.perfectlunacy.bailiwick.storage.db.getBailiwickDb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -193,9 +193,9 @@ class FirstRunFragment : Fragment() {
             )
             val identityId = db.identityDao().insert(identity)
 
-            // Create default "everyone" circle
+            // Create default "All" circle
             val circle = Circle(
-                name = EVERYONE_CIRCLE,
+                name = ALL_CIRCLE,
                 identityId = identityId,
                 blobHash = null
             )

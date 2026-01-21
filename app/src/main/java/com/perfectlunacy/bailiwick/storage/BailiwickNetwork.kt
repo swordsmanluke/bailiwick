@@ -30,8 +30,8 @@ class BailiwickNetworkImpl(
 
     companion object {
         private const val TAG = "BailiwickNetworkImpl"
-        /** Name of the default circle that all posts are added to. */
-        const val EVERYONE_CIRCLE = "everyone"
+        /** Name of the default circle. Cannot be deleted and new contacts are added to it by default. */
+        const val ALL_CIRCLE = "All"
     }
 
     override val me: Identity
@@ -120,13 +120,6 @@ class BailiwickNetworkImpl(
         val postId = db.postDao().insert(post)
         post.id = postId  // Update the post's ID so callers can use it
         circlePostDao.insert(CirclePost(circleId, postId))
-
-        // Always add things to the 'everyone' circle - if it still exists
-        circles.find { it.name == EVERYONE_CIRCLE }?.also {
-            if (it.id == circleId) { return@also } // don't double insert
-
-            circlePostDao.insert(CirclePost(it.id, postId))
-        }
     }
 
     override fun storeFile(hash: BlobHash, input: InputStream) {
