@@ -4,7 +4,6 @@ import com.perfectlunacy.bailiwick.Bailiwick
 import com.perfectlunacy.bailiwick.ciphers.AESEncryptor
 import com.perfectlunacy.bailiwick.ciphers.Encryptor
 import com.perfectlunacy.bailiwick.ciphers.MultiCipher
-import com.perfectlunacy.bailiwick.ciphers.NoopEncryptor
 import com.perfectlunacy.bailiwick.ciphers.RsaWithAesEncryptor
 import com.perfectlunacy.bailiwick.models.db.KeyDao
 import com.perfectlunacy.bailiwick.storage.NodeId
@@ -23,8 +22,9 @@ object EncryptorFactory {
     /**
      * Create an encryptor for decrypting content from a peer.
      *
-     * Tries all available AES keys for the peer, falling back to NoopEncryptor
-     * for unencrypted content. Uses the validator to determine which key works.
+     * SECURITY: Only tries AES keys we have received from the peer.
+     * Content MUST be encrypted - we no longer accept plaintext content.
+     * This prevents unauthorized access to Circle content.
      *
      * @param keyDao Database access for keys
      * @param nodeId The peer's node ID
@@ -35,7 +35,7 @@ object EncryptorFactory {
         val ciphers: MutableList<Encryptor> = keyDao.keysFor(nodeId).mapNotNull { key ->
             key.secretKey?.let { k -> AESEncryptor(k) }
         }.toMutableList()
-        ciphers.add(NoopEncryptor())
+        // SECURITY: Do NOT add NoopEncryptor - content MUST be encrypted with a shared key
 
         return MultiCipher(ciphers, validator)
     }
