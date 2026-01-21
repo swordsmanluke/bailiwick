@@ -23,4 +23,7 @@ interface CircleMemberDao {
 
     @Query("DELETE FROM circlemember WHERE circleId = :circleId AND userId = :userId")
     fun delete(circleId: Long, userId: Long)
+
+    @Query("DELETE FROM circlemember WHERE userId = :userId")
+    fun deleteByIdentity(userId: Long)
 }

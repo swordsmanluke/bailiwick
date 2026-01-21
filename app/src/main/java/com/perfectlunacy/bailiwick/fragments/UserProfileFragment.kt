@@ -47,6 +47,7 @@ class UserProfileFragment : BailiwickFragment() {
     private var userId: Long = -1
     private var identity: Identity? = null
     private var isOwnProfile: Boolean = false
+    private var isMuted: Boolean = false
 
     private var circleMembershipAdapter: CircleMembershipAdapter? = null
 
@@ -81,7 +82,7 @@ class UserProfileFragment : BailiwickFragment() {
 
     private fun loadUserProfile() {
         bwModel.viewModelScope.launch {
-            val (user, isOwn, avatar, posts, circles, memberOfCircleIds) = withContext(Dispatchers.Default) {
+            val (user, isOwn, avatar, posts, circles, memberOfCircleIds, muted) = withContext(Dispatchers.Default) {
                 val user = if (userId > 0) {
                     bwModel.db.identityDao().find(userId)
                 } else {
@@ -105,16 +106,21 @@ class UserProfileFragment : BailiwickFragment() {
                     .circlesFor(user.id)
                     .toSet()
 
-                ProfileData(user, isOwn, avatar, posts, circles, memberOfCircleIds)
+                // Get mute state from User table via NodeId
+                val userRecord = bwModel.db.userDao().findByNodeId(user.owner)
+                val muted = userRecord?.isMuted ?: false
+
+                ProfileData(user, isOwn, avatar, posts, circles, memberOfCircleIds, muted)
             }
 
             identity = user
             isOwnProfile = isOwn
+            isMuted = muted
             binding.identity = user
             binding.isOwnProfile = isOwn
 
             // Update UI based on profile type
-            updateProfileUI(isOwn)
+            updateProfileUI(isOwn, muted)
 
             // Set avatar
             binding.imgAvatar.setImageBitmap(avatar)
@@ -127,11 +133,13 @@ class UserProfileFragment : BailiwickFragment() {
         }
     }
 
-    private fun updateProfileUI(isOwnProfile: Boolean) {
+    private fun updateProfileUI(isOwnProfile: Boolean, isMuted: Boolean = false) {
         if (isOwnProfile) {
             // Own profile - show edit and export buttons
             binding.btnEditProfile.visibility = View.VISIBLE
             binding.btnExportIdentity.visibility = View.VISIBLE
+            binding.btnMute.visibility = View.GONE
+            binding.btnRemoveContact.visibility = View.GONE
             binding.cardCircles.visibility = View.GONE  // Don't show circle membership for own profile
 
             binding.btnEditProfile.setOnClickListener {
@@ -143,15 +151,105 @@ class UserProfileFragment : BailiwickFragment() {
             }
         } else {
             binding.btnExportIdentity.visibility = View.GONE
-            // Other user's profile - show circle membership
             binding.btnEditProfile.visibility = View.GONE
+            // Other user's profile - show circle membership, mute, and remove buttons
             binding.cardCircles.visibility = View.VISIBLE
             binding.btnManageContact.visibility = View.VISIBLE
+            binding.btnMute.visibility = View.VISIBLE
+            binding.btnRemoveContact.visibility = View.VISIBLE
+
+            // Update mute button icon based on current state
+            updateMuteButtonIcon(isMuted)
+
+            // Mute/Unmute button
+            binding.btnMute.setOnClickListener {
+                toggleMute()
+            }
+
+            // Remove contact button
+            binding.btnRemoveContact.setOnClickListener {
+                showRemoveContactDialog()
+            }
 
             // Manage Contact button - navigate to contact management
             binding.btnManageContact.setOnClickListener {
                 navigateToContact()
             }
+        }
+    }
+
+    private fun updateMuteButtonIcon(muted: Boolean) {
+        if (muted) {
+            binding.btnMute.setImageResource(R.drawable.ic_volume_off)
+            binding.btnMute.contentDescription = getString(R.string.unmute_contact)
+        } else {
+            binding.btnMute.setImageResource(R.drawable.ic_volume_up)
+            binding.btnMute.contentDescription = getString(R.string.mute_contact)
+        }
+    }
+
+    private fun toggleMute() {
+        val currentIdentity = identity ?: return
+
+        bwModel.viewModelScope.launch {
+            val newMutedState = !isMuted
+            withContext(Dispatchers.Default) {
+                val userRecord = bwModel.db.userDao().findByNodeId(currentIdentity.owner)
+                userRecord?.let {
+                    bwModel.db.userDao().setMuted(it.id, newMutedState)
+                }
+            }
+
+            isMuted = newMutedState
+            updateMuteButtonIcon(newMutedState)
+
+            val message = if (newMutedState) {
+                getString(R.string.muted_contact, currentIdentity.name)
+            } else {
+                getString(R.string.unmuted_contact, currentIdentity.name)
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showRemoveContactDialog() {
+        val currentIdentity = identity ?: return
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_contact_title)
+            .setMessage(getString(R.string.delete_contact_message, currentIdentity.name))
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                removeContact()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun removeContact() {
+        val currentIdentity = identity ?: return
+
+        bwModel.viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                // Delete the user record
+                val userRecord = bwModel.db.userDao().findByNodeId(currentIdentity.owner)
+                userRecord?.let {
+                    bwModel.db.userDao().delete(it.id)
+                }
+
+                // Remove from all circles
+                bwModel.db.circleMemberDao().deleteByIdentity(currentIdentity.id)
+
+                // Delete posts by this user
+                val posts = bwModel.db.postDao().postsFor(currentIdentity.id)
+                posts.forEach { post ->
+                    bwModel.db.postDao().delete(post.id)
+                }
+            }
+
+            Toast.makeText(context, getString(R.string.deleted_contact, currentIdentity.name), Toast.LENGTH_SHORT).show()
+
+            // Navigate back after deletion
+            findNavController().popBackStack()
         }
     }
 
@@ -375,6 +473,7 @@ class UserProfileFragment : BailiwickFragment() {
         val avatar: android.graphics.Bitmap,
         val posts: List<com.perfectlunacy.bailiwick.models.db.Post>,
         val circles: List<Circle>,
-        val memberOfCircleIds: Set<Long>
+        val memberOfCircleIds: Set<Long>,
+        val isMuted: Boolean
     )
 }
